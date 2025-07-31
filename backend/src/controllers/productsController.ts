@@ -1,27 +1,35 @@
+// Products controller - handles all product-related HTTP requests
 import { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
 
+// Initialize Prisma client for database operations
 const prisma = new PrismaClient();
 
+/**
+ * Get all products with their related data
+ * Includes instances, pages, events, variables, and suggested values
+ * Returns products ordered by last update date
+ */
 export const getAllProducts = async (req: Request, res: Response, next: NextFunction) => {
   try {
     logger.debug('Fetching all products', { requestId: req.ip });
     
+    // Fetch all products with comprehensive related data
     const products = await prisma.product.findMany({
       include: {
         instances: true,
         pages: {
           include: {
-            events: true
+            events: true // Include events for each page
           }
         },
         variables: true,
         suggestedValues: true
       },
       orderBy: {
-        updatedAt: 'desc'
+        updatedAt: 'desc' // Most recently updated first
       }
     });
 
@@ -30,6 +38,7 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
       requestId: req.ip 
     });
 
+    // Return standardized API response
     res.json({
       success: true,
       data: products,
@@ -37,23 +46,28 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
     });
   } catch (error) {
     logger.error('Error fetching products', { error, requestId: req.ip });
-    next(error);
+    next(error); // Pass to error handler middleware
   }
 };
 
+/**
+ * Get a single product by ID with all related data
+ * Returns 404 if product doesn't exist
+ */
 export const getProductById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     
     logger.debug('Fetching product by ID', { productId: id, requestId: req.ip });
 
+    // Find product with all related entities
     const product = await prisma.product.findUnique({
       where: { id },
       include: {
         instances: true,
         pages: {
           include: {
-            events: true
+            events: true // Include events for comprehensive view
           }
         },
         variables: true,
@@ -61,6 +75,7 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
       }
     });
 
+    // Handle product not found case
     if (!product) {
       const error: AppError = new Error('Product not found');
       error.statusCode = 404;
@@ -83,22 +98,29 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
   }
 };
 
+/**
+ * Create a new product with validation
+ * Validates business rules for hasInstances and currentEnvironment relationship
+ */
 export const createProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { name, description, hasInstances, currentEnvironment } = req.body;
 
+    // Validate required name field
     if (!name) {
       const error: AppError = new Error('Product name is required');
       error.statusCode = 400;
       return next(error);
     }
 
+    // Business rule: if product doesn't have instances, currentEnvironment is required
     if (hasInstances === false && !currentEnvironment) {
       const error: AppError = new Error('currentEnvironment is required when hasInstances is false');
       error.statusCode = 400;
       return next(error);
     }
 
+    // Business rule: if product has instances, currentEnvironment should not be set
     if (hasInstances === true && currentEnvironment) {
       const error: AppError = new Error('currentEnvironment should not be set when hasInstances is true');
       error.statusCode = 400;
@@ -112,11 +134,12 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       requestId: req.ip 
     });
 
+    // Create product with related data structure ready
     const product = await prisma.product.create({
       data: {
         name,
         description,
-        hasInstances: hasInstances ?? false,
+        hasInstances: hasInstances ?? false, // Default to false if not specified
         currentEnvironment: hasInstances === false ? currentEnvironment : null
       },
       include: {
@@ -133,6 +156,7 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       requestId: req.ip 
     });
 
+    // Return created product with 201 status
     res.status(201).json({
       success: true,
       data: product

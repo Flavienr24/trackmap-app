@@ -1,3 +1,5 @@
+// Express router for product-related endpoints
+// Defines RESTful routes for product CRUD operations
 import { Router } from 'express';
 import {
   getAllProducts,
@@ -9,19 +11,19 @@ import {
 
 const router = Router();
 
-// GET /api/products - Liste tous les produits
+// GET /api/products - Retrieve all products with related data
 router.get('/', getAllProducts);
 
-// POST /api/products - Crée un produit
+// POST /api/products - Create a new product with validation
 router.post('/', createProduct);
 
-// GET /api/products/:id - Détail d'un produit
+// GET /api/products/:id - Retrieve a specific product by ID
 router.get('/:id', getProductById);
 
-// PUT /api/products/:id - Modifie un produit
+// PUT /api/products/:id - Update an existing product
 router.put('/:id', updateProduct);
 
-// DELETE /api/products/:id - Supprime un produit
+// DELETE /api/products/:id - Delete a product and all related data
 router.delete('/:id', deleteProduct);
 
 export default router;

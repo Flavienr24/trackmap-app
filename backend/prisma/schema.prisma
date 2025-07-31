@@ -1,154 +1,190 @@
+// Prisma schema file - defines database structure and relationships
+// Generates TypeScript client for type-safe database operations
+
 generator client {
   provider = "prisma-client-js"
 }
 
+// PostgreSQL database configuration
+// Uses DATABASE_URL environment variable for connection
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+// Product model - represents a trackable application/website
+// Can have instances (multi-environment) or direct environment assignment
 model Product {
-  id                  String    @id @default(cuid())
-  name                String
-  description         String?
-  hasInstances        Boolean   @map("has_instances")
-  currentEnvironment  String?   @map("current_environment")
+  id                  String    @id @default(cuid()) // Unique identifier using cuid
+  name                String    // Product name (required)
+  description         String?   // Optional product description
+  hasInstances        Boolean   @map("has_instances") // Whether product supports multiple instances
+  currentEnvironment  String?   @map("current_environment") // Environment if no instances
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  instances          Instance[]
-  pages              Page[]
-  variables          Variable[]
-  suggestedValues    SuggestedValue[]
+  // Related entities
+  instances          Instance[]      // Product instances (if hasInstances = true)
+  pages              Page[]          // Product pages
+  variables          Variable[]      // Shared variable definitions
+  suggestedValues    SuggestedValue[] // Shared suggested values
 
   @@map("products")
 }
 
+// Instance model - represents product variations (e.g., country-specific versions)
+// Used when a product has multiple deployments with different configurations
 model Instance {
   id                 String   @id @default(cuid())
-  productId          String   @map("product_id")
-  name               String
-  code               String
-  currentEnvironment String   @map("current_environment")
+  productId          String   @map("product_id") // Foreign key to Product
+  name               String   // Instance name (e.g., "France", "UK")
+  code               String   // Instance code (e.g., "FR", "UK")
+  currentEnvironment String   @map("current_environment") // Current deployment environment
   createdAt         DateTime @default(now()) @map("created_at")  
   updatedAt         DateTime @updatedAt @map("updated_at")
 
+  // Relationships
   product           Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  pages             Page[]
+  pages             Page[]   // Pages specific to this instance
 
   @@map("instances")
 }
 
+// Page model - represents trackable pages within a product/instance
+// Contains URLs for different environments and hosts tracking events
 model Page {
   id         String   @id @default(cuid())
-  productId  String   @map("product_id")
-  instanceId String?  @map("instance_id")
-  name       String
-  urls       Json
+  productId  String   @map("product_id") // Foreign key to Product
+  instanceId String?  @map("instance_id") // Optional foreign key to Instance
+  name       String   // Page name (e.g., "Homepage", "Checkout")
+  urls       Json     // URLs for different environments {dev: "", staging: "", prod: ""}
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
+  // Relationships
   product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   instance   Instance? @relation(fields: [instanceId], references: [id], onDelete: Cascade)
-  events     Event[]
+  events     Event[]   // Tracking events on this page
 
   @@map("pages")
 }
 
+// Event model - represents GA4 tracking events on pages
+// Tracks implementation status and contains variable definitions
 model Event {
   id        String      @id @default(cuid())
-  pageId    String      @map("page_id")
-  name      String
-  status    EventStatus @default(TO_IMPLEMENT)
-  testDate  DateTime?   @map("test_date")
-  variables Json
+  pageId    String      @map("page_id") // Foreign key to Page
+  name      String      // Event name (e.g., "purchase", "page_view")
+  status    EventStatus @default(TO_IMPLEMENT) // Implementation status
+  testDate  DateTime?   @map("test_date") // Date when event was tested
+  variables Json        // Event variables as key-value pairs
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
 
+  // Relationships
   page      Page        @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  comments  Comment[]
-  history   EventHistory[]
+  comments  Comment[]   // Comments about this event
+  history   EventHistory[] // Change history for this event
 
   @@map("events")
 }
 
+// Variable model - defines reusable variable schemas for events
+// Provides type information and description for consistent variable usage
 model Variable {
   id          String      @id @default(cuid())
-  productId   String      @map("product_id")
-  name        String
-  type        VariableType
-  description String?
+  productId   String      @map("product_id") // Foreign key to Product
+  name        String      // Variable name (e.g., "page_name", "user_id")
+  type        VariableType // Data type (STRING, NUMBER, BOOLEAN, etc.)
+  description String?     // Optional description of variable usage
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
+  // Relationships
   product             Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  variableValues      VariableValue[]
+  variableValues      VariableValue[] // Associations with suggested values
 
   @@map("variables")
 }
 
+// SuggestedValue model - stores reusable values for variables
+// Can be static values or contextual placeholders (e.g., $page-name)
 model SuggestedValue {
   id            String    @id @default(cuid())
-  productId     String    @map("product_id")
-  value         String
-  isContextual  Boolean   @map("is_contextual") @default(false)
+  productId     String    @map("product_id") // Foreign key to Product
+  value         String    // The suggested value (static or contextual)
+  isContextual  Boolean   @map("is_contextual") @default(false) // True for $variable-name format
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
+  // Relationships
   product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  variableValues    VariableValue[]
+  variableValues    VariableValue[] // Associations with variables
 
   @@map("suggested_values")
 }
 
+// VariableValue model - many-to-many relationship between Variables and SuggestedValues
+// Associates which suggested values are appropriate for which variables
 model VariableValue {
-  variableId       String @map("variable_id")
-  suggestedValueId String @map("suggested_value_id")
+  variableId       String @map("variable_id") // Foreign key to Variable
+  suggestedValueId String @map("suggested_value_id") // Foreign key to SuggestedValue
 
+  // Relationships
   variable        Variable       @relation(fields: [variableId], references: [id], onDelete: Cascade)
   suggestedValue  SuggestedValue @relation(fields: [suggestedValueId], references: [id], onDelete: Cascade)
 
-  @@id([variableId, suggestedValueId])
+  @@id([variableId, suggestedValueId]) // Composite primary key
   @@map("variable_values")
 }
 
+// Comment model - stores user comments on events
+// Separate from history to distinguish between comments and change logs
 model Comment {
   id        String   @id @default(cuid())
-  eventId   String   @map("event_id")
-  content   String
-  author    String?
+  eventId   String   @map("event_id") // Foreign key to Event
+  content   String   // Comment text content
+  author    String?  // Optional author name/ID
   createdAt DateTime @default(now()) @map("created_at")
 
+  // Relationships
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@map("comments")
 }
 
+// EventHistory model - tracks changes to event fields over time
+// Separate from comments to maintain audit trail of modifications
 model EventHistory {
   id        String   @id @default(cuid())
-  eventId   String   @map("event_id")
-  field     String
-  oldValue  String?  @map("old_value")
-  newValue  String?  @map("new_value")
-  author    String?
+  eventId   String   @map("event_id") // Foreign key to Event
+  field     String   // Field name that was changed
+  oldValue  String?  @map("old_value") // Previous value (JSON string if complex)
+  newValue  String?  @map("new_value") // New value (JSON string if complex)
+  author    String?  // Optional author of the change
   createdAt DateTime @default(now()) @map("created_at")
 
+  // Relationships
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@map("event_history")
 }
 
+// Event implementation status enum
+// Tracks the lifecycle of event implementation
 enum EventStatus {
-  TO_IMPLEMENT
-  TO_TEST
-  ERROR
-  VALIDATED
+  TO_IMPLEMENT // Event needs to be implemented
+  TO_TEST      // Event implemented, needs testing
+  ERROR        // Event has issues/errors
+  VALIDATED    // Event tested and working correctly
 }
 
+// Variable data type enum
+// Defines the expected data type for variables
 enum VariableType {
-  STRING
-  NUMBER
-  BOOLEAN
-  ARRAY
-  OBJECT
+  STRING  // Text values
+  NUMBER  // Numeric values (int/float)
+  BOOLEAN // True/false values
+  ARRAY   // Array/list values
+  OBJECT  // Complex object/JSON values
 }
