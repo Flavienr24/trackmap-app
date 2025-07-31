@@ -1,12 +1,12 @@
 // Suggested Values controller - handles all suggested value-related HTTP requests
 // Suggested values store reusable values for variables (static or contextual)
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
+import { db } from '../config/database';
 
-// Initialize Prisma client for database operations
-const prisma = new PrismaClient();
+// Use centralized database instance
+const prisma = db;
 
 /**
  * Get all suggested values for a specific product

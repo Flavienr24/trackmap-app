@@ -1,12 +1,12 @@
 // Variables controller - handles all variable-related HTTP requests
 // Variables define reusable variable schemas for events
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
+import { db } from '../config/database';
 
-// Initialize Prisma client for database operations
-const prisma = new PrismaClient();
+// Use centralized database instance
+const prisma = db;
 
 // Valid variable types
 const VALID_TYPES = ['STRING', 'NUMBER', 'BOOLEAN', 'ARRAY', 'OBJECT'];
@@ -357,7 +357,7 @@ export const getSuggestedValuesByVariable = async (req: Request, res: Response, 
       }
     });
 
-    const suggestedValues = variableValues.map(vv => vv.suggestedValue);
+    const suggestedValues = variableValues.map((vv: any) => vv.suggestedValue);
 
     logger.info('Suggested values fetched successfully', { 
       variableId,

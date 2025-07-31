@@ -1,16 +1,16 @@
+// Integration tests for Products API
+// Tests all product CRUD operations with real database
 import request from 'supertest';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
 import productsRoutes from '../routes/products';
 import { errorHandler, notFoundHandler } from '../middleware/errorHandler';
+import { prisma } from './setup';
 
 // Load test environment
 dotenv.config({ path: '.env.test' });
-
-const prisma = new PrismaClient();
 
 const createTestApp = () => {
   const app = express();
@@ -34,11 +34,6 @@ describe('Products API', () => {
     app = createTestApp();
   });
 
-  beforeEach(() => {
-    // Reset all mocks before each test
-    jest.clearAllMocks();
-  });
-
   describe('POST /api/products', () => {
     it('should create a new product with hasInstances=false', async () => {
       const productData = {
@@ -47,19 +42,6 @@ describe('Products API', () => {
         hasInstances: false,
         currentEnvironment: 'dev'
       };
-
-      const mockProduct = {
-        id: 'test-id-1',
-        ...productData,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        instances: [],
-        pages: [],
-        variables: [],
-        suggestedValues: []
-      };
-
-      (prisma.product.create as jest.Mock).mockResolvedValue(mockProduct);
 
       const response = await request(app)
         .post('/api/products')
@@ -73,6 +55,13 @@ describe('Products API', () => {
       expect(response.body.data.currentEnvironment).toBe('dev');
       
       testProductId = response.body.data.id;
+
+      // Verify in database
+      const dbProduct = await prisma.product.findUnique({
+        where: { id: testProductId }
+      });
+      expect(dbProduct).toBeTruthy();
+      expect(dbProduct?.name).toBe(productData.name);
     });
 
     it('should create a new product with hasInstances=true', async () => {
@@ -91,6 +80,13 @@ describe('Products API', () => {
       expect(response.body.data.name).toBe(productData.name);
       expect(response.body.data.hasInstances).toBe(true);
       expect(response.body.data.currentEnvironment).toBeNull();
+
+      // Verify in database
+      const dbProduct = await prisma.product.findUnique({
+        where: { id: response.body.data.id }
+      });
+      expect(dbProduct).toBeTruthy();
+      expect(dbProduct?.hasInstances).toBe(true);
     });
 
     it('should return 400 if name is missing', async () => {
@@ -232,6 +228,12 @@ describe('Products API', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.name).toBe(updateData.name);
       expect(response.body.data.description).toBe(updateData.description);
+
+      // Verify in database
+      const dbProduct = await prisma.product.findUnique({
+        where: { id: productId }
+      });
+      expect(dbProduct?.name).toBe(updateData.name);
     });
 
     it('should return 404 for non-existent product', async () => {

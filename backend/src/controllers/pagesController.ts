@@ -1,12 +1,12 @@
 // Pages controller - handles all page-related HTTP requests
 // Pages represent trackable pages within a product/instance
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
+import { db } from '../config/database';
 
-// Initialize Prisma client for database operations
-const prisma = new PrismaClient();
+// Use centralized database instance
+const prisma = db;
 
 /**
  * Get all pages for a specific product with optional filters
@@ -73,7 +73,7 @@ export const getPagesByProduct = async (req: Request, res: Response, next: NextF
     // Filter pages that have events if requested
     let filteredPages = pages;
     if (has_events === 'true') {
-      filteredPages = pages.filter(page => page.events.length > 0);
+      filteredPages = pages.filter((page: any) => page.events.length > 0);
     }
 
     logger.info('Pages fetched successfully', { 

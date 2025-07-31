@@ -1,12 +1,12 @@
 // Events controller - handles all event-related HTTP requests
 // Events represent GA4 tracking events on pages
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
+import { db } from '../config/database';
 
-// Initialize Prisma client for database operations
-const prisma = new PrismaClient();
+// Use centralized database instance
+const prisma = db;
 
 // Valid event status values
 const VALID_STATUS = ['TO_IMPLEMENT', 'TO_TEST', 'ERROR', 'VALIDATED'];
@@ -42,9 +42,9 @@ export const getEventsByPage = async (req: Request, res: Response, next: NextFun
 
     // Filter by status if provided
     if (status && typeof status === 'string') {
-      const statusFilters = status.split(',').map(s => s.trim().toUpperCase());
+      const statusFilters = status.split(',').map((s: string) => s.trim().toUpperCase());
       // Validate status values
-      const invalidStatuses = statusFilters.filter(s => !VALID_STATUS.includes(s));
+      const invalidStatuses = statusFilters.filter((s: string) => !VALID_STATUS.includes(s));
       if (invalidStatuses.length > 0) {
         const error: AppError = new Error(`Invalid status values: ${invalidStatuses.join(', ')}`);
         error.statusCode = 400;
@@ -87,7 +87,7 @@ export const getEventsByPage = async (req: Request, res: Response, next: NextFun
     });
 
     // Parse variables JSON for each event
-    const eventsWithParsedVariables = events.map(event => ({
+    const eventsWithParsedVariables = events.map((event: any) => ({
       ...event,
       variables: typeof event.variables === 'string' ? JSON.parse(event.variables) : event.variables
     }));
@@ -457,6 +457,164 @@ export const deleteEvent = async (req: Request, res: Response, next: NextFunctio
     });
   } catch (error) {
     logger.error('Error deleting event', { error, eventId: req.params.id, requestId: req.ip });
+    next(error);
+  }
+};
+
+/**
+ * Get all comments for a specific event
+ * GET /api/events/:id/comments
+ */
+export const getEventComments = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id: eventId } = req.params;
+    
+    logger.debug('Fetching comments for event', { eventId, requestId: req.ip });
+
+    // Verify event exists
+    const event = await prisma.event.findUnique({
+      where: { id: eventId }
+    });
+
+    if (!event) {
+      const error: AppError = new Error('Event not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // Fetch all comments for the event
+    const comments = await prisma.comment.findMany({
+      where: { eventId },
+      orderBy: {
+        createdAt: 'desc' // Most recent first
+      }
+    });
+
+    logger.info('Event comments fetched successfully', { 
+      eventId,
+      count: comments.length,
+      requestId: req.ip 
+    });
+
+    res.json({
+      success: true,
+      data: comments,
+      count: comments.length
+    });
+  } catch (error) {
+    logger.error('Error fetching event comments', { error, eventId: req.params.id, requestId: req.ip });
+    next(error);
+  }
+};
+
+/**
+ * Add a new comment to an event
+ * POST /api/events/:id/comments
+ */
+export const addEventComment = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id: eventId } = req.params;
+    const { text, author } = req.body;
+
+    // Validate required fields
+    if (!text) {
+      const error: AppError = new Error('Comment text is required');
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    if (!author) {
+      const error: AppError = new Error('Comment author is required');
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    // Verify event exists
+    const event = await prisma.event.findUnique({
+      where: { id: eventId }
+    });
+
+    if (!event) {
+      const error: AppError = new Error('Event not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    logger.debug('Adding comment to event', { 
+      eventId,
+      author,
+      textLength: text.length,
+      requestId: req.ip 
+    });
+
+    // Create comment
+    const comment = await prisma.comment.create({
+      data: {
+        eventId,
+        text,
+        author
+      }
+    });
+
+    logger.info('Comment added successfully', { 
+      commentId: comment.id,
+      eventId,
+      author,
+      requestId: req.ip 
+    });
+
+    res.status(201).json({
+      success: true,
+      data: comment
+    });
+  } catch (error) {
+    logger.error('Error adding comment', { error, body: req.body, eventId: req.params.id, requestId: req.ip });
+    next(error);
+  }
+};
+
+/**
+ * Get history for a specific event
+ * GET /api/events/:id/history
+ */
+export const getEventHistory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id: eventId } = req.params;
+    
+    logger.debug('Fetching history for event', { eventId, requestId: req.ip });
+
+    // Verify event exists
+    const event = await prisma.event.findUnique({
+      where: { id: eventId }
+    });
+
+    if (!event) {
+      const error: AppError = new Error('Event not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // Fetch all history entries for the event
+    const history = await prisma.eventHistory.findMany({
+      where: { eventId },
+      orderBy: {
+        createdAt: 'desc' // Most recent first
+      }
+    });
+
+    logger.info('Event history fetched successfully', { 
+      eventId,
+      count: history.length,
+      requestId: req.ip 
+    });
+
+    res.json({
+      success: true,
+      data: history,
+      count: history.length
+    });
+  } catch (error) {
+    logger.error('Error fetching event history', { error, eventId: req.params.id, requestId: req.ip });
     next(error);
   }
 };

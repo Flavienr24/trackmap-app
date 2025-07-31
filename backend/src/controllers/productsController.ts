@@ -1,11 +1,11 @@
 // Products controller - handles all product-related HTTP requests
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
+import { db } from '../config/database';
 
-// Initialize Prisma client for database operations
-const prisma = new PrismaClient();
+// Use centralized database instance
+const prisma = db;
 
 /**
  * Get all products with their related data

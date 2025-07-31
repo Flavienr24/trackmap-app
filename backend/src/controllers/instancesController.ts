@@ -1,12 +1,12 @@
 // Instances controller - handles all instance-related HTTP requests
 // Instances represent product variations (e.g., country-specific versions)
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
+import { db } from '../config/database';
 
-// Initialize Prisma client for database operations
-const prisma = new PrismaClient();
+// Use centralized database instance
+const prisma = db;
 
 /**
  * Get all instances for a specific product
