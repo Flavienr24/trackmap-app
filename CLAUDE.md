@@ -211,6 +211,7 @@ Le projet doit pousser sur github dans le repo flavienr24/trackmap-app
 - **Supprimer le code obsolète** : Éliminer définitivement les fichiers/lignes non utilisés
 - **Validation d'architecture** : Ne pas ajouter fichiers/dossiers sans validation
 - **Coder directement dans le repo** : Pas d'artefacts, modifications directes des fichiers
+- **Documenter le code** : Le code doit être suffisamment documenter pour être compréhensible. Ajouter des commentaires en anglais à chaque fois que c'est nécessaire.
 - **Tests obligatoires** : Demander si des tests sont nécessaires avant implémentation
 - **Push master** : Pousser le code sur la branche principale une fois que tous les tests auront été fait et que je t'aurais donné l'autorisation
 
