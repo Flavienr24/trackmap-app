@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id                  String    @id @default(cuid())
+  name                String
+  description         String?
+  hasInstances        Boolean   @map("has_instances")
+  currentEnvironment  String?   @map("current_environment")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  instances          Instance[]
+  pages              Page[]
+  variables          Variable[]
+  suggestedValues    SuggestedValue[]
+
+  @@map("products")
+}
+
+model Instance {
+  id                 String   @id @default(cuid())
+  productId          String   @map("product_id")
+  name               String
+  code               String
+  currentEnvironment String   @map("current_environment")
+  createdAt         DateTime @default(now()) @map("created_at")  
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  product           Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  pages             Page[]
+
+  @@map("instances")
+}
+
+model Page {
+  id         String   @id @default(cuid())
+  productId  String   @map("product_id")
+  instanceId String?  @map("instance_id")
+  name       String
+  urls       Json
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  instance   Instance? @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  events     Event[]
+
+  @@map("pages")
+}
+
+model Event {
+  id        String      @id @default(cuid())
+  pageId    String      @map("page_id")
+  name      String
+  status    EventStatus @default(TO_IMPLEMENT)
+  testDate  DateTime?   @map("test_date")
+  variables Json
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  page      Page        @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  comments  Comment[]
+  history   EventHistory[]
+
+  @@map("events")
+}
+
+model Variable {
+  id          String      @id @default(cuid())
+  productId   String      @map("product_id")
+  name        String
+  type        VariableType
+  description String?
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  product             Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variableValues      VariableValue[]
+
+  @@map("variables")
+}
+
+model SuggestedValue {
+  id            String    @id @default(cuid())
+  productId     String    @map("product_id")
+  value         String
+  isContextual  Boolean   @map("is_contextual") @default(false)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variableValues    VariableValue[]
+
+  @@map("suggested_values")
+}
+
+model VariableValue {
+  variableId       String @map("variable_id")
+  suggestedValueId String @map("suggested_value_id")
+
+  variable        Variable       @relation(fields: [variableId], references: [id], onDelete: Cascade)
+  suggestedValue  SuggestedValue @relation(fields: [suggestedValueId], references: [id], onDelete: Cascade)
+
+  @@id([variableId, suggestedValueId])
+  @@map("variable_values")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  eventId   String   @map("event_id")
+  content   String
+  author    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model EventHistory {
+  id        String   @id @default(cuid())
+  eventId   String   @map("event_id")
+  field     String
+  oldValue  String?  @map("old_value")
+  newValue  String?  @map("new_value")
+  author    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("event_history")
+}
+
+enum EventStatus {
+  TO_IMPLEMENT
+  TO_TEST
+  ERROR
+  VALIDATED
+}
+
+enum VariableType {
+  STRING
+  NUMBER
+  BOOLEAN
+  ARRAY
+  OBJECT
+}
