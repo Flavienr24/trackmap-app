@@ -322,6 +322,17 @@ Les variables peuvent avoir des **valeurs statiques** ou **contextuelles** :
 - **Validation** : Code validé uniquement si tests passent avec succès
 - **Nettoyage** : Supprimer complètement fichiers/éléments créés pour tests
 
+### Logging et Debugging
+- **Logs obligatoires** : Implémenter des logs Winston au fur et à mesure de la construction de l'app
+- **Couverture complète** : Logger toutes les opérations critiques (CRUD, erreurs, authentification, etc.)
+- **Tests et debugging** : Durant les phases de test, toujours consulter les logs stockés (`logs/`) pour identifier les problèmes
+- **Niveaux appropriés** : 
+  - `error` : Erreurs critiques nécessitant intervention
+  - `warn` : Situations anormales mais non bloquantes
+  - `info` : Opérations importantes (création utilisateur, actions CRUD)
+  - `debug` : Détails pour le développement
+- **Contexte riche** : Inclure userId, requestId, IP, durée des requêtes dans les logs
+
 ### Gestion Fichiers
 - **Pas de fichiers .bak** : Suppression complète, pas de sauvegarde
 - **Repository propre** : Maintenir architecture contrôlée

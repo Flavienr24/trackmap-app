@@ -76,3 +76,7 @@ backend/prisma/migrations/
 # Frontend specific
 frontend/dist/
 frontend/.vite/
+
+# Logs
+logs/
+*.log
