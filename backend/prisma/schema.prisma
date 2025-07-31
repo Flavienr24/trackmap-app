@@ -5,10 +5,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// PostgreSQL database configuration
+// SQLite database configuration for development
 // Uses DATABASE_URL environment variable for connection
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -57,7 +57,7 @@ model Page {
   productId  String   @map("product_id") // Foreign key to Product
   instanceId String?  @map("instance_id") // Optional foreign key to Instance
   name       String   // Page name (e.g., "Homepage", "Checkout")
-  urls       Json     // URLs for different environments {dev: "", staging: "", prod: ""}
+  urls       String   // URLs for different environments as JSON string
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
@@ -75,9 +75,9 @@ model Event {
   id        String      @id @default(cuid())
   pageId    String      @map("page_id") // Foreign key to Page
   name      String      // Event name (e.g., "purchase", "page_view")
-  status    EventStatus @default(TO_IMPLEMENT) // Implementation status
+  status    String @default("TO_IMPLEMENT") // Implementation status
   testDate  DateTime?   @map("test_date") // Date when event was tested
-  variables Json        // Event variables as key-value pairs
+  variables String      // Event variables as JSON string
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
 
@@ -95,7 +95,7 @@ model Variable {
   id          String      @id @default(cuid())
   productId   String      @map("product_id") // Foreign key to Product
   name        String      // Variable name (e.g., "page_name", "user_id")
-  type        VariableType // Data type (STRING, NUMBER, BOOLEAN, etc.)
+  type        String       // Data type (STRING, NUMBER, BOOLEAN, etc.)
   description String?     // Optional description of variable usage
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
@@ -170,21 +170,6 @@ model EventHistory {
   @@map("event_history")
 }
 
-// Event implementation status enum
-// Tracks the lifecycle of event implementation
-enum EventStatus {
-  TO_IMPLEMENT // Event needs to be implemented
-  TO_TEST      // Event implemented, needs testing
-  ERROR        // Event has issues/errors
-  VALIDATED    // Event tested and working correctly
-}
-
-// Variable data type enum
-// Defines the expected data type for variables
-enum VariableType {
-  STRING  // Text values
-  NUMBER  // Numeric values (int/float)
-  BOOLEAN // True/false values
-  ARRAY   // Array/list values
-  OBJECT  // Complex object/JSON values
-}
+// SQLite doesn't support enums, so we use string constraints
+// Event status values: TO_IMPLEMENT, TO_TEST, ERROR, VALIDATED
+// Variable type values: STRING, NUMBER, BOOLEAN, ARRAY, OBJECT

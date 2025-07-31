@@ -9,6 +9,11 @@ import logger from './config/logger';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import productsRoutes from './routes/products';
+import instancesRoutes from './routes/instances';
+import pagesRoutes from './routes/pages';
+import eventsRoutes from './routes/events';
+import variablesRoutes from './routes/variables';
+import suggestedValuesRoutes from './routes/suggestedValues';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -67,6 +72,11 @@ app.get('/api/health', async (req, res) => {
 
 // API routes
 app.use('/api/products', productsRoutes);
+app.use('/api/instances', instancesRoutes);
+app.use('/api/pages', pagesRoutes);
+app.use('/api/events', eventsRoutes);
+app.use('/api/variables', variablesRoutes);
+app.use('/api/suggested-values', suggestedValuesRoutes);
 
 // Error handling middleware (must be last)
 app.use(notFoundHandler); // 404 handler

@@ -8,6 +8,22 @@ import {
   updateProduct,
   deleteProduct
 } from '../controllers/productsController';
+import {
+  getInstancesByProduct,
+  createInstance
+} from '../controllers/instancesController';
+import {
+  getPagesByProduct,
+  createPage
+} from '../controllers/pagesController';
+import {
+  getVariablesByProduct,
+  createVariable
+} from '../controllers/variablesController';
+import {
+  getSuggestedValuesByProduct,
+  createSuggestedValue
+} from '../controllers/suggestedValuesController';
 
 const router = Router();
 
@@ -25,5 +41,33 @@ router.put('/:id', updateProduct);
 
 // DELETE /api/products/:id - Delete a product and all related data
 router.delete('/:id', deleteProduct);
+
+// Instance routes nested under products
+// GET /api/products/:id/instances - Get all instances for a product
+router.get('/:id/instances', getInstancesByProduct);
+
+// POST /api/products/:id/instances - Create a new instance for a product
+router.post('/:id/instances', createInstance);
+
+// Page routes nested under products
+// GET /api/products/:id/pages - Get all pages for a product (with optional filters)
+router.get('/:id/pages', getPagesByProduct);
+
+// POST /api/products/:id/pages - Create a new page for a product
+router.post('/:id/pages', createPage);
+
+// Variable routes nested under products
+// GET /api/products/:id/variables - Get all variables for a product
+router.get('/:id/variables', getVariablesByProduct);
+
+// POST /api/products/:id/variables - Create a new variable for a product
+router.post('/:id/variables', createVariable);
+
+// Suggested Value routes nested under products
+// GET /api/products/:id/suggested-values - Get all suggested values for a product
+router.get('/:id/suggested-values', getSuggestedValuesByProduct);
+
+// POST /api/products/:id/suggested-values - Create a new suggested value for a product
+router.post('/:id/suggested-values', createSuggestedValue);
 
 export default router;
