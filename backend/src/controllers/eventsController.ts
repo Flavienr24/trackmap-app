@@ -551,7 +551,7 @@ export const addEventComment = async (req: Request, res: Response, next: NextFun
     const comment = await prisma.comment.create({
       data: {
         eventId,
-        text,
+        content: text,
         author
       }
     });

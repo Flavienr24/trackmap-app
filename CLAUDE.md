@@ -36,7 +36,7 @@ Produit (has_instances: boolean, current_environment si pas d'instances)
 
 - **Frontend** : React avec hooks (useState, useReducer)
 - **Backend** : Node.js/Express (API REST)
-- **Base de données** : PostgreSQL + Prisma + JSONB
+- **Base de données** : SQLite (développement) → PostgreSQL (production) + Prisma + JSONB
 - **ORM** : Prisma pour TypeScript avec migrations
 - **Stockage temporaire** : localStorage en attendant le backend
 
