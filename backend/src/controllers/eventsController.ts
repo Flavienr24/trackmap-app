@@ -4,6 +4,7 @@ import { Request, Response, NextFunction } from 'express';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
 import { db } from '../config/database';
+import { safeJsonParse } from '../utils/helpers';
 
 // Use centralized database instance
 const prisma = db;
@@ -88,7 +89,7 @@ export const getEventsByPage = async (req: Request, res: Response, next: NextFun
     // Parse variables JSON for each event
     const eventsWithParsedVariables = events.map((event: any) => ({
       ...event,
-      variables: typeof event.variables === 'string' ? JSON.parse(event.variables) : event.variables
+      variables: safeJsonParse(event.variables, {})
     }));
 
     logger.info('Events fetched successfully', { 
@@ -172,7 +173,7 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
     // Parse variables for response
     const eventResponse = {
       ...event,
-      variables: typeof event.variables === 'string' ? JSON.parse(event.variables) : event.variables
+      variables: safeJsonParse(event.variables, {})
     };
 
     logger.info('Event created successfully', { 
@@ -228,7 +229,7 @@ export const getEventById = async (req: Request, res: Response, next: NextFuncti
     // Parse variables if stored as JSON string
     const eventData = {
       ...event,
-      variables: typeof event.variables === 'string' ? JSON.parse(event.variables) : event.variables
+      variables: safeJsonParse(event.variables, {})
     };
 
     logger.info('Event fetched successfully', { 
@@ -318,7 +319,7 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
     // Parse variables for response
     const eventResponse = {
       ...event,
-      variables: typeof event.variables === 'string' ? JSON.parse(event.variables) : event.variables
+      variables: safeJsonParse(event.variables, {})
     };
 
     logger.info('Event updated successfully', { 
