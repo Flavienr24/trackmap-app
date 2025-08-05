@@ -17,20 +17,20 @@ Interface web type "Airtable du tracking" pour documenter et maintenir les plans
 
 ## Architecture du Projet
 
-### Structure des Données
+### Structure des Données (Simplifiée)
 ```
-Produit (has_instances: boolean, current_environment si pas d'instances)
+Produit (standalone, pas d'instances)
   └── Variables Library (partagée au niveau produit)
-  └── Instances (optionnel, avec current_environment)
-      └── Pages (nom + URLs par environnement)
-          └── Events (avec variables, statuts, historique)
+  └── Pages (nom + URL unique)
+      └── Events (avec variables, statuts, historique)
 ```
 
 ### Hiérarchie des Entités
 1. **Produit** : Application/site à tracker (ex: "E-commerce Mobile")
-2. **Instance** : Déclinaisons optionnelles (ex: FR, UK, DE pour multi-pays)
-3. **Page** : Pages du site avec URLs par environnement
-4. **Event** : Événements GA4 avec variables et cycle de vie
+2. **Page** : Pages du site avec URL unique
+3. **Event** : Événements GA4 avec variables et cycle de vie
+
+**Note Architecture** : Les instances ont été supprimées pour simplifier la V1. Un système de "parent Product" sera ajouté plus tard pour regrouper des produits similaires (ex: E-commerce FR, UK, DE).
 
 ## Stack Technique
 
@@ -42,40 +42,22 @@ Produit (has_instances: boolean, current_environment si pas d'instances)
 
 ## Modèles de Données
 
-### Product
+### Product (Simplifié)
 ```json
 {
   "id": "uuid",
   "name": "E-commerce Mobile",
-  "description": "App mobile e-commerce",
-  "has_instances": true,
-  "current_environment": "dev" // uniquement si has_instances=false
+  "description": "App mobile e-commerce"
 }
 ```
 
-### Instance (optionnelle)
+### Page (Simplifié)
 ```json
 {
   "id": "uuid",
   "product_id": "uuid",
-  "name": "France", 
-  "code": "FR",
-  "current_environment": "dev" // uniquement si has_instances=true
-}
-```
-
-### Page
-```json
-{
-  "id": "uuid",
-  "product_id": "uuid",
-  "instance_id": "uuid", // null si has_instances=false
   "name": "Homepage",
-  "urls": {
-    "dev": "https://dev.site.fr/",
-    "staging": "https://staging.site.fr/",
-    "prod": "https://site.fr/"
-  }
+  "url": "https://site.fr/"
 }
 ```
 
@@ -140,17 +122,10 @@ Produit (has_instances: boolean, current_environment si pas d'instances)
 - `PUT /api/products/:id` - Modifie un produit
 - `DELETE /api/products/:id` - Supprime un produit
 
-### Instances
-- `GET /api/products/:id/instances` - Instances d'un produit
-- `POST /api/products/:id/instances` - Crée une instance
-- `GET /api/instances/:id` - Détail d'une instance
-- `PUT /api/instances/:id` - Modifie une instance
-- `DELETE /api/instances/:id` - Supprime une instance
 
 ### Pages
 - `GET /api/products/:id/pages` - Pages d'un produit
-- `GET /api/products/:id/pages?instance=FR&has_events=true` - Pages avec filtres
-- `GET /api/instances/:id/pages` - Pages d'une instance
+- `GET /api/products/:id/pages?has_events=true` - Pages avec filtres
 - `POST /api/products/:id/pages` - Crée une page
 - `GET /api/pages/:id` - Détail d'une page
 - `PUT /api/pages/:id` - Modifie une page
@@ -187,12 +162,12 @@ Produit (has_instances: boolean, current_environment si pas d'instances)
 - `GET /api/events/:id/history` - Historique d'un event
 
 ### Search & Analytics
-- `GET /api/products/:id/search?q=purchase&status=validated&instance=UK` - Recherche avec filtres
+- `GET /api/products/:id/search?q=purchase&status=validated` - Recherche avec filtres
 - `GET /api/products/:id/all-pages` - Toutes les pages d'un produit
-- `GET /api/products/:id/all-events?status=error&instance=FR&page_name=checkout` - Tous events avec filtres
+- `GET /api/products/:id/all-events?status=error&page_name=checkout` - Tous events avec filtres
 - `GET /api/products/:id/export?format=csv&status=validated` - Export avec filtres
 - `GET /api/products/:id/stats` - Health score, répartition statuts
-- `GET /api/products/:id/stats?instance=FR&timeframe=30d` - Stats avec filtres
+- `GET /api/products/:id/stats?timeframe=30d` - Stats avec filtres
 
 ## Règles de Développement
 
@@ -227,11 +202,8 @@ Le projet doit pousser sur github dans le repo flavienr24/trackmap-app
 3. **Phase 3** : Interfaces finales + UX
 
 ### Environnements
-- **Environnements par défaut** : dev, staging, prod
-- **Gestion niveau approprié** : 
-  - Si has_instances=false → current_environment sur Product
-  - Si has_instances=true → current_environment sur Instance
-- **URLs par environnement** : Pages ont URLs distinctes par env
+- **Environnement unique** : Plus de gestion multi-environnements pour simplifier la V1
+- **URL unique par page** : Une seule URL par page (généralement production)
 
 ## Fonctionnalités UX Spécifiées
 
@@ -357,5 +329,40 @@ Ce projet fait partie de l'écosystème TrackMap avec :
 - Privilégier modifications vs réécriture
 - Confirmer architecture avant ajouts
 - Proposer tests pour nouvelles fonctionnalités
+
+### Gestion du Serveur de Développement
+
+**RÈGLE IMPORTANTE** : Ne pas laisser le serveur tourner en permanence
+
+#### Bonnes Pratiques
+- **Arrêt par défaut** : Toujours arrêter le serveur après usage
+- **Démarrage à la demande** : Ne démarrer que quand nécessaire pour le développement/test
+- **Environnement propre** : Éviter les processus orphelins et libérer les ressources
+
+#### Commandes de Gestion
+```bash
+# Démarrer le serveur (développement avec hot-reload)
+npm run dev
+
+# Arrêter proprement
+Ctrl+C  # ou pkill -f "tsx watch"
+
+# Vérifier si un serveur tourne
+lsof -i :3001
+
+# Tests (démarre/arrête automatiquement)
+npm test
+
+# Production
+npm run build && npm start
+```
+
+#### Workflow Recommandé
+1. **Développer** → `npm run dev` uniquement pendant le développement actif
+2. **Tester** → `npm test` (gestion automatique du serveur)
+3. **Arrêter** → `Ctrl+C` dès que fini
+4. **Vérifier** → Port 3001 libre entre les sessions
+
+**Avantages** : Économie ressources, environnement propre, ports disponibles, meilleur contrôle
 
 Garde ces principes à l'esprit pour maintenir la cohérence et la qualité du code dans le développement de TrackMap Web App.
