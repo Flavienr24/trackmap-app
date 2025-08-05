@@ -71,7 +71,6 @@ export const getEventsByPage = async (req: Request, res: Response, next: NextFun
         page: {
           include: {
             product: true,
-            instance: true
           }
         },
         comments: {
@@ -163,7 +162,6 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
         page: {
           include: {
             product: true,
-            instance: true
           }
         },
         comments: true,
@@ -210,7 +208,6 @@ export const getEventById = async (req: Request, res: Response, next: NextFuncti
         page: {
           include: {
             product: true,
-            instance: true
           }
         },
         comments: {
@@ -309,7 +306,6 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
         page: {
           include: {
             product: true,
-            instance: true
           }
         },
         comments: true,

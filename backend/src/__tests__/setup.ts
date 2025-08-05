@@ -25,7 +25,6 @@ beforeEach(async () => {
   await prisma.variableValue.deleteMany();
   await prisma.variable.deleteMany();
   await prisma.suggestedValue.deleteMany();
-  await prisma.instance.deleteMany();
   await prisma.product.deleteMany();
 });
 
@@ -39,7 +38,6 @@ afterAll(async () => {
   await prisma.variableValue.deleteMany();
   await prisma.variable.deleteMany();
   await prisma.suggestedValue.deleteMany();
-  await prisma.instance.deleteMany();
   await prisma.product.deleteMany();
   
   // Disconnect from database

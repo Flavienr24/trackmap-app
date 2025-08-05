@@ -13,58 +13,36 @@ datasource db {
 }
 
 // Product model - represents a trackable application/website
-// Can have instances (multi-environment) or direct environment assignment
+// Simplified model without instances - each product is standalone
 model Product {
-  id                  String    @id @default(cuid()) // Unique identifier using cuid
-  name                String    // Product name (required)
-  description         String?   // Optional product description
-  hasInstances        Boolean   @map("has_instances") // Whether product supports multiple instances
-  currentEnvironment  String?   @map("current_environment") // Environment if no instances
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
+  id          String    @id @default(cuid()) // Unique identifier using cuid
+  name        String    // Product name (required)
+  description String?   // Optional product description
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   // Related entities
-  instances          Instance[]      // Product instances (if hasInstances = true)
-  pages              Page[]          // Product pages
-  variables          Variable[]      // Shared variable definitions
-  suggestedValues    SuggestedValue[] // Shared suggested values
+  pages           Page[]           // Product pages
+  variables       Variable[]       // Shared variable definitions
+  suggestedValues SuggestedValue[] // Shared suggested values
 
   @@map("products")
 }
 
-// Instance model - represents product variations (e.g., country-specific versions)
-// Used when a product has multiple deployments with different configurations
-model Instance {
-  id                 String   @id @default(cuid())
-  productId          String   @map("product_id") // Foreign key to Product
-  name               String   // Instance name (e.g., "France", "UK")
-  code               String   // Instance code (e.g., "FR", "UK")
-  currentEnvironment String   @map("current_environment") // Current deployment environment
-  createdAt         DateTime @default(now()) @map("created_at")  
-  updatedAt         DateTime @updatedAt @map("updated_at")
 
-  // Relationships
-  product           Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  pages             Page[]   // Pages specific to this instance
-
-  @@map("instances")
-}
-
-// Page model - represents trackable pages within a product/instance
-// Contains URLs for different environments and hosts tracking events
+// Page model - represents trackable pages within a product
+// Simplified model with single URL per page
 model Page {
-  id         String   @id @default(cuid())
-  productId  String   @map("product_id") // Foreign key to Product
-  instanceId String?  @map("instance_id") // Optional foreign key to Instance
-  name       String   // Page name (e.g., "Homepage", "Checkout")
-  urls       String   // URLs for different environments as JSON string
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(cuid())
+  productId String   @map("product_id") // Foreign key to Product
+  name      String   // Page name (e.g., "Homepage", "Checkout")
+  url       String   // Single URL for the page
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relationships
-  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  instance   Instance? @relation(fields: [instanceId], references: [id], onDelete: Cascade)
-  events     Event[]   // Tracking events on this page
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  events    Event[]  // Tracking events on this page
 
   @@map("pages")
 }
@@ -173,3 +151,5 @@ model EventHistory {
 // SQLite doesn't support enums, so we use string constraints
 // Event status values: TO_IMPLEMENT, TO_TEST, ERROR, VALIDATED
 // Variable type values: STRING, NUMBER, BOOLEAN, ARRAY, OBJECT
+
+// Removed models: Instance (replaced by separate Products)

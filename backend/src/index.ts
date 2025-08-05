@@ -9,7 +9,6 @@ import logger from './config/logger';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import productsRoutes from './routes/products';
-import instancesRoutes from './routes/instances';
 import pagesRoutes from './routes/pages';
 import eventsRoutes from './routes/events';
 import variablesRoutes from './routes/variables';
@@ -72,7 +71,6 @@ app.get('/api/health', async (req, res) => {
 
 // API routes
 app.use('/api/products', productsRoutes);
-app.use('/api/instances', instancesRoutes);
 app.use('/api/pages', pagesRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/variables', variablesRoutes);

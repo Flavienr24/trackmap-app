@@ -9,10 +9,6 @@ import {
   deleteProduct
 } from '../controllers/productsController';
 import {
-  getInstancesByProduct,
-  createInstance
-} from '../controllers/instancesController';
-import {
   getPagesByProduct,
   createPage
 } from '../controllers/pagesController';
@@ -42,12 +38,6 @@ router.put('/:id', updateProduct);
 // DELETE /api/products/:id - Delete a product and all related data
 router.delete('/:id', deleteProduct);
 
-// Instance routes nested under products
-// GET /api/products/:id/instances - Get all instances for a product
-router.get('/:id/instances', getInstancesByProduct);
-
-// POST /api/products/:id/instances - Create a new instance for a product
-router.post('/:id/instances', createInstance);
 
 // Page routes nested under products
 // GET /api/products/:id/pages - Get all pages for a product (with optional filters)

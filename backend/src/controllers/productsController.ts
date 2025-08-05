@@ -9,7 +9,7 @@ const prisma = db;
 
 /**
  * Get all products with their related data
- * Includes instances, pages, events, variables, and suggested values
+ * Includes pages, events, variables, and suggested values
  * Returns products ordered by last update date
  */
 export const getAllProducts = async (req: Request, res: Response, next: NextFunction) => {
@@ -19,7 +19,6 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
     // Fetch all products with comprehensive related data
     const products = await prisma.product.findMany({
       include: {
-        instances: true,
         pages: {
           include: {
             events: true // Include events for each page
@@ -64,7 +63,6 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
     const product = await prisma.product.findUnique({
       where: { id },
       include: {
-        instances: true,
         pages: {
           include: {
             events: true // Include events for comprehensive view
@@ -100,11 +98,11 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
 
 /**
  * Create a new product with validation
- * Validates business rules for hasInstances and currentEnvironment relationship
+ * Simplified version without instances support
  */
 export const createProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, description, hasInstances, currentEnvironment } = req.body;
+    const { name, description } = req.body;
 
     // Validate required name field
     if (!name) {
@@ -113,24 +111,9 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       return next(error);
     }
 
-    // Business rule: if product doesn't have instances, currentEnvironment is required
-    if (hasInstances === false && !currentEnvironment) {
-      const error: AppError = new Error('currentEnvironment is required when hasInstances is false');
-      error.statusCode = 400;
-      return next(error);
-    }
-
-    // Business rule: if product has instances, currentEnvironment should not be set
-    if (hasInstances === true && currentEnvironment) {
-      const error: AppError = new Error('currentEnvironment should not be set when hasInstances is true');
-      error.statusCode = 400;
-      return next(error);
-    }
-
     logger.debug('Creating new product', { 
       name, 
-      hasInstances, 
-      currentEnvironment,
+      description,
       requestId: req.ip 
     });
 
@@ -138,12 +121,9 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
     const product = await prisma.product.create({
       data: {
         name,
-        description,
-        hasInstances: hasInstances ?? false, // Default to false if not specified
-        currentEnvironment: hasInstances === false ? currentEnvironment : null
+        description
       },
       include: {
-        instances: true,
         pages: true,
         variables: true,
         suggestedValues: true
@@ -170,7 +150,7 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
 export const updateProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { name, description, hasInstances, currentEnvironment } = req.body;
+    const { name, description } = req.body;
 
     logger.debug('Updating product', { 
       productId: id, 
@@ -188,29 +168,13 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
       return next(error);
     }
 
-    if (hasInstances === false && !currentEnvironment) {
-      const error: AppError = new Error('currentEnvironment is required when hasInstances is false');
-      error.statusCode = 400;
-      return next(error);
-    }
-
-    if (hasInstances === true && currentEnvironment) {
-      const error: AppError = new Error('currentEnvironment should not be set when hasInstances is true');
-      error.statusCode = 400;
-      return next(error);
-    }
-
     const product = await prisma.product.update({
       where: { id },
       data: {
         ...(name !== undefined && { name }),
-        ...(description !== undefined && { description }),
-        ...(hasInstances !== undefined && { hasInstances }),
-        ...(hasInstances === false && { currentEnvironment }),
-        ...(hasInstances === true && { currentEnvironment: null })
+        ...(description !== undefined && { description })
       },
       include: {
-        instances: true,
         pages: true,
         variables: true,
         suggestedValues: true

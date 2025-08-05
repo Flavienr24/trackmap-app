@@ -1,5 +1,5 @@
 // Integration tests for Products API
-// Tests all product CRUD operations with real database
+// Tests all product CRUD operations with simplified architecture
 import request from 'supertest';
 import express from 'express';
 import cors from 'cors';
@@ -35,12 +35,10 @@ describe('Products API', () => {
   });
 
   describe('POST /api/products', () => {
-    it('should create a new product with hasInstances=false', async () => {
+    it('should create a new product with name and description', async () => {
       const productData = {
         name: 'Test Product 1',
-        description: 'Test description',
-        hasInstances: false,
-        currentEnvironment: 'dev'
+        description: 'Test description'
       };
 
       const response = await request(app)
@@ -51,8 +49,6 @@ describe('Products API', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.name).toBe(productData.name);
       expect(response.body.data.description).toBe(productData.description);
-      expect(response.body.data.hasInstances).toBe(false);
-      expect(response.body.data.currentEnvironment).toBe('dev');
       
       testProductId = response.body.data.id;
 
@@ -64,11 +60,9 @@ describe('Products API', () => {
       expect(dbProduct?.name).toBe(productData.name);
     });
 
-    it('should create a new product with hasInstances=true', async () => {
+    it('should create a new product with only name', async () => {
       const productData = {
-        name: 'Test Product 2',
-        description: 'Test description',
-        hasInstances: true
+        name: 'Test Product 2'
       };
 
       const response = await request(app)
@@ -78,22 +72,19 @@ describe('Products API', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.data.name).toBe(productData.name);
-      expect(response.body.data.hasInstances).toBe(true);
-      expect(response.body.data.currentEnvironment).toBeNull();
+      expect(response.body.data.description).toBeNull();
 
       // Verify in database
       const dbProduct = await prisma.product.findUnique({
         where: { id: response.body.data.id }
       });
       expect(dbProduct).toBeTruthy();
-      expect(dbProduct?.hasInstances).toBe(true);
+      expect(dbProduct?.name).toBe(productData.name);
     });
 
     it('should return 400 if name is missing', async () => {
       const productData = {
-        description: 'Test description',
-        hasInstances: false,
-        currentEnvironment: 'dev'
+        description: 'Test description'
       };
 
       const response = await request(app)
@@ -104,37 +95,6 @@ describe('Products API', () => {
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Product name is required');
     });
-
-    it('should return 400 if hasInstances=false and currentEnvironment is missing', async () => {
-      const productData = {
-        name: 'Test Product',
-        hasInstances: false
-      };
-
-      const response = await request(app)
-        .post('/api/products')
-        .send(productData)
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('currentEnvironment is required when hasInstances is false');
-    });
-
-    it('should return 400 if hasInstances=true and currentEnvironment is provided', async () => {
-      const productData = {
-        name: 'Test Product',
-        hasInstances: true,
-        currentEnvironment: 'dev'
-      };
-
-      const response = await request(app)
-        .post('/api/products')
-        .send(productData)
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('currentEnvironment should not be set when hasInstances is true');
-    });
   });
 
   describe('GET /api/products', () => {
@@ -143,9 +103,7 @@ describe('Products API', () => {
       await prisma.product.create({
         data: {
           name: 'Test Product for GET',
-          description: 'Test description',
-          hasInstances: false,
-          currentEnvironment: 'dev'
+          description: 'Test description'
         }
       });
     });
@@ -170,9 +128,7 @@ describe('Products API', () => {
       const product = await prisma.product.create({
         data: {
           name: 'Test Product for GET by ID',
-          description: 'Test description',
-          hasInstances: false,
-          currentEnvironment: 'dev'
+          description: 'Test description'
         }
       });
       productId = product.id;
@@ -206,9 +162,7 @@ describe('Products API', () => {
       const product = await prisma.product.create({
         data: {
           name: 'Test Product for PUT',
-          description: 'Test description',
-          hasInstances: false,
-          currentEnvironment: 'dev'
+          description: 'Test description'
         }
       });
       productId = product.id;
@@ -257,9 +211,7 @@ describe('Products API', () => {
       const product = await prisma.product.create({
         data: {
           name: 'Test Product for DELETE',
-          description: 'Test description',
-          hasInstances: false,
-          currentEnvironment: 'dev'
+          description: 'Test description'
         }
       });
       productId = product.id;
@@ -273,16 +225,15 @@ describe('Products API', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Product deleted successfully');
 
-      // Verify product is deleted
-      const deletedProduct = await prisma.product.findUnique({
+      // Verify product is deleted from database
+      const dbProduct = await prisma.product.findUnique({
         where: { id: productId }
       });
-      expect(deletedProduct).toBeNull();
+      expect(dbProduct).toBeNull();
     });
 
     it('should return 404 for non-existent product', async () => {
       const fakeId = 'non-existent-id';
-
       const response = await request(app)
         .delete(`/api/products/${fakeId}`)
         .expect(404);

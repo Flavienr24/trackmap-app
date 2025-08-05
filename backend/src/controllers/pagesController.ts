@@ -10,16 +10,16 @@ const prisma = db;
 
 /**
  * Get all pages for a specific product with optional filters
- * GET /api/products/:id/pages?instance=FR&has_events=true
+ * GET /api/products/:id/pages?has_events=true
  */
 export const getPagesByProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id: productId } = req.params;
-    const { instance, has_events } = req.query;
+    const { has_events } = req.query;
     
     logger.debug('Fetching pages for product', { 
       productId, 
-      filters: { instance, has_events },
+      filters: { has_events },
       requestId: req.ip 
     });
 
@@ -34,35 +34,10 @@ export const getPagesByProduct = async (req: Request, res: Response, next: NextF
       return next(error);
     }
 
-    // Build query filters
-    const whereClause: any = { productId };
-
-    // Filter by instance code if provided
-    if (instance && typeof instance === 'string') {
-      const instanceRecord = await prisma.instance.findFirst({
-        where: { 
-          productId,
-          code: instance 
-        }
-      });
-      
-      if (instanceRecord) {
-        whereClause.instanceId = instanceRecord.id;
-      } else {
-        // If instance code doesn't exist, return empty result
-        return res.json({
-          success: true,
-          data: [],
-          count: 0
-        });
-      }
-    }
-
-    // Fetch pages with optional event filtering
+    // Fetch pages with event filtering
     const pages = await prisma.page.findMany({
-      where: whereClause,
+      where: { productId },
       include: {
-        instance: true,
         events: true
       },
       orderBy: {
@@ -94,55 +69,6 @@ export const getPagesByProduct = async (req: Request, res: Response, next: NextF
   }
 };
 
-/**
- * Get all pages for a specific instance
- * GET /api/instances/:id/pages
- */
-export const getPagesByInstance = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id: instanceId } = req.params;
-    
-    logger.debug('Fetching pages for instance', { instanceId, requestId: req.ip });
-
-    // Verify instance exists first
-    const instance = await prisma.instance.findUnique({
-      where: { id: instanceId }
-    });
-
-    if (!instance) {
-      const error: AppError = new Error('Instance not found');
-      error.statusCode = 404;
-      return next(error);
-    }
-
-    // Fetch all pages for the instance
-    const pages = await prisma.page.findMany({
-      where: { instanceId },
-      include: {
-        instance: true,
-        events: true
-      },
-      orderBy: {
-        updatedAt: 'desc'
-      }
-    });
-
-    logger.info('Pages fetched successfully', { 
-      instanceId,
-      count: pages.length,
-      requestId: req.ip 
-    });
-
-    res.json({
-      success: true,
-      data: pages,
-      count: pages.length
-    });
-  } catch (error) {
-    logger.error('Error fetching pages', { error, instanceId: req.params.id, requestId: req.ip });
-    next(error);
-  }
-};
 
 /**
  * Create a new page for a product
@@ -151,7 +77,7 @@ export const getPagesByInstance = async (req: Request, res: Response, next: Next
 export const createPage = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id: productId } = req.params;
-    const { name, urls, instanceId } = req.body;
+    const { name, url } = req.body;
 
     // Validate required fields
     if (!name) {
@@ -160,8 +86,8 @@ export const createPage = async (req: Request, res: Response, next: NextFunction
       return next(error);
     }
 
-    if (!urls) {
-      const error: AppError = new Error('Page URLs are required');
+    if (!url) {
+      const error: AppError = new Error('Page URL is required');
       error.statusCode = 400;
       return next(error);
     }
@@ -177,23 +103,10 @@ export const createPage = async (req: Request, res: Response, next: NextFunction
       return next(error);
     }
 
-    // If instanceId provided, verify it belongs to the product
-    if (instanceId) {
-      const instance = await prisma.instance.findUnique({
-        where: { id: instanceId }
-      });
-
-      if (!instance || instance.productId !== productId) {
-        const error: AppError = new Error('Instance not found or does not belong to this product');
-        error.statusCode = 400;
-        return next(error);
-      }
-    }
-
     logger.debug('Creating new page', { 
       productId,
-      instanceId,
       name,
+      url,
       requestId: req.ip 
     });
 
@@ -201,13 +114,11 @@ export const createPage = async (req: Request, res: Response, next: NextFunction
     const page = await prisma.page.create({
       data: {
         productId,
-        instanceId: instanceId || null,
         name,
-        urls: typeof urls === 'string' ? urls : JSON.stringify(urls)
+        url
       },
       include: {
         product: true,
-        instance: true,
         events: true
       }
     });
@@ -243,7 +154,6 @@ export const getPageById = async (req: Request, res: Response, next: NextFunctio
       where: { id },
       include: {
         product: true,
-        instance: true,
         events: true
       }
     });
@@ -254,12 +164,6 @@ export const getPageById = async (req: Request, res: Response, next: NextFunctio
       return next(error);
     }
 
-    // Parse URLs if stored as JSON string
-    const pageData = {
-      ...page,
-      urls: typeof page.urls === 'string' ? JSON.parse(page.urls) : page.urls
-    };
-
     logger.info('Page fetched successfully', { 
       pageId: id,
       pageName: page.name,
@@ -268,7 +172,7 @@ export const getPageById = async (req: Request, res: Response, next: NextFunctio
 
     res.json({
       success: true,
-      data: pageData
+      data: page
     });
   } catch (error) {
     logger.error('Error fetching page', { error, pageId: req.params.id, requestId: req.ip });
@@ -283,7 +187,7 @@ export const getPageById = async (req: Request, res: Response, next: NextFunctio
 export const updatePage = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { name, urls, instanceId } = req.body;
+    const { name, url } = req.body;
 
     logger.debug('Updating page', { 
       pageId: id, 
@@ -302,32 +206,15 @@ export const updatePage = async (req: Request, res: Response, next: NextFunction
       return next(error);
     }
 
-    // If instanceId provided, verify it exists and belongs to the same product
-    if (instanceId !== undefined) {
-      if (instanceId) {
-        const instance = await prisma.instance.findUnique({
-          where: { id: instanceId }
-        });
-
-        if (!instance || instance.productId !== existingPage.productId) {
-          const error: AppError = new Error('Instance not found or does not belong to this product');
-          error.statusCode = 400;
-          return next(error);
-        }
-      }
-    }
-
     // Update page
     const page = await prisma.page.update({
       where: { id },
       data: {
         ...(name !== undefined && { name }),
-        ...(urls !== undefined && { urls: typeof urls === 'string' ? urls : JSON.stringify(urls) }),
-        ...(instanceId !== undefined && { instanceId: instanceId || null })
+        ...(url !== undefined && { url })
       },
       include: {
         product: true,
-        instance: true,
         events: true
       }
     });
