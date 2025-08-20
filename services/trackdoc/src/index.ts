@@ -1,4 +1,4 @@
-// Main application entry point
+// TrackDoc API - Documentation service entry point
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -19,7 +19,7 @@ dotenv.config();
 
 // Initialize Express app and configuration
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3002;
 const prisma = new PrismaClient();
 
 // Security and parsing middleware
@@ -45,7 +45,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    service: 'trackmap-backend'
+    service: 'trackdoc-api'
   });
 });
 
@@ -69,12 +69,12 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// API routes
-app.use('/api/products', productsRoutes);
-app.use('/api/pages', pagesRoutes);
-app.use('/api/events', eventsRoutes);
-app.use('/api/variables', variablesRoutes);
-app.use('/api/suggested-values', suggestedValuesRoutes);
+// TrackDoc API routes - Documentation CRUD operations
+app.use('/api/doc/products', productsRoutes);
+app.use('/api/doc/pages', pagesRoutes);
+app.use('/api/doc/events', eventsRoutes);
+app.use('/api/doc/variables', variablesRoutes);
+app.use('/api/doc/suggested-values', suggestedValuesRoutes);
 
 // Error handling middleware (must be last)
 app.use(notFoundHandler); // 404 handler

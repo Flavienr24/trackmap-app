@@ -1,7 +1,7 @@
 {
-  "name": "trackmap-backend",
+  "name": "@trackmap/trackdoc",
   "version": "1.0.0",
-  "description": "Backend API for TrackMap application",
+  "description": "TrackDoc API - Documentation service for GA4 tracking plans",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

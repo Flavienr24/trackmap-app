@@ -1,0 +1,40 @@
+{
+  "name": "trackmap-app",
+  "version": "1.0.0",
+  "description": "TrackMap Application - Documentation and audit tools for GA4 tracking",
+  "private": true,
+  "workspaces": [
+    "services/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:trackdoc\" \"npm run dev:bff\" \"npm run dev:trackmapi\"",
+    "dev:trackdoc": "cd services/trackdoc && npm run dev",
+    "dev:bff": "cd services/bff && npm run dev",
+    "dev:trackmapi": "cd services/trackmapi && npm run dev",
+    "build": "npm run build:trackdoc && npm run build:bff",
+    "build:trackdoc": "cd services/trackdoc && npm run build",
+    "build:bff": "cd services/bff && npm run build",
+    "test": "npm run test:trackdoc && npm run test:bff && npm run test:trackmapi",
+    "test:trackdoc": "cd services/trackdoc && npm test",
+    "test:bff": "cd services/bff && npm test",
+    "test:trackmapi": "cd services/trackmapi && npm test",
+    "install:all": "npm install && cd services/trackdoc && npm install && cd ../bff && npm install && cd ../trackmapi && npm install",
+    "clean": "rm -rf services/*/node_modules services/*/dist node_modules",
+    "db:generate": "cd services/trackdoc && npm run db:generate",
+    "db:push": "cd services/trackdoc && npm run db:push",
+    "db:migrate": "cd services/trackdoc && npm run db:migrate",
+    "db:studio": "cd services/trackdoc && npm run db:studio"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "tracking",
+    "GA4",
+    "documentation",
+    "audit",
+    "analytics"
+  ],
+  "author": "Flavien",
+  "license": "ISC"
+}
