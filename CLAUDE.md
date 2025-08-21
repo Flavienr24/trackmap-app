@@ -180,7 +180,6 @@ Le projet doit pousser sur github dans le repo flavienr24/trackmap-app
   - **Toute modification de code après setup initial** : Obligatoire de créer une nouvelle branche
   - **Format des branches** : `feature/nom-feature`, `fix/nom-bug`, `setup/nom-config`, `refactor/nom-refactor`
   - **Aucun développement direct sur master** après la phase d'initialisation du projet
-  - **Pull Request obligatoire** pour merger vers master
 - **Minimiser les lignes de code** : Privilégier la modification du code existant vs réécriture complète
 - **Code modulaire et factorisé** : Éviter la dette technique, fichiers avec peu de lignes
 - **Supprimer le code obsolète** : Éliminer définitivement les fichiers/lignes non utilisés

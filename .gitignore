@@ -71,7 +71,7 @@ Thumbs.db
 *.sqlite3
 
 # Prisma
-backend/prisma/migrations/
+services/trackdoc/prisma/migrations/
 
 # Frontend specific
 frontend/dist/
