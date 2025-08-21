@@ -1,0 +1,8 @@
+# This directory is obsolete
+# All backend code has been moved to services/trackdoc/
+# This file exists only to prevent VS Code TypeScript errors
+
+# Ignore everything in this directory
+*
+# But keep this .gitignore file
+!.gitignore
