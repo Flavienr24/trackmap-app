@@ -2,6 +2,25 @@
 
 Ce fichier fournit les instructions contextuelles pour Claude Code lors du développement de l'application web TrackMap.
 
+## Règles 
+
+Le projet doit pousser sur github dans le repo flavienr24/trackmap-app
+
+- **Demander confirmation avant de coder** : Toujours valider l'approche avant implémentation
+- **Gestion des branches Git stricte** :
+  - **Setup initial du projet** : Autorisé sur master (structure, package.json, config de base, README, .gitignore)
+  - **Toute modification de code après setup initial** : Obligatoire de créer une nouvelle branche. Cette création de branche doit toujours être la première tâche de ta todo
+  - **Format des branches** : `feature/nom-feature`, `fix/nom-bug`, `setup/nom-config`, `refactor/nom-refactor`
+  - **Aucun développement direct sur master** après la phase d'initialisation du projet
+- **Minimiser les lignes de code** : Privilégier la modification du code existant vs réécriture complète
+- **Code modulaire et factorisé** : Éviter la dette technique, fichiers avec peu de lignes
+- **Supprimer le code obsolète** : Éliminer définitivement les fichiers/lignes non utilisés
+- **Validation d'architecture** : Ne pas ajouter fichiers/dossiers sans validation
+- **Coder directement dans le repo** : Pas d'artefacts, modifications directes des fichiers
+- **Documenter le code** : Le code doit être suffisamment documenter pour être compréhensible. Ajouter des commentaires en anglais à chaque fois que c'est nécessaire.
+- **Tests obligatoires** : Demander si des tests sont nécessaires avant implémentation
+- **Push master** : Pousser le code sur la branche principale une fois que tous les tests auront été fait et que je t'aurais donné l'autorisation
+
 ## Contexte du Projet
 
 **TrackMap** est un outil permettant d'auditer, documenter et collaborer sur les plans de tracking GA4 personnalisés. Il remplace les fichiers Excel manuels par une interface web modulaire pour une meilleure collaboration entre équipes produit, data, QA et développeurs.
@@ -170,30 +189,6 @@ Produit (standalone, pas d'instances)
 - `GET /api/products/:id/stats?timeframe=30d` - Stats avec filtres
 
 ## Règles de Développement
-
-Le projet doit pousser sur github dans le repo flavienr24/trackmap-app
-
-### MUST (Obligatoire)
-- **Demander confirmation avant de coder** : Toujours valider l'approche avant implémentation
-- **Gestion des branches Git stricte** :
-  - **Setup initial du projet** : Autorisé sur master (structure, package.json, config de base, README, .gitignore)
-  - **Toute modification de code après setup initial** : Obligatoire de créer une nouvelle branche
-  - **Format des branches** : `feature/nom-feature`, `fix/nom-bug`, `setup/nom-config`, `refactor/nom-refactor`
-  - **Aucun développement direct sur master** après la phase d'initialisation du projet
-- **Minimiser les lignes de code** : Privilégier la modification du code existant vs réécriture complète
-- **Code modulaire et factorisé** : Éviter la dette technique, fichiers avec peu de lignes
-- **Supprimer le code obsolète** : Éliminer définitivement les fichiers/lignes non utilisés
-- **Validation d'architecture** : Ne pas ajouter fichiers/dossiers sans validation
-- **Coder directement dans le repo** : Pas d'artefacts, modifications directes des fichiers
-- **Documenter le code** : Le code doit être suffisamment documenter pour être compréhensible. Ajouter des commentaires en anglais à chaque fois que c'est nécessaire.
-- **Tests obligatoires** : Demander si des tests sont nécessaires avant implémentation
-- **Push master** : Pousser le code sur la branche principale une fois que tous les tests auront été fait et que je t'aurais donné l'autorisation
-
-### SHOULD (Fortement Recommandé)
-- **Interface simple d'abord** : Backend-first avec interfaces CRUD basiques, puis polish UX
-- **Transitions d'états libres** : Permettre passage libre entre to_implement, to_test, error, validated
-- **Historique séparé des commentaires** : Tracer modifications champs + changements état à part
-- **Vue tableau principale** : Commencer par vue tableau avec filtres/recherche
 
 ### Workflow de Développement
 1. **Phase 1** : API + modèles de données + interfaces CRUD basiques
