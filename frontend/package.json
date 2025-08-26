@@ -2,6 +2,7 @@
   "name": "trackmap-frontend",
   "version": "1.0.0",
   "description": "Frontend React app for TrackMap application",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -16,6 +17,7 @@
     "react-router-dom": "^6.20.1"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.12",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
@@ -24,6 +26,7 @@
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "tailwindcss": "^4.1.12",
     "typescript": "^5.2.2",
     "vite": "^5.0.8"
   }
