@@ -80,3 +80,6 @@ frontend/.vite/
 # Logs
 logs/
 *.log
+
+# Internal Documentation (Sensitive Information)
+INTERNAL_DOCS.md

@@ -15,7 +15,7 @@ export const config = {
     },
     // TrackAudit integration
     trackaudit: {
-      baseUrl: process.env.TRACKAUDIT_URL || 'http://localhost:3000',
+      baseUrl: process.env.TRACKAUDIT_URL || 'http://localhost:3003',
       timeout: parseInt(process.env.TRACKAUDIT_TIMEOUT || '10000'),
     }
   },

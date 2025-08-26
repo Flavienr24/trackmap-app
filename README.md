@@ -1,169 +1,52 @@
 # TrackMap Application
 
-TrackMap est un outil permettant d'auditer, documenter et collaborer sur les plans de tracking GA4 personnalisés. Il remplace les fichiers Excel manuels par une solution collaborative moderne utilisant une architecture microservices optimisée.
+TrackMap est un outil de collaboration pour documenter et gérer les plans de tracking analytics. Il permet aux équipes produit, data et développement de travailler ensemble sur la stratégie de mesure.
 
-## Architecture BFF (Backend For Frontend)
+## 🚀 Installation
 
-L'application utilise une architecture microservices avec un pattern BFF pour optimiser les performances et la maintenabilité :
-
-```
-┌─────────────────┐
-│   Frontend      │  Client React (Port 3000)
-│   (TrackMap)    │  
-└─────────┬───────┘
-          │
-┌─────────▼───────┐
-│      BFF        │  🆕 Backend For Frontend (Port 3001)
-│                 │  • Endpoints UX-optimisés
-│                 │  • Agrégation de données  
-│ /api/bff/...    │  • Business logic
-└─────────┬───────┘
-          │
-┌─────────▼───────┐
-│   TrackDoc      │  📝 API Documentation (Port 3002)
-│                 │  • Pure CRUD operations
-│                 │  • Data persistence
-│ /api/doc/...    │  • Basic validation
-└─────────────────┘
-```
-
-## Services
-
-### 🎯 BFF (Backend For Frontend)
-**Port 3001** - Optimisé pour les besoins du frontend
-- `/api/bff/dashboard` - Données agrégées pour tableau de bord
-- `/api/bff/dashboard/products/:id/overview` - Vue complète produit
-- `/api/bff/dashboard/stats/summary` - Statistiques résumées
-- `/health` - Health check avec dépendances
-
-### 📝 TrackDoc API  
-**Port 3002** - API de documentation pure
-- `/api/doc/products` - CRUD Products
-- `/api/doc/pages` - CRUD Pages  
-- `/api/doc/events` - CRUD Events
-- `/api/doc/variables` - CRUD Variables Library
-- `/api/doc/suggested-values` - CRUD Suggested Values
-
-## Installation & Développement
-
-### Prérequis
-- Node.js 18+
-- PostgreSQL
-- npm
-
-### Installation Complète
 ```bash
-# Installation des dépendances (workspace)
-npm run install:all
+# Installation des dépendances
+npm install
 
-# Démarrage des services en parallèle
+# Démarrage en mode développement
 npm run dev
-# Ou individuellement:
-npm run dev:trackdoc  # Port 3002
-npm run dev:bff       # Port 3001
+
+# Build pour production
+npm run build
+
+# Démarrage en production
+npm start
 ```
 
-### Configuration Base de Données
-```bash
-# TrackDoc service
-cd services/trackdoc
-cp .env.example .env
-# Configurer DATABASE_URL dans .env
-npm run db:push
-npm run db:migrate
-```
+## 📋 Scripts disponibles
 
-## Scripts Disponibles
+- `npm run dev` - Mode développement avec hot reload
+- `npm start` - Mode production  
+- `npm run frontend` - Interface utilisateur uniquement
+- `npm run backend` - Services backend uniquement
+- `npm run build` - Build de production
+- `npm test` - Tests
 
-### Root (Workspace)
-- `npm run dev` - Démarre tous les services
-- `npm run build` - Build tous les services
-- `npm run test` - Tests de tous les services
-- `npm run install:all` - Installation complète
+## 🛠️ Développement
 
-### TrackDoc Service
-- `npm run dev` - Serveur TrackDoc (port 3002)
-- `npm run build` - Build production
-- `npm run test` - Tests unitaires
-- `npm run db:*` - Commandes Prisma
+Le projet utilise une architecture moderne avec React et Node.js. Les services démarrent automatiquement avec `npm run dev`.
 
-### BFF Service  
-- `npm run dev` - Serveur BFF (port 3001)
-- `npm run build` - Build production
-- `npm run test` - Tests unitaires
+## 🤝 Contribution
 
-## Endpoints Principaux
+1. Fork le projet
+2. Créer une branche feature (`git checkout -b feature/nouvelle-fonctionnalite`)
+3. Commit les changements (`git commit -am 'Ajout nouvelle fonctionnalité'`)
+4. Push vers la branche (`git push origin feature/nouvelle-fonctionnalite`)
+5. Ouvrir une Pull Request
 
-### BFF (Optimisés Frontend)
-```bash
-# Dashboard principal
-GET /api/bff/dashboard
+## 📄 License
 
-# Vue produit complète
-GET /api/bff/dashboard/products/:id/overview
+ISC License - voir le fichier LICENSE pour plus de détails.
 
-# Stats rapides
-GET /api/bff/dashboard/stats/summary
+## 👨‍💻 Auteur
 
-# Health check
-GET /health
-```
+Flavien - [GitHub](https://github.com/flavienr24)
 
-### TrackDoc (CRUD Pure)
-```bash
-# Products
-GET|POST /api/doc/products
-GET|PUT|DELETE /api/doc/products/:id
+---
 
-# Pages
-GET|POST /api/doc/products/:id/pages
-GET|PUT|DELETE /api/doc/pages/:id
-
-# Events
-GET|POST /api/doc/pages/:id/events
-GET|PUT|DELETE /api/doc/events/:id
-```
-
-## Tests
-
-```bash
-# Tous les tests
-npm test
-
-# Tests par service
-npm run test:trackdoc
-npm run test:bff
-
-# Tests avec coverage
-npm run test:trackdoc -- --coverage
-```
-
-## Avantages de l'Architecture BFF
-
-✅ **Performance** : Données pré-agrégées, moins de requêtes frontend
-✅ **UX** : Endpoints optimisés pour chaque écran  
-✅ **Évolutivité** : Services indépendants, déploiements séparés
-✅ **Intégration** : Prêt pour TrackAudit (audit temps réel)
-✅ **Maintenance** : Responsabilités claires, code modulaire
-
-## Structure des Données
-
-Hiérarchie : **Product** → **Page** → **Event**
-Plus **Variables Library** et **Suggested Values** partagées.
-
-Voir `CLAUDE.md` pour la spécification complète.
-
-## Future : Integration TrackAudit
-
-Le BFF est conçu pour intégrer facilement TrackAudit (audit temps réel) :
-- Comparaison plan documenté vs audit réel
-- Health score basé sur conformité  
-- Détection automatique d'events non documentés
-
-## Contribution
-
-1. Créer une branche `feature/nom-feature`
-2. Développer et tester
-3. Pull request vers master
-
-**Architecture validée et tests passants** ✅
+**Note:** Ce README contient uniquement les informations publiques. La documentation technique détaillée est disponible en interne.

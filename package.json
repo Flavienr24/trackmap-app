@@ -4,29 +4,21 @@
   "description": "TrackMap Application - Documentation and audit tools for GA4 tracking",
   "private": true,
   "workspaces": [
-    "services/*"
+    "services/*",
+    "frontend"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:trackdoc\" \"npm run dev:bff\" \"npm run dev:trackaudit\"",
-    "dev:trackdoc": "cd services/trackdoc && npm run dev",
-    "dev:bff": "cd services/bff && npm run dev",
-    "dev:trackaudit": "cd services/trackaudit && npm run dev",
-    "build": "npm run build:trackdoc && npm run build:bff",
-    "build:trackdoc": "cd services/trackdoc && npm run build",
-    "build:bff": "cd services/bff && npm run build",
-    "test": "npm run test:trackdoc && npm run test:bff && npm run test:trackaudit",
-    "test:trackdoc": "cd services/trackdoc && npm test",
-    "test:bff": "cd services/bff && npm test",
-    "test:trackaudit": "cd services/trackaudit && npm test",
-    "install:all": "npm install && cd services/trackdoc && npm install && cd ../bff && npm install && cd ../trackaudit && npm install",
-    "clean": "rm -rf services/*/node_modules services/*/dist node_modules",
-    "db:generate": "cd services/trackdoc && npm run db:generate",
-    "db:push": "cd services/trackdoc && npm run db:push",
-    "db:migrate": "cd services/trackdoc && npm run db:migrate",
-    "db:studio": "cd services/trackdoc && npm run db:studio"
+    "start": "concurrently \"npm run start -w frontend\" \"npm run start -w bff\" \"npm run start -w trackdoc\" \"npm run start -w trackaudit\"",
+    "dev": "concurrently \"npm run frontend\" \"npm run backend\"",
+    "frontend": "cd frontend && npm run dev",
+    "backend": "concurrently \"cd services/bff && npm run dev\" \"cd services/trackdoc && npm run dev\" \"cd services/trackaudit && npm run dev\"",
+    "build": "npm run build -w frontend && npm run build -w bff && npm run build -w trackdoc",
+    "test": "npm test -w bff && npm test -w trackdoc && npm test -w trackaudit"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^8.2.2",
+    "postcss": "^8.5.6"
   },
   "keywords": [
     "tracking",
@@ -36,5 +28,9 @@
     "analytics"
   ],
   "author": "Flavien",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.12",
+    "tailwindcss": "^4.1.12"
+  }
 }

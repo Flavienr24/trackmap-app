@@ -7,6 +7,7 @@ Ce fichier fournit les instructions contextuelles pour Claude Code lors du déve
 Le projet doit pousser sur github dans le repo flavienr24/trackmap-app
 
 - **Demander confirmation avant de coder** : Toujours valider l'approche avant implémentation
+- **README public et sécurisé** : Le README.md est public sur GitHub et ne doit JAMAIS contenir d'informations sensibles (architecture interne, ports, APIs, stack technique détaillée, logique métier). Seules les informations générales sont autorisées. Toute documentation technique sensible doit aller dans INTERNAL_DOCS.md (gitignored)
 - **Gestion des branches Git stricte** :
   - **Setup initial du projet** : Autorisé sur master (structure, package.json, config de base, README, .gitignore)
   - **Toute modification de code après setup initial** : Obligatoire de créer une nouvelle branche. Cette création de branche doit toujours être la première tâche de ta todo
