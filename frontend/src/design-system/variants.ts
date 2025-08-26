@@ -17,9 +17,9 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary: [
-          'bg-primary-500 text-white border border-transparent',
-          'hover:bg-primary-600 focus:ring-primary-500',
-          'active:bg-primary-700',
+          'bg-blue-600 text-white border border-transparent',
+          'hover:bg-blue-700 focus:ring-blue-500',
+          'active:bg-blue-800',
         ],
         secondary: [
           'bg-neutral-100 text-neutral-900 border border-neutral-300',
@@ -27,9 +27,9 @@ export const buttonVariants = cva(
           'active:bg-neutral-300',
         ],
         outline: [
-          'bg-transparent text-primary-600 border border-primary-300',
-          'hover:bg-primary-50 hover:border-primary-400 focus:ring-primary-500',
-          'active:bg-primary-100',
+          'bg-transparent text-blue-600 border border-blue-300',
+          'hover:bg-blue-50 hover:border-blue-400 focus:ring-blue-500',
+          'active:bg-blue-100',
         ],
         ghost: [
           'bg-transparent text-neutral-600 border border-transparent',
@@ -37,14 +37,14 @@ export const buttonVariants = cva(
           'active:bg-neutral-200',
         ],
         danger: [
-          'bg-error text-white border border-transparent',
-          'hover:bg-error-dark focus:ring-error',
-          'active:bg-red-700',
+          'bg-red-600 text-white border border-transparent',
+          'hover:bg-red-700 focus:ring-red-500',
+          'active:bg-red-800',
         ],
         success: [
-          'bg-success text-white border border-transparent',
-          'hover:bg-success-dark focus:ring-success',
-          'active:bg-green-700',
+          'bg-green-600 text-white border border-transparent',
+          'hover:bg-green-700 focus:ring-green-500',
+          'active:bg-green-800',
         ],
       },
       size: {
