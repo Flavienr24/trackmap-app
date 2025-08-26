@@ -1,7 +1,7 @@
 // Dashboard Controller - BFF endpoints optimized for UI
 import { Request, Response, NextFunction } from 'express';
 import { dashboardService } from '../services/dashboardService';
-import { trackmapiClient } from '../services/trackmapiClient';
+import { trackauditClient } from '../services/trackauditClient';
 import logger from '../config/logger';
 import { ApiResponse } from '../types';
 
@@ -89,9 +89,9 @@ export class DashboardController {
     try {
       // Check dependencies
       const trackdocClient = await import('../services/trackdocClient');
-      const [trackdocHealth, trackmapiHealth] = await Promise.all([
+      const [trackdocHealth, trackauditHealth] = await Promise.all([
         trackdocClient.trackdocClient.healthCheck(),
-        trackmapiClient.healthCheck()
+        trackauditClient.healthCheck()
       ]);
 
       const health = {
@@ -100,12 +100,12 @@ export class DashboardController {
         timestamp: new Date().toISOString(),
         dependencies: {
           trackdoc: trackdocHealth ? 'healthy' : 'unhealthy',
-          trackmapi: trackmapiHealth ? 'healthy' : 'unhealthy'
+          trackaudit: trackauditHealth ? 'healthy' : 'unhealthy'
         },
         version: '1.0.0'
       };
 
-      const httpStatus = (trackdocHealth && trackmapiHealth) ? 200 : 503;
+      const httpStatus = (trackdocHealth && trackauditHealth) ? 200 : 503;
 
       res.status(httpStatus).json(health);
     } catch (error) {

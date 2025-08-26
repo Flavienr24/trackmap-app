@@ -11,7 +11,7 @@ import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import dashboardRoutes from './routes/dashboard';
 import { trackdocClient } from './services/trackdocClient';
-import { trackmapiClient } from './services/trackmapiClient';
+import { trackauditClient } from './services/trackauditClient';
 
 // Load environment variables
 dotenv.config();
@@ -40,12 +40,12 @@ app.use(morgan('combined', {
 // Basic health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    const [trackdocHealth, trackmapiHealth] = await Promise.all([
+    const [trackdocHealth, trackauditHealth] = await Promise.all([
       trackdocClient.healthCheck(),
-      trackmapiClient.healthCheck()
+      trackauditClient.healthCheck()
     ]);
     
-    const allHealthy = trackdocHealth && trackmapiHealth;
+    const allHealthy = trackdocHealth && trackauditHealth;
     
     res.status(allHealthy ? 200 : 503).json({ 
       status: allHealthy ? 'OK' : 'DEGRADED', 
@@ -53,7 +53,7 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       dependencies: {
         trackdoc: trackdocHealth ? 'healthy' : 'unhealthy',
-        trackmapi: trackmapiHealth ? 'healthy' : 'unhealthy'
+        trackaudit: trackauditHealth ? 'healthy' : 'unhealthy'
       },
       version: '1.0.0'
     });
@@ -86,9 +86,9 @@ app.use(errorHandler); // Global error handler
 const startServer = async () => {
   try {
     // Check services availability
-    const [trackdocHealthy, trackmapiHealthy] = await Promise.all([
+    const [trackdocHealthy, trackauditHealthy] = await Promise.all([
       trackdocClient.healthCheck(),
-      trackmapiClient.healthCheck()
+      trackauditClient.healthCheck()
     ]);
     
     if (!trackdocHealthy) {
@@ -101,13 +101,13 @@ const startServer = async () => {
       });
     }
 
-    if (!trackmapiHealthy) {
-      logger.warn('TrackmAPI service is not available - starting BFF anyway', {
-        trackmapiUrl: config.services.trackmapi.baseUrl
+    if (!trackauditHealthy) {
+      logger.warn('TrackAudit service is not available - starting BFF anyway', {
+        trackauditUrl: config.services.trackaudit.baseUrl
       });
     } else {
-      logger.info('TrackmAPI service is healthy', {
-        trackmapiUrl: config.services.trackmapi.baseUrl
+      logger.info('TrackAudit service is healthy', {
+        trackauditUrl: config.services.trackaudit.baseUrl
       });
     }
     

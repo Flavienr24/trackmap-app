@@ -312,7 +312,7 @@ Les variables peuvent avoir des **valeurs statiques** ou **contextuelles** :
 ## Références Architecture
 
 Ce projet fait partie de l'écosystème TrackMap avec :
-- **TrackmAPI** : Backend audit (Users/flavien/Code/trackmapi)
+- **TrackAudit** : Backend audit (Users/flavien/Code/trackaudit)
 - **Web App** : Interface documentation (ce projet)
 - **Extension Chrome** : Interface audit embarquée (futur)
 

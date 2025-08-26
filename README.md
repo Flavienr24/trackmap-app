@@ -143,7 +143,7 @@ npm run test:trackdoc -- --coverage
 ✅ **Performance** : Données pré-agrégées, moins de requêtes frontend
 ✅ **UX** : Endpoints optimisés pour chaque écran  
 ✅ **Évolutivité** : Services indépendants, déploiements séparés
-✅ **Intégration** : Prêt pour TrackmAPI (audit temps réel)
+✅ **Intégration** : Prêt pour TrackAudit (audit temps réel)
 ✅ **Maintenance** : Responsabilités claires, code modulaire
 
 ## Structure des Données
@@ -153,9 +153,9 @@ Plus **Variables Library** et **Suggested Values** partagées.
 
 Voir `CLAUDE.md` pour la spécification complète.
 
-## Future : Integration TrackmAPI
+## Future : Integration TrackAudit
 
-Le BFF est conçu pour intégrer facilement TrackmAPI (audit temps réel) :
+Le BFF est conçu pour intégrer facilement TrackAudit (audit temps réel) :
 - Comparaison plan documenté vs audit réel
 - Health score basé sur conformité  
 - Détection automatique d'events non documentés

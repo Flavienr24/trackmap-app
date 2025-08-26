@@ -1,4 +1,4 @@
-// TrackmAPI Client for audit functionality
+// TrackAudit Client for audit functionality
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import logger from '../config/logger';
 import config from '../config';
@@ -29,13 +29,13 @@ export interface AuditResults {
   filters?: any;
 }
 
-class TrackmAPIClient {
+class TrackAuditClient {
   private client: AxiosInstance;
 
   constructor() {
     this.client = axios.create({
-      baseURL: config.services.trackmapi.baseUrl,
-      timeout: config.services.trackmapi.timeout,
+      baseURL: config.services.trackaudit.baseUrl,
+      timeout: config.services.trackaudit.timeout,
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'TrackMap-BFF/1.0.0'
@@ -45,7 +45,7 @@ class TrackmAPIClient {
     // Request interceptor for logging
     this.client.interceptors.request.use(
       (config) => {
-        logger.debug('TrackmAPI Request', {
+        logger.debug('TrackAudit Request', {
           method: config.method?.toUpperCase(),
           url: config.url,
           baseURL: config.baseURL,
@@ -54,7 +54,7 @@ class TrackmAPIClient {
         return config;
       },
       (error) => {
-        logger.error('TrackmAPI Request Error', { error: error.message });
+        logger.error('TrackAudit Request Error', { error: error.message });
         return Promise.reject(error);
       }
     );
@@ -62,7 +62,7 @@ class TrackmAPIClient {
     // Response interceptor for logging and error handling
     this.client.interceptors.response.use(
       (response: AxiosResponse) => {
-        logger.debug('TrackmAPI Response', {
+        logger.debug('TrackAudit Response', {
           status: response.status,
           statusText: response.statusText,
           url: response.config.url,
@@ -79,7 +79,7 @@ class TrackmAPIClient {
           method: error.config?.method?.toUpperCase()
         };
 
-        logger.error('TrackmAPI Error', errorInfo);
+        logger.error('TrackAudit Error', errorInfo);
 
         // Transform axios errors to app errors
         const appError: AppError = new Error(this.getErrorMessage(error));
@@ -96,15 +96,15 @@ class TrackmAPIClient {
       return error.response.data.message;
     }
     if (error.code === 'ECONNREFUSED') {
-      return 'TrackmAPI service is unavailable';
+      return 'TrackAudit service is unavailable';
     }
     if (error.code === 'ENOTFOUND') {
-      return 'TrackmAPI service not found';
+      return 'TrackAudit service not found';
     }
     if (error.code === 'ETIMEDOUT') {
-      return 'TrackmAPI service timeout';
+      return 'TrackAudit service timeout';
     }
-    return error.message || 'Unknown TrackmAPI service error';
+    return error.message || 'Unknown TrackAudit service error';
   }
 
   // Health check
@@ -113,7 +113,7 @@ class TrackmAPIClient {
       await this.client.get('/health');
       return true;
     } catch (error) {
-      logger.warn('TrackmAPI health check failed', { error: (error as Error).message });
+      logger.warn('TrackAudit health check failed', { error: (error as Error).message });
       return false;
     }
   }
@@ -182,5 +182,5 @@ class TrackmAPIClient {
 }
 
 // Singleton instance
-export const trackmapiClient = new TrackmAPIClient();
-export default trackmapiClient;
+export const trackauditClient = new TrackAuditClient();
+export default trackauditClient;

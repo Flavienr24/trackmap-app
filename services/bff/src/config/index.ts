@@ -13,10 +13,10 @@ export const config = {
       baseUrl: process.env.TRACKDOC_URL || 'http://localhost:3002',
       timeout: parseInt(process.env.TRACKDOC_TIMEOUT || '5000'),
     },
-    // TrackmAPI integration
-    trackmapi: {
-      baseUrl: process.env.TRACKMAPI_URL || 'http://localhost:3000',
-      timeout: parseInt(process.env.TRACKMAPI_TIMEOUT || '10000'),
+    // TrackAudit integration
+    trackaudit: {
+      baseUrl: process.env.TRACKAUDIT_URL || 'http://localhost:3000',
+      timeout: parseInt(process.env.TRACKAUDIT_TIMEOUT || '10000'),
     }
   },
 
