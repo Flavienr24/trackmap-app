@@ -3,10 +3,12 @@ import { Modal } from './Modal'
 import { Button } from '@/components/atoms/Button'
 import { Badge } from '@/components/atoms/Badge'
 import { FormField } from '@/components/molecules/FormField'
+import { EventVariablesInput } from '@/components/organisms/EventVariablesInput'
 import type { CreateEventRequest, EventStatus } from '@/types'
 
 interface CreateEventModalProps {
   isOpen: boolean
+  productId: string
   onClose: () => void
   onSubmit: (data: CreateEventRequest) => Promise<void>
   loading?: boolean
@@ -14,6 +16,7 @@ interface CreateEventModalProps {
 
 const CreateEventModal: React.FC<CreateEventModalProps> = ({
   isOpen,
+  productId,
   onClose,
   onSubmit,
   loading = false
@@ -23,8 +26,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     status: 'to_implement',
     variables: {}
   })
-  const [errors, setErrors] = useState<Partial<CreateEventRequest>>({})
-  const [variablesJson, setVariablesJson] = useState('{}')
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const eventStatuses: { value: EventStatus; label: string }[] = [
     { value: 'to_implement', label: 'À implémenter' },
@@ -41,33 +43,19 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     }
   }
 
-  const handleVariablesChange = (value: string) => {
-    setVariablesJson(value)
-    
-    try {
-      const parsed = JSON.parse(value || '{}')
-      setFormData(prev => ({ ...prev, variables: parsed }))
-      // Clear variables error if JSON is valid
-      if (errors.variables) {
-        setErrors(prev => ({ ...prev, variables: undefined }))
-      }
-    } catch (error) {
-      // Don't update variables if JSON is invalid, but don't show error yet
+  const handleVariablesChange = (variables: Record<string, any>) => {
+    setFormData(prev => ({ ...prev, variables }))
+    // Clear variables error
+    if (errors.variables) {
+      setErrors(prev => ({ ...prev, variables: undefined }))
     }
   }
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<CreateEventRequest> = {}
+    const newErrors: Record<string, string> = {}
     
     if (!formData.name.trim()) {
       newErrors.name = 'Le nom de l\'event est requis'
-    }
-    
-    // Validate JSON
-    try {
-      JSON.parse(variablesJson || '{}')
-    } catch (error) {
-      newErrors.variables = 'Format JSON invalide'
     }
     
     setErrors(newErrors)
@@ -80,17 +68,14 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     if (!validateForm()) return
     
     try {
-      const variables = JSON.parse(variablesJson || '{}')
-      
       await onSubmit({
         name: formData.name.trim(),
         status: formData.status,
-        variables: Object.keys(variables).length > 0 ? variables : undefined
+        variables: Object.keys(formData.variables || {}).length > 0 ? formData.variables : undefined
       })
       
       // Reset form
       setFormData({ name: '', status: 'to_implement', variables: {} })
-      setVariablesJson('{}')
       setErrors({})
       onClose()
     } catch (error) {
@@ -100,7 +85,6 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
   const handleClose = () => {
     setFormData({ name: '', status: 'to_implement', variables: {} })
-    setVariablesJson('{}')
     setErrors({})
     onClose()
   }
@@ -190,24 +174,13 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
           </div>
         </FormField>
 
-        <FormField
-          label="Variables (JSON)"
+        <EventVariablesInput
+          productId={productId}
+          value={formData.variables || {}}
+          onChange={handleVariablesChange}
+          disabled={loading}
           error={errors.variables}
-          hint="Variables de l'événement au format JSON. Laisser vide pour aucune variable."
-        >
-          <textarea
-            value={variablesJson}
-            onChange={(e) => handleVariablesChange(e.target.value)}
-            placeholder={`{
-  "page_name": "homepage",
-  "page_category": "landing",
-  "user_id": "$user-id"
-}`}
-            rows={6}
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm resize-none"
-            disabled={loading}
-          />
-        </FormField>
+        />
       </form>
     </Modal>
   )

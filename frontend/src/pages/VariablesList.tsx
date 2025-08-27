@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, Navigate, Link } from 'react-router-dom'
+import { useParams, Navigate, Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
 import { BackLink } from '@/components/atoms/BackLink'
@@ -16,6 +16,7 @@ import type { Variable, CreateVariableRequest, UpdateVariableRequest } from '@/t
  */
 const VariablesList: React.FC = () => {
   const { productId } = useParams<{ productId: string }>()
+  const navigate = useNavigate()
   const [variables, setVariables] = useState<Variable[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -229,12 +230,20 @@ const VariablesList: React.FC = () => {
             Variables de "{product.name}" • {variables.length} variable{variables.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <Button variant="primary" onClick={handleCreateVariable}>
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Créer une variable
-        </Button>
+        <div className="flex items-center space-x-3">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate(`/products/${productId}/suggested-values`)}
+          >
+            Valeurs suggérées
+          </Button>
+          <Button variant="primary" onClick={handleCreateVariable}>
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Créer une variable
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}

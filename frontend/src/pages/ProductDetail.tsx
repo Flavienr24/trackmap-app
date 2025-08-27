@@ -254,6 +254,9 @@ const ProductDetail: React.FC = () => {
             <Button variant="secondary" onClick={() => navigate(`/products/${id}/variables`)}>
               Gérer les variables
             </Button>
+            <Button variant="secondary" onClick={() => navigate(`/products/${id}/suggested-values`)}>
+              Valeurs suggérées
+            </Button>
             <Button onClick={handleCreatePage}>
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

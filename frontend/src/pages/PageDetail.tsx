@@ -7,6 +7,7 @@ import { DataTable, type Column, type Action } from '@/components/organisms/Data
 import { CreateEventModal } from '@/components/organisms/CreateEventModal'
 import { EditEventModal } from '@/components/organisms/EditEventModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
+import { EventDetailModal } from '@/components/organisms/EventDetailModal'
 import { mockData } from '@/services/api'
 import type { Page, Event, Product, EventStatus, CreateEventRequest, UpdateEventRequest, UpdatePageRequest } from '@/types'
 
@@ -29,6 +30,7 @@ const PageDetail: React.FC = () => {
   const [showAllEventsPreview, setShowAllEventsPreview] = useState(false)
   const [showEditPageModal, setShowEditPageModal] = useState(false)
   const [editPageLoading, setEditPageLoading] = useState(false)
+  const [detailEvent, setDetailEvent] = useState<Event | null>(null)
 
   useEffect(() => {
     if (id) {
@@ -234,6 +236,11 @@ const PageDetail: React.FC = () => {
   // Events table actions with status updates
   const actions: Action<Event>[] = [
     {
+      label: 'Voir détails',
+      onClick: (event: Event) => setDetailEvent(event),
+      variant: 'primary',
+    },
+    {
       label: 'Modifier',
       onClick: handleEditEvent,
       variant: 'secondary',
@@ -414,6 +421,7 @@ const PageDetail: React.FC = () => {
       {/* Create Event Modal */}
       <CreateEventModal
         isOpen={showCreateEventModal}
+        productId={product?.id || ''}
         onClose={() => setShowCreateEventModal(false)}
         onSubmit={handleCreateEventSubmit}
         loading={createEventLoading}
@@ -435,6 +443,17 @@ const PageDetail: React.FC = () => {
         onClose={() => setShowEditPageModal(false)}
         onSubmit={handleEditPageSubmit}
         loading={editPageLoading}
+      />
+
+      {/* Event Detail Modal */}
+      <EventDetailModal
+        isOpen={!!detailEvent}
+        event={detailEvent}
+        onClose={() => setDetailEvent(null)}
+        onEdit={(event) => {
+          setDetailEvent(null)
+          setEditEvent(event)
+        }}
       />
     </div>
   )
