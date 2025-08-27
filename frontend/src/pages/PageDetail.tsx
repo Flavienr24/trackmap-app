@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/atoms/Button'
 import { Badge } from '@/components/atoms/Badge'
+import { BackLink } from '@/components/atoms/BackLink'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreateEventModal } from '@/components/organisms/CreateEventModal'
 import { EditEventModal } from '@/components/organisms/EditEventModal'
@@ -252,14 +253,17 @@ const PageDetail: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb */}
-      <nav className="flex items-center space-x-2 text-sm text-neutral-600">
-        <Link to="/products" className="hover:text-neutral-900">Produits</Link>
-        <span>›</span>
-        <Link to={`/products/${product.id}`} className="hover:text-neutral-900">{product.name}</Link>
-        <span>›</span>
-        <span className="text-neutral-900 font-medium">{page.name}</span>
-      </nav>
+      {/* Navigation */}
+      <div className="flex items-center justify-between">
+        <BackLink to={`/products/${product.id}`}>Retour</BackLink>
+        <nav className="flex items-center space-x-2 text-sm text-neutral-600">
+          <Link to="/products" className="hover:text-neutral-900">Produits</Link>
+          <span>›</span>
+          <Link to={`/products/${product.id}`} className="hover:text-neutral-900">{product.name}</Link>
+          <span>›</span>
+          <span className="text-neutral-900 font-medium">{page.name}</span>
+        </nav>
+      </div>
 
       {/* Page Header */}
       <div className="bg-white rounded-lg border border-neutral-200 p-6">
@@ -400,13 +404,8 @@ const PageDetail: React.FC = () => {
         </div>
       )}
 
-      {/* Quick Actions */}
-      <div className="flex justify-between items-center pt-4">
-        <Link to={`/products/${product.id}`}>
-          <Button variant="outline">
-            ← Retour au produit
-          </Button>
-        </Link>
+      {/* Page Info */}
+      <div className="flex justify-end pt-4">
         <div className="text-sm text-neutral-500">
           Page créée le {new Date(page.created_at).toLocaleDateString('fr-FR')}
         </div>

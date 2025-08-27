@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/atoms/Button'
 import { Badge } from '@/components/atoms/Badge'
+import { BackLink } from '@/components/atoms/BackLink'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreatePageModal } from '@/components/organisms/CreatePageModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
@@ -212,12 +213,15 @@ const ProductDetail: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb */}
-      <nav className="flex items-center space-x-2 text-sm text-neutral-600">
-        <Link to="/products" className="hover:text-neutral-900">Produits</Link>
-        <span>›</span>
-        <span className="text-neutral-900 font-medium">{product.name}</span>
-      </nav>
+      {/* Navigation */}
+      <div className="flex items-center justify-between">
+        <BackLink to="/products">Retour</BackLink>
+        <nav className="flex items-center space-x-2 text-sm text-neutral-600">
+          <Link to="/products" className="hover:text-neutral-900">Produits</Link>
+          <span>›</span>
+          <span className="text-neutral-900 font-medium">{product.name}</span>
+        </nav>
+      </div>
 
       {/* Product Header */}
       <div className="bg-white rounded-lg border border-neutral-200 p-6">
@@ -301,13 +305,8 @@ const ProductDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="flex justify-between items-center pt-4">
-        <Link to="/products">
-          <Button variant="outline">
-            ← Retour aux produits
-          </Button>
-        </Link>
+      {/* Product Info */}
+      <div className="flex justify-end pt-4">
         <div className="text-sm text-neutral-500">
           Produit créé le {new Date(product.created_at).toLocaleDateString('fr-FR')}
         </div>
