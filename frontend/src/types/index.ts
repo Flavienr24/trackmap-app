@@ -81,6 +81,45 @@ export interface SuggestedValue {
 }
 
 /**
+ * Variable Value Model (Junction table)
+ */
+export interface VariableValue {
+  variable_id: string
+  suggested_value_id: string
+  // Relations
+  variable?: Variable
+  suggested_value?: SuggestedValue
+}
+
+/**
+ * Comment Model
+ */
+export interface Comment {
+  id: string
+  event_id: string
+  content: string
+  author?: string
+  created_at: string
+  // Relations
+  event?: Event
+}
+
+/**
+ * Event History Model
+ */
+export interface EventHistory {
+  id: string
+  event_id: string
+  field: string
+  old_value?: string
+  new_value?: string
+  author?: string
+  created_at: string
+  // Relations
+  event?: Event
+}
+
+/**
  * API Response Types
  */
 export interface ApiResponse<T> {
@@ -125,6 +164,38 @@ export interface UpdateEventRequest extends Partial<CreateEventRequest> {
   test_date?: string
 }
 
+export interface CreateVariableRequest {
+  name: string
+  type: VariableType
+  description?: string
+}
+
+export interface UpdateVariableRequest extends Partial<CreateVariableRequest> {}
+
+export interface CreateSuggestedValueRequest {
+  value: string
+  is_contextual?: boolean
+}
+
+export interface UpdateSuggestedValueRequest extends Partial<CreateSuggestedValueRequest> {}
+
+export interface CreateVariableValueRequest {
+  variable_id: string
+  suggested_value_id: string
+}
+
+export interface DeleteVariableValueRequest {
+  variable_id: string
+  suggested_value_id: string
+}
+
+export interface CreateCommentRequest {
+  content: string
+  author?: string
+}
+
+export interface UpdateCommentRequest extends Partial<CreateCommentRequest> {}
+
 /**
  * Filter and Search Types
  */
@@ -146,6 +217,36 @@ export interface EventsFilter {
   status?: EventStatus[]
   modified_since?: string
   sortBy?: 'name' | 'created_at' | 'updated_at'
+  sortOrder?: 'asc' | 'desc'
+}
+
+export interface VariablesFilter {
+  search?: string
+  type?: VariableType[]
+  sortBy?: 'name' | 'type' | 'created_at' | 'updated_at'
+  sortOrder?: 'asc' | 'desc'
+}
+
+export interface SuggestedValuesFilter {
+  search?: string
+  is_contextual?: boolean
+  sortBy?: 'value' | 'created_at' | 'updated_at'
+  sortOrder?: 'asc' | 'desc'
+}
+
+export interface CommentsFilter {
+  search?: string
+  author?: string
+  sortBy?: 'created_at' | 'author'
+  sortOrder?: 'asc' | 'desc'
+}
+
+export interface EventHistoryFilter {
+  field?: string
+  author?: string
+  date_from?: string
+  date_to?: string
+  sortBy?: 'created_at' | 'field' | 'author'
   sortOrder?: 'asc' | 'desc'
 }
 

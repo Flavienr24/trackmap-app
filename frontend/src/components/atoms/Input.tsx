@@ -2,7 +2,7 @@ import React from 'react'
 import { inputVariants, cn, type InputVariants } from '@/design-system'
 
 export interface InputProps 
-  extends React.InputHTMLAttributes<HTMLInputElement>,
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>,
          InputVariants {
   error?: boolean
   success?: boolean

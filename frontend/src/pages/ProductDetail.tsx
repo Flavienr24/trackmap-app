@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/atoms/Button'
-import { Badge } from '@/components/atoms/Badge'
 import { BackLink } from '@/components/atoms/BackLink'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreatePageModal } from '@/components/organisms/CreatePageModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { mockData } from '@/services/api'
-import type { Product, Page, CreatePageRequest, UpdatePageRequest } from '@/types'
+import type { Product, Page, Variable, CreatePageRequest, UpdatePageRequest } from '@/types'
 
 /**
  * Product Detail Page
@@ -19,6 +18,7 @@ const ProductDetail: React.FC = () => {
   
   const [product, setProduct] = useState<Product | null>(null)
   const [pages, setPages] = useState<Page[]>([])
+  const [variables, setVariables] = useState<Variable[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreatePageModal, setShowCreatePageModal] = useState(false)
   const [createPageLoading, setCreatePageLoading] = useState(false)
@@ -29,6 +29,7 @@ const ProductDetail: React.FC = () => {
     if (id) {
       loadProduct(id)
       loadPages(id)
+      loadVariables(id)
     }
   }, [id])
 
@@ -65,6 +66,20 @@ const ProductDetail: React.FC = () => {
     } catch (error) {
       console.error('Error loading pages:', error)
       setLoading(false)
+    }
+  }
+
+  const loadVariables = async (productId: string) => {
+    try {
+      // TODO: Replace with real API call
+      // const response = await variablesApi.getByProduct(productId)
+      // setVariables(response.data)
+      
+      // Mock data simulation
+      const mockVariables = mockData.variables.filter(v => v.product_id === productId)
+      setVariables(mockVariables)
+    } catch (error) {
+      console.error('Error loading variables:', error)
     }
   }
 
@@ -236,6 +251,9 @@ const ProductDetail: React.FC = () => {
             <Button variant="secondary" onClick={() => console.log('Edit product')}>
               Modifier le produit
             </Button>
+            <Button variant="secondary" onClick={() => navigate(`/products/${id}/variables`)}>
+              Gérer les variables
+            </Button>
             <Button onClick={handleCreatePage}>
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -246,12 +264,18 @@ const ProductDetail: React.FC = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="bg-neutral-50 rounded-lg p-4">
             <div className="text-2xl font-bold text-neutral-900">
               {product.pages_count || pages.length}
             </div>
             <div className="text-sm text-neutral-600">Pages</div>
+          </div>
+          <div className="bg-neutral-50 rounded-lg p-4">
+            <div className="text-2xl font-bold text-neutral-900">
+              {variables.length}
+            </div>
+            <div className="text-sm text-neutral-600">Variables</div>
           </div>
           <div className="bg-neutral-50 rounded-lg p-4">
             <div className="text-2xl font-bold text-neutral-900">
@@ -304,6 +328,7 @@ const ProductDetail: React.FC = () => {
           />
         </div>
       </div>
+
 
       {/* Product Info */}
       <div className="flex justify-end pt-4">
