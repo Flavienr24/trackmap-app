@@ -3,7 +3,7 @@ import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
 import { FormField } from '@/components/molecules/FormField'
 import { CreateVariableModal } from '@/components/organisms/CreateVariableModal'
-import { mockData } from '@/services/api'
+// import { mockData } from '@/services/api' // Removed - using real API
 import type { Variable, SuggestedValue, CreateVariableRequest } from '@/types'
 
 interface EventVariablesInputProps {
@@ -142,7 +142,7 @@ const EventVariablesInput: React.FC<EventVariablesInputProps> = ({
     }
     
     // Get associated suggested values for this variable
-    const variableValueAssociations = mockData.variableValues.filter(vv => vv.variable_id === variable.id)
+    const variableValueAssociations = []
     const associatedSuggestedValues = variableValueAssociations
       .map(vv => suggestedValues.find(sv => sv.id === vv.suggested_value_id))
       .filter(Boolean) as SuggestedValue[]

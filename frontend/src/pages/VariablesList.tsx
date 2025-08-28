@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, Navigate, Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
@@ -6,8 +6,8 @@ import { BackLink } from '@/components/atoms/BackLink'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreateVariableModal } from '@/components/organisms/CreateVariableModal'
 import { EditVariableModal } from '@/components/organisms/EditVariableModal'
-import { mockData } from '@/services/api'
-import type { Variable, CreateVariableRequest, UpdateVariableRequest } from '@/types'
+import { variablesApi, productsApi } from '@/services/api'
+import type { Variable, Product, CreateVariableRequest, UpdateVariableRequest } from '@/types'
 
 /**
  * Variables List Page
@@ -18,6 +18,7 @@ const VariablesList: React.FC = () => {
   const { productId } = useParams<{ productId: string }>()
   const navigate = useNavigate()
   const [variables, setVariables] = useState<Variable[]>([])
+  const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -25,37 +26,46 @@ const VariablesList: React.FC = () => {
   const [editVariable, setEditVariable] = useState<Variable | null>(null)
   const [editLoading, setEditLoading] = useState(false)
 
-  // Find the product to display its name
-  const product = mockData.products.find(p => p.id === productId)
-
-  // Redirect if product not found
-  if (!product) {
+  // Redirect if no productId
+  if (!productId) {
     return <Navigate to="/products" replace />
   }
 
-  // Load variables on component mount
-  useEffect(() => {
-    loadVariables()
-  }, [productId])
-
-  const loadVariables = async () => {
-    setLoading(true)
+  const loadProduct = useCallback(async () => {
     try {
-      // TODO: Replace with real API call
-      // const response = await variablesApi.getByProduct(productId!)
-      // setVariables(response.data)
-      
-      // Mock data simulation
-      setTimeout(() => {
-        const productVariables = mockData.variables.filter(v => v.product_id === productId)
-        setVariables(productVariables)
-        setLoading(false)
-      }, 300)
+      const response = await productsApi.getById(productId!)
+      setProduct(response.data)
+    } catch (error) {
+      console.error('Error loading product:', error)
+      navigate('/products', { replace: true })
+    }
+  }, [productId, navigate])
+
+  const loadVariables = useCallback(async () => {
+    try {
+      const response = await variablesApi.getByProduct(productId!)
+      setVariables(response.data)
     } catch (error) {
       console.error('Error loading variables:', error)
+    }
+  }, [productId])
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    try {
+      await Promise.all([
+        loadProduct(),
+        loadVariables()
+      ])
+    } finally {
       setLoading(false)
     }
-  }
+  }, [loadProduct, loadVariables])
+
+  // Load data on component mount
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   const handleCreateVariable = () => {
     setShowCreateModal(true)
@@ -64,25 +74,9 @@ const VariablesList: React.FC = () => {
   const handleCreateSubmit = async (data: CreateVariableRequest) => {
     setCreateLoading(true)
     try {
-      // TODO: Replace with real API call
-      // const response = await variablesApi.create(productId!, data)
-      
-      // Mock data simulation
-      const newVariable: Variable = {
-        id: String(Date.now()) + '-' + Math.random().toString(36).slice(2),
-        product_id: productId!,
-        name: data.name,
-        type: data.type,
-        description: data.description,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
-      
-      // Add to global mockData and reload
-      mockData.variables.unshift(newVariable)
-      const productVariables = mockData.variables.filter(v => v.product_id === productId)
-      setVariables(productVariables)
-      console.log('Variable created:', newVariable)
+      const response = await variablesApi.create(productId!, data)
+      console.log('Variable created:', response.data)
+      await loadVariables() // Reload the list
     } catch (error) {
       console.error('Error creating variable:', error)
       throw error
@@ -98,18 +92,9 @@ const VariablesList: React.FC = () => {
   const handleEditSubmit = async (id: string, data: UpdateVariableRequest) => {
     setEditLoading(true)
     try {
-      // TODO: Replace with real API call
-      // const response = await variablesApi.update(id, data)
-      
-      // Update in global mockData and reload
-      const updatedVariable = { ...data, updated_at: new Date().toISOString() }
-      const index = mockData.variables.findIndex(v => v.id === id)
-      if (index !== -1) {
-        mockData.variables[index] = { ...mockData.variables[index], ...updatedVariable }
-      }
-      const productVariables = mockData.variables.filter(v => v.product_id === productId)
-      setVariables(productVariables)
-      console.log('Variable updated:', { id, ...data })
+      const response = await variablesApi.update(id, data)
+      console.log('Variable updated:', response.data)
+      await loadVariables() // Reload the list
     } catch (error) {
       console.error('Error updating variable:', error)
       throw error
@@ -122,17 +107,9 @@ const VariablesList: React.FC = () => {
     console.log('handleDeleteVariable called for:', variable.name)
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer la variable "${variable.name}" ?`)) {
       try {
-        // TODO: Replace with real API call
-        // await variablesApi.delete(variable.id)
-        
-        // Remove from global mockData and reload
-        const index = mockData.variables.findIndex(v => v.id === variable.id)
-        if (index !== -1) {
-          mockData.variables.splice(index, 1)
-        }
-        const productVariables = mockData.variables.filter(v => v.product_id === productId)
-        setVariables(productVariables)
+        await variablesApi.delete(variable.id)
         console.log('Variable deleted:', variable)
+        await loadVariables() // Reload the list
       } catch (error) {
         console.error('Error deleting variable:', error)
       }
@@ -214,7 +191,7 @@ const VariablesList: React.FC = () => {
         <nav className="flex items-center space-x-2 text-sm text-neutral-600">
           <Link to="/products" className="hover:text-neutral-900">Produits</Link>
           <span>›</span>
-          <Link to={`/products/${productId}`} className="hover:text-neutral-900">{product.name}</Link>
+          <Link to={`/products/${productId}`} className="hover:text-neutral-900">{product?.name || 'Chargement...'}</Link>
           <span>›</span>
           <span className="text-neutral-900 font-medium">Variables</span>
         </nav>
@@ -227,7 +204,7 @@ const VariablesList: React.FC = () => {
             Variables Library
           </h1>
           <p className="text-neutral-600 mt-1">
-            Variables de "{product.name}" • {variables.length} variable{variables.length !== 1 ? 's' : ''}
+            Variables de "{product?.name || 'Chargement...'}" • {variables.length} variable{variables.length !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex items-center space-x-3">

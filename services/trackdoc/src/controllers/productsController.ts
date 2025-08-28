@@ -32,16 +32,28 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
       }
     });
 
+    // Add computed fields for each product
+    const enrichedProducts = products.map(product => {
+      const totalEvents = product.pages.reduce((acc, page) => acc + page.events.length, 0);
+      
+      return {
+        ...product,
+        pages_count: product.pages.length,
+        events_count: totalEvents,
+        health_score: totalEvents > 0 ? Math.round((product.pages.length * 20) + (totalEvents * 10)) : 0
+      };
+    });
+
     logger.info('Products fetched successfully', { 
-      count: products.length,
+      count: enrichedProducts.length,
       requestId: req.ip 
     });
 
     // Return standardized API response
     res.json({
       success: true,
-      data: products,
-      count: products.length
+      data: enrichedProducts,
+      count: enrichedProducts.length
     });
   } catch (error) {
     logger.error('Error fetching products', { error, requestId: req.ip });

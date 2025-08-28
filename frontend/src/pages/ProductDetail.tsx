@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/atoms/Button'
 import { BackLink } from '@/components/atoms/BackLink'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreatePageModal } from '@/components/organisms/CreatePageModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
-import { mockData } from '@/services/api'
+import { productsApi, pagesApi, variablesApi } from '@/services/api'
 import type { Product, Page, Variable, CreatePageRequest, UpdatePageRequest } from '@/types'
 
 /**
@@ -25,63 +25,52 @@ const ProductDetail: React.FC = () => {
   const [editPage, setEditPage] = useState<Page | null>(null)
   const [editPageLoading, setEditPageLoading] = useState(false)
 
-  useEffect(() => {
-    if (id) {
-      loadProduct(id)
-      loadPages(id)
-      loadVariables(id)
-    }
-  }, [id])
-
-  const loadProduct = async (productId: string) => {
-    setLoading(true)
+  const loadProduct = useCallback(async (productId: string) => {
     try {
-      // TODO: Replace with real API call
-      // const response = await productsApi.getById(productId)
-      // setProduct(response.data)
-      
-      // Mock data simulation
-      const mockProduct = mockData.products.find(p => p.id === productId)
-      if (mockProduct) {
-        setProduct(mockProduct)
-      } else {
-        navigate('/products', { replace: true })
-      }
+      const response = await productsApi.getById(productId)
+      setProduct(response.data)
     } catch (error) {
       console.error('Error loading product:', error)
       navigate('/products', { replace: true })
     }
-  }
+  }, [navigate])
 
-  const loadPages = async (productId: string) => {
+  const loadPages = useCallback(async (productId: string) => {
     try {
-      // TODO: Replace with real API call
-      // const response = await pagesApi.getByProduct(productId)
-      // setPages(response.data)
-      
-      // Mock data simulation
-      const mockPages = mockData.pages.filter(p => p.product_id === productId)
-      setPages(mockPages)
-      setLoading(false)
+      const response = await pagesApi.getByProduct(productId)
+      setPages(response.data)
     } catch (error) {
       console.error('Error loading pages:', error)
-      setLoading(false)
     }
-  }
+  }, [])
 
-  const loadVariables = async (productId: string) => {
+  const loadVariables = useCallback(async (productId: string) => {
     try {
-      // TODO: Replace with real API call
-      // const response = await variablesApi.getByProduct(productId)
-      // setVariables(response.data)
-      
-      // Mock data simulation
-      const mockVariables = mockData.variables.filter(v => v.product_id === productId)
-      setVariables(mockVariables)
+      const response = await variablesApi.getByProduct(productId)
+      setVariables(response.data)
     } catch (error) {
       console.error('Error loading variables:', error)
     }
-  }
+  }, [])
+  
+  const loadData = useCallback(async (productId: string) => {
+    setLoading(true)
+    try {
+      await Promise.all([
+        loadProduct(productId),
+        loadPages(productId),
+        loadVariables(productId)
+      ])
+    } finally {
+      setLoading(false)
+    }
+  }, [loadProduct, loadPages, loadVariables])
+
+  useEffect(() => {
+    if (id) {
+      loadData(id)
+    }
+  }, [id, loadData])
 
   const handleCreatePage = () => {
     setShowCreatePageModal(true)
@@ -92,23 +81,9 @@ const ProductDetail: React.FC = () => {
     
     setCreatePageLoading(true)
     try {
-      // TODO: Replace with real API call
-      // const response = await pagesApi.create(id, data)
-      
-      // Mock data simulation
-      const newPage: Page = {
-        id: String(Date.now()),
-        product_id: id,
-        name: data.name,
-        url: data.url,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        events_count: 0
-      }
-      
-      setPages(prev => [newPage, ...prev])
-      mockData.pages.push(newPage)
-      console.log('Page created:', newPage)
+      const response = await pagesApi.create(id, data)
+      console.log('Page created:', response.data)
+      await loadPages(id) // Reload the list
     } catch (error) {
       console.error('Error creating page:', error)
       throw error
@@ -121,19 +96,12 @@ const ProductDetail: React.FC = () => {
     setEditPage(page)
   }
 
-  const handleEditPageSubmit = async (id: string, data: UpdatePageRequest) => {
+  const handleEditPageSubmit = async (pageId: string, data: UpdatePageRequest) => {
     setEditPageLoading(true)
     try {
-      // Update in global mockData and reload
-      const updatedPage = { ...data, updated_at: new Date().toISOString() }
-      const index = mockData.pages.findIndex(p => p.id === id)
-      if (index !== -1) {
-        mockData.pages[index] = { ...mockData.pages[index], ...updatedPage }
-      }
-      // Reload pages from mockData
-      const updatedPages = mockData.pages.filter(p => p.product_id === product?.id)
-      setPages(updatedPages)
-      console.log('Page updated:', { id, ...data })
+      const response = await pagesApi.update(pageId, data)
+      console.log('Page updated:', response.data)
+      await loadPages(id!) // Reload the list
     } catch (error) {
       console.error('Error updating page:', error)
       throw error
@@ -145,16 +113,9 @@ const ProductDetail: React.FC = () => {
   const handleDeletePage = async (page: Page) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer la page "${page.name}" ?`)) {
       try {
-        // TODO: Replace with real API call
-        // await pagesApi.delete(page.id)
-        
-        // Mock data simulation
-        setPages(prev => prev.filter(p => p.id !== page.id))
-        const index = mockData.pages.findIndex(p => p.id === page.id)
-        if (index !== -1) {
-          mockData.pages.splice(index, 1)
-        }
+        await pagesApi.delete(page.id)
         console.log('Page deleted:', page)
+        await loadPages(id!) // Reload the list
       } catch (error) {
         console.error('Error deleting page:', error)
       }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, Navigate, Link } from 'react-router-dom'
 import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
@@ -6,8 +6,8 @@ import { BackLink } from '@/components/atoms/BackLink'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreateSuggestedValueModal } from '@/components/organisms/CreateSuggestedValueModal'
 import { EditSuggestedValueModal } from '@/components/organisms/EditSuggestedValueModal'
-import { mockData } from '@/services/api'
-import type { SuggestedValue, CreateSuggestedValueRequest, UpdateSuggestedValueRequest } from '@/types'
+import { suggestedValuesApi, productsApi } from '@/services/api'
+import type { SuggestedValue, Product, CreateSuggestedValueRequest, UpdateSuggestedValueRequest } from '@/types'
 
 /**
  * Suggested Values List Page
@@ -17,6 +17,7 @@ import type { SuggestedValue, CreateSuggestedValueRequest, UpdateSuggestedValueR
 const SuggestedValuesList: React.FC = () => {
   const { productId } = useParams<{ productId: string }>()
   const [suggestedValues, setSuggestedValues] = useState<SuggestedValue[]>([])
+  const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -24,37 +25,45 @@ const SuggestedValuesList: React.FC = () => {
   const [editSuggestedValue, setEditSuggestedValue] = useState<SuggestedValue | null>(null)
   const [editLoading, setEditLoading] = useState(false)
 
-  // Find the product to display its name
-  const product = mockData.products.find(p => p.id === productId)
-
-  // Redirect if product not found
-  if (!product) {
+  // Redirect if no productId
+  if (!productId) {
     return <Navigate to="/products" replace />
   }
 
-  // Load suggested values on component mount
-  useEffect(() => {
-    loadSuggestedValues()
+  const loadProduct = useCallback(async () => {
+    try {
+      const response = await productsApi.getById(productId!)
+      setProduct(response.data)
+    } catch (error) {
+      console.error('Error loading product:', error)
+    }
   }, [productId])
 
-  const loadSuggestedValues = async () => {
-    setLoading(true)
+  const loadSuggestedValues = useCallback(async () => {
     try {
-      // TODO: Replace with real API call
-      // const response = await suggestedValuesApi.getByProduct(productId!)
-      // setSuggestedValues(response.data)
-      
-      // Mock data simulation
-      setTimeout(() => {
-        const productSuggestedValues = mockData.suggestedValues.filter(sv => sv.product_id === productId)
-        setSuggestedValues(productSuggestedValues)
-        setLoading(false)
-      }, 300)
+      const response = await suggestedValuesApi.getByProduct(productId!)
+      setSuggestedValues(response.data)
     } catch (error) {
       console.error('Error loading suggested values:', error)
+    }
+  }, [productId])
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    try {
+      await Promise.all([
+        loadProduct(),
+        loadSuggestedValues()
+      ])
+    } finally {
       setLoading(false)
     }
-  }
+  }, [loadProduct, loadSuggestedValues])
+
+  // Load data on component mount
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   const handleCreateSuggestedValue = () => {
     setShowCreateModal(true)
@@ -63,24 +72,9 @@ const SuggestedValuesList: React.FC = () => {
   const handleCreateSubmit = async (data: CreateSuggestedValueRequest) => {
     setCreateLoading(true)
     try {
-      // TODO: Replace with real API call
-      // const response = await suggestedValuesApi.create(productId!, data)
-      
-      // Mock data simulation
-      const newSuggestedValue: SuggestedValue = {
-        id: String(Date.now()) + '-' + Math.random().toString(36).slice(2),
-        product_id: productId!,
-        value: data.value,
-        is_contextual: data.is_contextual || false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
-      
-      // Add to global mockData and reload
-      mockData.suggestedValues.unshift(newSuggestedValue)
-      const productSuggestedValues = mockData.suggestedValues.filter(sv => sv.product_id === productId)
-      setSuggestedValues(productSuggestedValues)
-      console.log('Suggested value created:', newSuggestedValue)
+      const response = await suggestedValuesApi.create(productId!, data)
+      console.log('Suggested value created:', response.data)
+      await loadSuggestedValues() // Reload the list
     } catch (error) {
       console.error('Error creating suggested value:', error)
       throw error
@@ -96,18 +90,9 @@ const SuggestedValuesList: React.FC = () => {
   const handleEditSubmit = async (id: string, data: UpdateSuggestedValueRequest) => {
     setEditLoading(true)
     try {
-      // TODO: Replace with real API call
-      // const response = await suggestedValuesApi.update(id, data)
-      
-      // Update in global mockData and reload
-      const updatedSuggestedValue = { ...data, updated_at: new Date().toISOString() }
-      const index = mockData.suggestedValues.findIndex(sv => sv.id === id)
-      if (index !== -1) {
-        mockData.suggestedValues[index] = { ...mockData.suggestedValues[index], ...updatedSuggestedValue }
-      }
-      const productSuggestedValues = mockData.suggestedValues.filter(sv => sv.product_id === productId)
-      setSuggestedValues(productSuggestedValues)
-      console.log('Suggested value updated:', { id, ...data })
+      const response = await suggestedValuesApi.update(id, data)
+      console.log('Suggested value updated:', response.data)
+      await loadSuggestedValues() // Reload the list
     } catch (error) {
       console.error('Error updating suggested value:', error)
       throw error
@@ -120,17 +105,9 @@ const SuggestedValuesList: React.FC = () => {
     console.log('handleDeleteSuggestedValue called for:', suggestedValue.value)
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer la valeur "${suggestedValue.value}" ?`)) {
       try {
-        // TODO: Replace with real API call
-        // await suggestedValuesApi.delete(suggestedValue.id)
-        
-        // Remove from global mockData and reload
-        const index = mockData.suggestedValues.findIndex(sv => sv.id === suggestedValue.id)
-        if (index !== -1) {
-          mockData.suggestedValues.splice(index, 1)
-        }
-        const productSuggestedValues = mockData.suggestedValues.filter(sv => sv.product_id === productId)
-        setSuggestedValues(productSuggestedValues)
+        await suggestedValuesApi.delete(suggestedValue.id)
         console.log('Suggested value deleted:', suggestedValue)
+        await loadSuggestedValues() // Reload the list
       } catch (error) {
         console.error('Error deleting suggested value:', error)
       }
@@ -212,7 +189,7 @@ const SuggestedValuesList: React.FC = () => {
         <nav className="flex items-center space-x-2 text-sm text-neutral-600">
           <Link to="/products" className="hover:text-neutral-900">Produits</Link>
           <span>›</span>
-          <Link to={`/products/${productId}`} className="hover:text-neutral-900">{product.name}</Link>
+          <Link to={`/products/${productId}`} className="hover:text-neutral-900">{product?.name || 'Chargement...'}</Link>
           <span>›</span>
           <Link to={`/products/${productId}/variables`} className="hover:text-neutral-900">Variables</Link>
           <span>›</span>
@@ -227,7 +204,7 @@ const SuggestedValuesList: React.FC = () => {
             Valeurs suggérées
           </h1>
           <p className="text-neutral-600 mt-1">
-            Valeurs réutilisables pour "{product.name}" • {suggestedValues.length} valeur{suggestedValues.length !== 1 ? 's' : ''}
+            Valeurs réutilisables pour "{product?.name || 'Chargement...'}" • {suggestedValues.length} valeur{suggestedValues.length !== 1 ? 's' : ''}
           </p>
         </div>
         <Button variant="primary" onClick={handleCreateSuggestedValue}>

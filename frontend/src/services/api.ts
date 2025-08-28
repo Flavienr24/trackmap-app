@@ -41,6 +41,45 @@ import type {
 const API_BASE_URL = '/api'
 
 /**
+ * Transform API response data from camelCase to snake_case
+ * Maps backend field names to frontend interface expectations
+ */
+function transformApiData(data: any): any {
+  if (!data) return data
+  
+  if (Array.isArray(data)) {
+    return data.map(item => transformApiData(item))
+  }
+  
+  if (typeof data === 'object') {
+    const transformed: any = {}
+    
+    for (const [key, value] of Object.entries(data)) {
+      let newKey = key
+      
+      // Transform common field mappings
+      if (key === 'createdAt') newKey = 'created_at'
+      if (key === 'updatedAt') newKey = 'updated_at'
+      if (key === 'productId') newKey = 'product_id'
+      if (key === 'pageId') newKey = 'page_id'
+      if (key === 'eventId') newKey = 'event_id'
+      if (key === 'variableId') newKey = 'variable_id'
+      if (key === 'suggestedValueId') newKey = 'suggested_value_id'
+      if (key === 'testDate') newKey = 'test_date'
+      if (key === 'isContextual') newKey = 'is_contextual'
+      if (key === 'oldValue') newKey = 'old_value'
+      if (key === 'newValue') newKey = 'new_value'
+      
+      transformed[newKey] = transformApiData(value)
+    }
+    
+    return transformed
+  }
+  
+  return data
+}
+
+/**
  * Generic API request handler with error handling
  */
 async function apiRequest<T>(
@@ -65,7 +104,16 @@ async function apiRequest<T>(
       throw new Error(`API Error: ${response.status} - ${error}`)
     }
     
-    return await response.json()
+    const jsonData = await response.json()
+    
+    // Transform the response data to match frontend interfaces
+    if (jsonData.data) {
+      jsonData.data = transformApiData(jsonData.data)
+    } else {
+      return transformApiData(jsonData)
+    }
+    
+    return jsonData
   } catch (error) {
     console.error(`API request failed: ${endpoint}`, error)
     throw error
@@ -320,263 +368,3 @@ export const eventHistoryApi = {
     apiRequest(`/event-history/${id}`),
 }
 
-/**
- * Mock data for development
- * TODO: Remove when backend is ready
- */
-export const mockData = {
-  products: [
-    {
-      id: '1',
-      name: 'MyServier',
-      description: 'Content hub for health care professionals',
-      created_at: '2024-01-15T10:00:00Z',
-      updated_at: '2024-01-20T14:30:00Z',
-      pages_count: 8,
-      events_count: 24,
-      health_score: 85,
-    },
-    {
-      id: '2', 
-      name: 'My Health Partner',
-      description: 'Content hub for patients and care givers',
-      created_at: '2024-01-10T09:00:00Z',
-      updated_at: '2024-01-25T16:45:00Z',
-      pages_count: 12,
-      events_count: 18,
-      health_score: 72,
-    },
-  ] as Product[],
-
-  pages: [
-    {
-      id: '1',
-      product_id: '1',
-      name: 'Homepage',
-      url: 'https://mysiervier.pt/',
-      created_at: '2024-01-15T10:30:00Z',
-      updated_at: '2024-01-20T11:00:00Z',
-      events_count: 5,
-    },
-    {
-      id: '2',
-      product_id: '1',
-      name: 'Events',
-      url: 'https://mysiervier.pt/events/*',
-      created_at: '2024-01-15T11:00:00Z',
-      updated_at: '2024-01-22T09:15:00Z',
-      events_count: 8,
-    },
-  ] as Page[],
-
-  events: [
-    {
-      id: '1',
-      page_id: '1',
-      name: 'page_view',
-      status: 'validated' as const,
-      variables: {
-        page_name: 'homepage',
-        page_category: 'landing'
-      },
-      created_at: '2024-01-15T10:45:00Z',
-      updated_at: '2024-01-18T14:20:00Z',
-    },
-    {
-      id: '2',
-      page_id: '1',
-      name: 'button_click',
-      status: 'to_test' as const,
-      variables: {
-        button_name: 'cta_signup',
-        button_location: 'hero'
-      },
-      created_at: '2024-01-16T09:30:00Z',
-      updated_at: '2024-01-19T16:10:00Z',
-    },
-  ] as Event[],
-
-  variables: [
-    {
-      id: '1',
-      product_id: '1',
-      name: 'page_name',
-      type: 'string' as const,
-      description: 'Nom de la page visitée',
-      created_at: '2024-01-15T10:00:00Z',
-      updated_at: '2024-01-15T10:00:00Z',
-    },
-    {
-      id: '2',
-      product_id: '1',
-      name: 'user_id',
-      type: 'string' as const,
-      description: 'Identifiant unique de l\'utilisateur',
-      created_at: '2024-01-15T10:15:00Z',
-      updated_at: '2024-01-15T10:15:00Z',
-    },
-    {
-      id: '3',
-      product_id: '1',
-      name: 'transaction_value',
-      type: 'number' as const,
-      description: 'Montant de la transaction',
-      created_at: '2024-01-15T10:30:00Z',
-      updated_at: '2024-01-15T10:30:00Z',
-    },
-    {
-      id: '4',
-      product_id: '2',
-      name: 'lead_score',
-      type: 'number' as const,
-      description: 'Score de qualification du lead',
-      created_at: '2024-01-10T09:30:00Z',
-      updated_at: '2024-01-10T09:30:00Z',
-    },
-  ] as Variable[],
-
-  suggestedValues: [
-    {
-      id: '1',
-      product_id: '1',
-      value: 'homepage',
-      is_contextual: false,
-      created_at: '2024-01-15T10:00:00Z',
-      updated_at: '2024-01-15T10:00:00Z',
-    },
-    {
-      id: '2',
-      product_id: '1',
-      value: 'checkout',
-      is_contextual: false,
-      created_at: '2024-01-15T10:05:00Z',
-      updated_at: '2024-01-15T10:05:00Z',
-    },
-    {
-      id: '3',
-      product_id: '1',
-      value: '$page-name',
-      is_contextual: true,
-      created_at: '2024-01-15T10:10:00Z',
-      updated_at: '2024-01-15T10:10:00Z',
-    },
-    {
-      id: '4',
-      product_id: '1',
-      value: '$user-id',
-      is_contextual: true,
-      created_at: '2024-01-15T10:15:00Z',
-      updated_at: '2024-01-15T10:15:00Z',
-    },
-    {
-      id: '5',
-      product_id: '2',
-      value: 'lead-form',
-      is_contextual: false,
-      created_at: '2024-01-10T09:00:00Z',
-      updated_at: '2024-01-10T09:00:00Z',
-    },
-    {
-      id: '6',
-      product_id: '2',
-      value: '$campaign-id',
-      is_contextual: true,
-      created_at: '2024-01-10T09:05:00Z',
-      updated_at: '2024-01-10T09:05:00Z',
-    },
-  ] as SuggestedValue[],
-
-  variableValues: [
-    // page_name variable can use these values
-    { variable_id: '1', suggested_value_id: '1' }, // homepage
-    { variable_id: '1', suggested_value_id: '2' }, // checkout
-    { variable_id: '1', suggested_value_id: '3' }, // $page-name
-    
-    // user_id variable can use these values
-    { variable_id: '2', suggested_value_id: '4' }, // $user-id
-    
-    // transaction_value variable (number type)
-    // No associations yet
-    
-    // lead_score for product 2
-    { variable_id: '4', suggested_value_id: '6' }, // $campaign-id
-  ] as VariableValue[],
-
-  comments: [
-    {
-      id: '1',
-      event_id: '1',
-      content: 'Ce pageview fonctionne parfaitement sur toutes les pages du site.',
-      author: 'Marie Dupont',
-      created_at: '2024-01-16T14:30:00Z',
-    },
-    {
-      id: '2',
-      event_id: '1',
-      content: 'Attention: vérifier que la variable page_name est bien renseignée sur les pages dynamiques.',
-      author: 'Jean Martin',
-      created_at: '2024-01-17T09:15:00Z',
-    },
-    {
-      id: '3',
-      event_id: '2',
-      content: 'Le tracking du bouton CTA nécessite des tests complémentaires sur mobile.',
-      author: 'Sophie Laurent',
-      created_at: '2024-01-18T16:45:00Z',
-    },
-    {
-      id: '4',
-      event_id: '2',
-      content: 'Tests validés sur Chrome et Firefox, reste Safari à vérifier.',
-      created_at: '2024-01-19T11:20:00Z',
-    },
-  ] as Comment[],
-
-  eventHistory: [
-    {
-      id: '1',
-      event_id: '1',
-      field: 'status',
-      old_value: 'to_implement',
-      new_value: 'to_test',
-      author: 'Jean Martin',
-      created_at: '2024-01-17T08:30:00Z',
-    },
-    {
-      id: '2',
-      event_id: '1',
-      field: 'status',
-      old_value: 'to_test',
-      new_value: 'validated',
-      author: 'Marie Dupont',
-      created_at: '2024-01-18T14:15:00Z',
-    },
-    {
-      id: '3',
-      event_id: '2',
-      field: 'status',
-      old_value: 'to_implement',
-      new_value: 'to_test',
-      author: 'Sophie Laurent',
-      created_at: '2024-01-18T10:45:00Z',
-    },
-    {
-      id: '4',
-      event_id: '2',
-      field: 'variables',
-      old_value: '{"button_name": "cta_signup"}',
-      new_value: '{"button_name": "cta_signup", "button_location": "hero"}',
-      author: 'Jean Martin',
-      created_at: '2024-01-19T16:20:00Z',
-    },
-    {
-      id: '5',
-      event_id: '1',
-      field: 'test_date',
-      old_value: null,
-      new_value: '2024-01-18',
-      author: 'Marie Dupont',
-      created_at: '2024-01-18T14:16:00Z',
-    },
-  ] as EventHistory[],
-}

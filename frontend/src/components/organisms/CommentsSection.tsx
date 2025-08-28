@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
 import { FormField } from '@/components/molecules/FormField'
-import { mockData } from '@/services/api'
+// import { mockData } from '@/services/api' // Removed - using real API
 import type { Comment, CreateCommentRequest } from '@/types'
 
 interface CommentsSectionProps {

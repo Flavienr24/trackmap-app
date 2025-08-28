@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { mockData } from '@/services/api'
+// import { mockData } from '@/services/api' // Removed - using real API
 import type { EventHistory } from '@/types'
 
 interface EventHistorySectionProps {

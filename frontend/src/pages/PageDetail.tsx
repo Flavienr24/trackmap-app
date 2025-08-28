@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/atoms/Button'
 import { Badge } from '@/components/atoms/Badge'
@@ -8,7 +8,7 @@ import { CreateEventModal } from '@/components/organisms/CreateEventModal'
 import { EditEventModal } from '@/components/organisms/EditEventModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { EventDetailModal } from '@/components/organisms/EventDetailModal'
-import { mockData } from '@/services/api'
+import { pagesApi, eventsApi } from '@/services/api'
 import type { Page, Event, Product, EventStatus, CreateEventRequest, UpdateEventRequest, UpdatePageRequest } from '@/types'
 
 /**
@@ -32,51 +32,44 @@ const PageDetail: React.FC = () => {
   const [editPageLoading, setEditPageLoading] = useState(false)
   const [detailEvent, setDetailEvent] = useState<Event | null>(null)
 
-  useEffect(() => {
-    if (id) {
-      loadPage(id)
-      loadEvents(id)
-    }
-  }, [id])
-
-  const loadPage = async (pageId: string) => {
-    setLoading(true)
+  const loadPage = useCallback(async (pageId: string) => {
     try {
-      // TODO: Replace with real API call
-      // const response = await pagesApi.getById(pageId)
-      // setPage(response.data)
-      
-      // Mock data simulation
-      const mockPage = mockData.pages.find(p => p.id === pageId)
-      if (mockPage) {
-        setPage(mockPage)
-        // Load associated product
-        const mockProduct = mockData.products.find(p => p.id === mockPage.product_id)
-        setProduct(mockProduct || null)
-      } else {
-        navigate('/products', { replace: true })
-      }
+      const response = await pagesApi.getById(pageId)
+      setPage(response.data)
+      // Product info is included in the page response
+      setProduct(response.data.product || null)
     } catch (error) {
       console.error('Error loading page:', error)
       navigate('/products', { replace: true })
     }
-  }
+  }, [navigate])
 
-  const loadEvents = async (pageId: string) => {
+  const loadEvents = useCallback(async (pageId: string) => {
     try {
-      // TODO: Replace with real API call
-      // const response = await eventsApi.getByPage(pageId)
-      // setEvents(response.data)
-      
-      // Mock data simulation
-      const mockEvents = mockData.events.filter(e => e.page_id === pageId)
-      setEvents(mockEvents)
-      setLoading(false)
+      const response = await eventsApi.getByPage(pageId)
+      setEvents(response.data)
     } catch (error) {
       console.error('Error loading events:', error)
+    }
+  }, [])
+
+  const loadData = useCallback(async (pageId: string) => {
+    setLoading(true)
+    try {
+      await Promise.all([
+        loadPage(pageId),
+        loadEvents(pageId)
+      ])
+    } finally {
       setLoading(false)
     }
-  }
+  }, [loadPage, loadEvents])
+
+  useEffect(() => {
+    if (id) {
+      loadData(id)
+    }
+  }, [id, loadData])
 
   const handleCreateEvent = () => {
     setShowCreateEventModal(true)
@@ -123,10 +116,10 @@ const PageDetail: React.FC = () => {
       const updatedEvent = { ...data, updated_at: new Date().toISOString() }
       const index = mockData.events.findIndex(e => e.id === id)
       if (index !== -1) {
-        mockData.events[index] = { ...mockData.events[index], ...updatedEvent }
+        [].events[index], ...updatedEvent }
       }
       // Reload events from mockData
-      const updatedEvents = mockData.events.filter(e => e.page_id === page?.id)
+      const updatedEvents = []
       setEvents(updatedEvents)
       console.log('Event updated:', { id, ...data })
     } catch (error) {
@@ -144,7 +137,7 @@ const PageDetail: React.FC = () => {
       const updatedPage = { ...data, updated_at: new Date().toISOString() }
       const index = mockData.pages.findIndex(p => p.id === id)
       if (index !== -1) {
-        mockData.pages[index] = { ...mockData.pages[index], ...updatedPage }
+        [].pages[index], ...updatedPage }
         // Update local page state
         setPage({ ...mockData.pages[index] })
       }
@@ -165,7 +158,7 @@ const PageDetail: React.FC = () => {
         
         // Mock data simulation
         setEvents(prev => prev.filter(e => e.id !== event.id))
-        const index = mockData.events.findIndex(e => e.id === event.id)
+        const index = []
         if (index !== -1) {
           mockData.events.splice(index, 1)
         }
