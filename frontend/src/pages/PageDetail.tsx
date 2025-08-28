@@ -176,14 +176,6 @@ const PageDetail: React.FC = () => {
     }
   }
 
-  const handleUpdateStatus = (event: Event, newStatus: EventStatus) => {
-    console.log('Update event status:', event.id, newStatus)
-    // TODO: Implement status update
-    const updatedEvents = events.map(e => 
-      e.id === event.id ? { ...e, status: newStatus } : e
-    )
-    setEvents(updatedEvents)
-  }
 
   if (!page || !product) {
     return (
@@ -331,15 +323,15 @@ const PageDetail: React.FC = () => {
               {/* Status filter buttons */}
               <div className="flex items-center space-x-2">
                 <Button size="sm" variant="outline">
-                  <Badge status="to_implement" className="mr-1" />
+                  <Badge status="to_implement" className="mr-1">●</Badge>
                   Implémenter
                 </Button>
                 <Button size="sm" variant="outline">
-                  <Badge status="to_test" className="mr-1" />
+                  <Badge status="to_test" className="mr-1">●</Badge>
                   Tester
                 </Button>
                 <Button size="sm" variant="outline">
-                  <Badge status="error" className="mr-1" />
+                  <Badge status="error" className="mr-1">●</Badge>
                   Erreur
                 </Button>
               </div>

@@ -26,7 +26,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     variables: {},
     test_date: ''
   })
-  const [errors, setErrors] = useState<Partial<UpdateEventRequest>>({})
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [variablesJson, setVariablesJson] = useState('{}')
 
   const eventStatuses: { value: EventStatus; label: string }[] = [
@@ -53,7 +53,9 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     setFormData(prev => ({ ...prev, [field]: value }))
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }))
+      const newErrors = { ...errors }
+      delete newErrors[field]
+      setErrors(newErrors)
     }
   }
 
@@ -65,7 +67,9 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
       setFormData(prev => ({ ...prev, variables: parsed }))
       // Clear variables error if JSON is valid
       if (errors.variables) {
-        setErrors(prev => ({ ...prev, variables: undefined }))
+        const newErrors = { ...errors }
+        delete newErrors.variables
+        setErrors(newErrors)
       }
     } catch (error) {
       // Don't update variables if JSON is invalid, but don't show error yet
@@ -73,7 +77,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   }
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<UpdateEventRequest> = {}
+    const newErrors: Record<string, string> = {}
     
     if (!formData.name?.trim()) {
       newErrors.name = 'Le nom de l\'event est requis'
@@ -203,8 +207,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
                     ? 'border-blue-500 bg-blue-50'
                     : 'border-neutral-300 hover:border-neutral-400'
                 }`}>
-                  <Badge status={status.value} className="mr-2" />
-                  {status.label}
+                  <Badge status={status.value}>{status.label}</Badge>
                 </div>
               </label>
             ))}

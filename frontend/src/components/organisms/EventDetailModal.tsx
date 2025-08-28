@@ -40,9 +40,6 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
     })
   }
 
-  const formatVariables = (variables: Record<string, any>) => {
-    return JSON.stringify(variables, null, 2)
-  }
 
   const tabs: { id: TabType; label: string; count?: number }[] = [
     { id: 'details', label: 'Détails' },

@@ -328,8 +328,8 @@ export const mockData = {
   products: [
     {
       id: '1',
-      name: 'E-commerce Mobile App',
-      description: 'Mobile application for e-commerce tracking',
+      name: 'MyServier',
+      description: 'Content hub for health care professionals',
       created_at: '2024-01-15T10:00:00Z',
       updated_at: '2024-01-20T14:30:00Z',
       pages_count: 8,
@@ -338,8 +338,8 @@ export const mockData = {
     },
     {
       id: '2', 
-      name: 'Marketing Website',
-      description: 'Corporate website with lead generation',
+      name: 'My Health Partner',
+      description: 'Content hub for patients and care givers',
       created_at: '2024-01-10T09:00:00Z',
       updated_at: '2024-01-25T16:45:00Z',
       pages_count: 12,
@@ -353,7 +353,7 @@ export const mockData = {
       id: '1',
       product_id: '1',
       name: 'Homepage',
-      url: 'https://app.ecommerce.fr/',
+      url: 'https://mysiervier.pt/',
       created_at: '2024-01-15T10:30:00Z',
       updated_at: '2024-01-20T11:00:00Z',
       events_count: 5,
@@ -361,8 +361,8 @@ export const mockData = {
     {
       id: '2',
       product_id: '1',
-      name: 'Product Page',
-      url: 'https://app.ecommerce.fr/products/*',
+      name: 'Events',
+      url: 'https://mysiervier.pt/events/*',
       created_at: '2024-01-15T11:00:00Z',
       updated_at: '2024-01-22T09:15:00Z',
       events_count: 8,

@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Modal } from './Modal'
 import { Button } from '@/components/atoms/Button'
 import { FormField } from '@/components/molecules/FormField'
-import type { Product, CreateProductRequest } from '@/types'
+import type { CreateProductRequest } from '@/types'
 
 interface CreateProductModalProps {
   isOpen: boolean

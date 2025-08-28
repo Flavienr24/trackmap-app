@@ -39,7 +39,9 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     setFormData(prev => ({ ...prev, [field]: value }))
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }))
+      const newErrors = { ...errors }
+      delete newErrors[field]
+      setErrors(newErrors)
     }
   }
 
@@ -47,7 +49,9 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     setFormData(prev => ({ ...prev, variables }))
     // Clear variables error
     if (errors.variables) {
-      setErrors(prev => ({ ...prev, variables: undefined }))
+      const newErrors = { ...errors }
+      delete newErrors.variables
+      setErrors(newErrors)
     }
   }
 
@@ -166,8 +170,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
                     ? 'border-primary-500 bg-primary-50'
                     : 'border-neutral-300 hover:border-neutral-400'
                 }`}>
-                  <Badge status={status.value} className="mr-2" />
-                  {status.label}
+                  <Badge status={status.value}>{status.label}</Badge>
                 </div>
               </label>
             ))}
