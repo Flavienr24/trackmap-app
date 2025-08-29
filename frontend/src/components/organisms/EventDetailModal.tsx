@@ -141,10 +141,13 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
               {/* Variables */}
               <div>
                 <h3 className="text-sm font-medium text-neutral-600 mb-2">Variables</h3>
-                {Object.keys(event.variables || {}).length > 0 ? (
-                  <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
-                    <div className="space-y-2">
-                      {Object.entries(event.variables || {}).map(([key, value]) => (
+                {(() => {
+                  const parsedVariables = parseVariables(event.variables)
+                  
+                  return Object.keys(parsedVariables).length > 0 ? (
+                    <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
+                      <div className="space-y-2">
+                        {Object.entries(parsedVariables).map(([key, value]) => (
                         <div key={key} className="flex items-start">
                           <div className="font-medium text-neutral-700 w-1/3 font-mono text-sm">
                             {key}:
@@ -156,9 +159,10 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                       ))}
                     </div>
                   </div>
-                ) : (
-                  <p className="text-neutral-500 italic">Aucune variable définie</p>
-                )}
+                  ) : (
+                    <p className="text-neutral-500 italic">Aucune variable définie</p>
+                  )
+                })()}
               </div>
             </div>
           )}

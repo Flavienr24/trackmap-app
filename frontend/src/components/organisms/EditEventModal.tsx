@@ -3,6 +3,7 @@ import { Modal } from './Modal'
 import { Button } from '@/components/atoms/Button'
 import { Badge } from '@/components/atoms/Badge'
 import { FormField } from '@/components/molecules/FormField'
+import { parseVariables } from '@/utils/variables'
 import type { Event, UpdateEventRequest, EventStatus } from '@/types'
 
 interface EditEventModalProps {
@@ -39,13 +40,15 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   // Initialize form when event changes
   useEffect(() => {
     if (event) {
+      const parsedVariables = parseVariables(event.variables)
+      
       setFormData({
         name: event.name,
         status: event.status,
-        variables: event.variables,
+        variables: parsedVariables,
         test_date: event.test_date || ''
       })
-      setVariablesJson(JSON.stringify(event.variables, null, 2))
+      setVariablesJson(JSON.stringify(parsedVariables, null, 2))
     }
   }, [event])
 
