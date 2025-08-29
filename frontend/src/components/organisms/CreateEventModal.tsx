@@ -24,7 +24,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [formData, setFormData] = useState<CreateEventRequest>({
     name: '',
     status: 'to_implement',
-    variables: {}
+    properties: {}
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -45,12 +45,12 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     }
   }
 
-  const handlePropertiesChange = (variables: Record<string, any>) => {
-    setFormData(prev => ({ ...prev, variables }))
+  const handlePropertiesChange = (properties: Record<string, any>) => {
+    setFormData(prev => ({ ...prev, properties }))
     // Clear properties error
-    if (errors.variables) {
+    if (errors.properties) {
       const newErrors = { ...errors }
-      delete newErrors.variables
+      delete newErrors.properties
       setErrors(newErrors)
     }
   }
@@ -75,11 +75,11 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
       await onSubmit({
         name: formData.name.trim(),
         status: formData.status,
-        variables: Object.keys(formData.variables || {}).length > 0 ? formData.variables : undefined
+        properties: Object.keys(formData.properties || {}).length > 0 ? formData.properties : undefined
       })
       
       // Reset form
-      setFormData({ name: '', status: 'to_implement', variables: {} })
+      setFormData({ name: '', status: 'to_implement', properties: {} })
       setErrors({})
       onClose()
     } catch (error) {
@@ -179,10 +179,10 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
         <EventPropertiesInput
           productId={productId}
-          value={formData.variables || {}}
+          value={formData.properties || {}}
           onChange={handlePropertiesChange}
           disabled={loading}
-          error={errors.variables}
+          error={errors.properties}
         />
       </form>
     </Modal>

@@ -50,7 +50,7 @@ export interface Event {
   name: string
   status: EventStatus
   test_date?: string
-  variables: Record<string, any>
+  properties: Record<string, any>
   created_at: string
   updated_at: string
   // Relations
@@ -161,7 +161,7 @@ export interface UpdatePageRequest extends Partial<CreatePageRequest> {}
 export interface CreateEventRequest {
   name: string
   status?: EventStatus
-  variables?: Record<string, any>
+  properties?: Record<string, any>
 }
 
 export interface UpdateEventRequest extends Partial<CreateEventRequest> {

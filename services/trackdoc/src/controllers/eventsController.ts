@@ -86,10 +86,10 @@ export const getEventsByPage = async (req: Request, res: Response, next: NextFun
       }
     });
 
-    // Parse variables JSON for each event
-    const eventsWithParsedVariables = events.map((event: any) => ({
+    // Parse properties JSON for each event
+    const eventsWithParsedProperties = events.map((event: any) => ({
       ...event,
-      variables: safeJsonParse(event.variables, {})
+      properties: safeJsonParse(event.properties, {})
     }));
 
     logger.info('Events fetched successfully', { 
@@ -100,7 +100,7 @@ export const getEventsByPage = async (req: Request, res: Response, next: NextFun
 
     res.json({
       success: true,
-      data: eventsWithParsedVariables,
+      data: eventsWithParsedProperties,
       count: events.length
     });
   } catch (error) {
@@ -116,7 +116,7 @@ export const getEventsByPage = async (req: Request, res: Response, next: NextFun
 export const createEvent = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id: pageId } = req.params;
-    const { name, status, testDate, variables } = req.body;
+    const { name, status, testDate, properties } = req.body;
 
     // Validate required fields
     if (!name) {
@@ -157,7 +157,7 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
         name,
         status: status ? status.toUpperCase() : 'TO_IMPLEMENT',
         testDate: testDate ? new Date(testDate) : null,
-        variables: variables ? JSON.stringify(variables) : '{}'
+        properties: properties ? JSON.stringify(properties) : '{}'
       },
       include: {
         page: {
@@ -173,7 +173,7 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
     // Parse variables for response
     const eventResponse = {
       ...event,
-      variables: safeJsonParse(event.variables, {})
+      properties: safeJsonParse(event.properties, {})
     };
 
     logger.info('Event created successfully', { 
@@ -226,10 +226,10 @@ export const getEventById = async (req: Request, res: Response, next: NextFuncti
       return next(error);
     }
 
-    // Parse variables if stored as JSON string
+    // Parse properties if stored as JSON string
     const eventData = {
       ...event,
-      variables: safeJsonParse(event.variables, {})
+      properties: safeJsonParse(event.properties, {})
     };
 
     logger.info('Event fetched successfully', { 
@@ -255,7 +255,7 @@ export const getEventById = async (req: Request, res: Response, next: NextFuncti
 export const updateEvent = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { name, status, testDate, variables } = req.body;
+    const { name, status, testDate, properties } = req.body;
 
     logger.debug('Updating event', { 
       eventId: id, 
@@ -301,7 +301,7 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
         ...(name !== undefined && { name }),
         ...(status !== undefined && { status: status.toUpperCase() }),
         ...(testDate !== undefined && { testDate: testDate ? new Date(testDate) : null }),
-        ...(variables !== undefined && { variables: JSON.stringify(variables) })
+        ...(properties !== undefined && { properties: JSON.stringify(properties) })
       },
       include: {
         page: {
@@ -319,7 +319,7 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
     // Parse variables for response
     const eventResponse = {
       ...event,
-      variables: safeJsonParse(event.variables, {})
+      properties: safeJsonParse(event.properties, {})
     };
 
     logger.info('Event updated successfully', { 

@@ -16,7 +16,7 @@ export const getSuggestedValuesByProduct = async (req: Request, res: Response, n
   try {
     const { id: productSlug } = req.params;
     
-    logger.debug('Fetching suggested values for product', { productId: product.id, requestId: req.ip });
+    logger.debug('Fetching suggested values for product', { productSlug, requestId: req.ip });
 
     // Verify product exists
     const product = await prisma.product.findUnique({
@@ -29,13 +29,13 @@ export const getSuggestedValuesByProduct = async (req: Request, res: Response, n
       return next(error);
     }
 
-    // Fetch all suggested values for the product with associated variables
+    // Fetch all suggested values for the product with associated properties
     const suggestedValues = await prisma.suggestedValue.findMany({
       where: { productId: product.id },
       include: {
-        variableValues: {
+        propertyValues: {
           include: {
-            variable: true
+            property: true
           }
         }
       },
@@ -121,9 +121,9 @@ export const createSuggestedValue = async (req: Request, res: Response, next: Ne
         isContextual: isContextualValue
       },
       include: {
-        variableValues: {
+        propertyValues: {
           include: {
-            variable: true
+            property: true
           }
         }
       }
@@ -160,9 +160,9 @@ export const getSuggestedValueById = async (req: Request, res: Response, next: N
       where: { id },
       include: {
         product: true,
-        variableValues: {
+        propertyValues: {
           include: {
-            variable: true
+            property: true
           }
         }
       }
@@ -248,9 +248,9 @@ export const updateSuggestedValue = async (req: Request, res: Response, next: Ne
       },
       include: {
         product: true,
-        variableValues: {
+        propertyValues: {
           include: {
-            variable: true
+            property: true
           }
         }
       }
@@ -292,7 +292,7 @@ export const deleteSuggestedValue = async (req: Request, res: Response, next: Ne
       return next(error);
     }
 
-    // Delete suggested value (cascade will handle related variableValues)
+    // Delete suggested value (cascade will handle related propertyValues)
     await prisma.suggestedValue.delete({
       where: { id }
     });
