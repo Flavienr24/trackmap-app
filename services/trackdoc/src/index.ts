@@ -70,11 +70,11 @@ app.get('/api/health', async (req, res) => {
 });
 
 // TrackDoc API routes - Documentation CRUD operations
-app.use('/api/doc/products', productsRoutes);
-app.use('/api/doc/pages', pagesRoutes);
-app.use('/api/doc/events', eventsRoutes);
-app.use('/api/doc/variables', variablesRoutes);
-app.use('/api/doc/suggested-values', suggestedValuesRoutes);
+app.use('/api/products', productsRoutes);
+app.use('/api/pages', pagesRoutes);
+app.use('/api/events', eventsRoutes);
+app.use('/api/variables', variablesRoutes);
+app.use('/api/suggested-values', suggestedValuesRoutes);
 
 // Error handling middleware (must be last)
 app.use(notFoundHandler); // 404 handler

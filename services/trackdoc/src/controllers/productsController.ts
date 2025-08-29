@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
 import { db } from '../config/database';
+import { generateSlug, generateUniqueSlug } from '../utils/slugs';
 
 // Use centralized database instance
 const prisma = db;
@@ -62,18 +63,29 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
 };
 
 /**
- * Get a single product by ID with all related data
+ * Get a single product by ID or slug with all related data
  * Returns 404 if product doesn't exist
  */
 export const getProductById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     
-    logger.debug('Fetching product by ID', { productId: id, requestId: req.ip });
+    logger.debug('Fetching product by ID or slug', { productId: id, requestId: req.ip });
+
+    // Try to find by slug first, then by ID if it looks like a cuid
+    let whereClause: { id?: string; slug?: string };
+    
+    // If the param looks like a cuid (starts with 'c' and is long), search by ID
+    if (id.startsWith('c') && id.length > 20) {
+      whereClause = { id };
+    } else {
+      // Otherwise, search by slug
+      whereClause = { slug: id };
+    }
 
     // Find product with all related entities
     const product = await prisma.product.findUnique({
-      where: { id },
+      where: whereClause,
       include: {
         pages: {
           include: {
@@ -129,10 +141,20 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       requestId: req.ip 
     });
 
+    // Get existing slugs to ensure uniqueness
+    const existingProducts = await prisma.product.findMany({
+      select: { slug: true }
+    });
+    const existingSlugs = existingProducts.map(p => p.slug);
+    
+    // Generate unique slug
+    const slug = generateUniqueSlug(name, existingSlugs);
+
     // Create product with related data structure ready
     const product = await prisma.product.create({
       data: {
         name,
+        slug,
         description
       },
       include: {
@@ -145,6 +167,7 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
     logger.info('Product created successfully', { 
       productId: product.id,
       productName: product.name,
+      productSlug: product.slug,
       requestId: req.ip 
     });
 
@@ -170,8 +193,17 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
       requestId: req.ip 
     });
 
+    // Try to find by slug first, then by ID if it looks like a cuid
+    let whereClause: { id?: string; slug?: string };
+    
+    if (id.startsWith('c') && id.length > 20) {
+      whereClause = { id };
+    } else {
+      whereClause = { slug: id };
+    }
+
     const existingProduct = await prisma.product.findUnique({
-      where: { id }
+      where: whereClause
     });
 
     if (!existingProduct) {
@@ -180,12 +212,31 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
       return next(error);
     }
 
+    let updateData: any = {};
+    
+    // Add name if provided
+    if (name !== undefined) {
+      updateData.name = name;
+      
+      // Generate new slug if name changed
+      if (name !== existingProduct.name) {
+        const existingProducts = await prisma.product.findMany({
+          select: { slug: true },
+          where: { id: { not: existingProduct.id } } // Exclude current product
+        });
+        const existingSlugs = existingProducts.map(p => p.slug);
+        updateData.slug = generateUniqueSlug(name, existingSlugs);
+      }
+    }
+    
+    // Add description if provided
+    if (description !== undefined) {
+      updateData.description = description;
+    }
+
     const product = await prisma.product.update({
-      where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(description !== undefined && { description })
-      },
+      where: { id: existingProduct.id },
+      data: updateData,
       include: {
         pages: true,
         variables: true,
@@ -194,8 +245,9 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
     });
 
     logger.info('Product updated successfully', { 
-      productId: id,
+      productId: existingProduct.id,
       productName: product.name,
+      productSlug: product.slug,
       requestId: req.ip 
     });
 
@@ -215,8 +267,17 @@ export const deleteProduct = async (req: Request, res: Response, next: NextFunct
 
     logger.debug('Deleting product', { productId: id, requestId: req.ip });
 
+    // Try to find by slug first, then by ID if it looks like a cuid
+    let whereClause: { id?: string; slug?: string };
+    
+    if (id.startsWith('c') && id.length > 20) {
+      whereClause = { id };
+    } else {
+      whereClause = { slug: id };
+    }
+
     const existingProduct = await prisma.product.findUnique({
-      where: { id }
+      where: whereClause
     });
 
     if (!existingProduct) {
@@ -226,12 +287,13 @@ export const deleteProduct = async (req: Request, res: Response, next: NextFunct
     }
 
     await prisma.product.delete({
-      where: { id }
+      where: { id: existingProduct.id }
     });
 
     logger.info('Product deleted successfully', { 
-      productId: id,
+      productId: existingProduct.id,
       productName: existingProduct.name,
+      productSlug: existingProduct.slug,
       requestId: req.ip 
     });
 

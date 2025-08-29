@@ -17,6 +17,7 @@ datasource db {
 model Product {
   id          String    @id @default(cuid()) // Unique identifier using cuid
   name        String    // Product name (required)
+  slug        String    @unique // URL-friendly slug (e.g., "myservier")
   description String?   // Optional product description
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
@@ -36,6 +37,7 @@ model Page {
   id        String   @id @default(cuid())
   productId String   @map("product_id") // Foreign key to Product
   name      String   // Page name (e.g., "Homepage", "Checkout")
+  slug      String   // URL-friendly slug (e.g., "homepage")
   url       String   // Single URL for the page
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -44,6 +46,7 @@ model Page {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   events    Event[]  // Tracking events on this page
 
+  @@unique([productId, slug]) // Unique slug per product
   @@map("pages")
 }
 

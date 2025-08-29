@@ -10,7 +10,8 @@ import {
 } from '../controllers/productsController';
 import {
   getPagesByProduct,
-  createPage
+  createPage,
+  getPageBySlug
 } from '../controllers/pagesController';
 import {
   getVariablesByProduct,
@@ -45,6 +46,9 @@ router.get('/:id/pages', getPagesByProduct);
 
 // POST /api/products/:id/pages - Create a new page for a product
 router.post('/:id/pages', createPage);
+
+// GET /api/products/:productSlug/pages/:pageSlug - Get a specific page by slugs
+router.get('/:productSlug/pages/:pageSlug', getPageBySlug);
 
 // Variable routes nested under products
 // GET /api/products/:id/variables - Get all variables for a product

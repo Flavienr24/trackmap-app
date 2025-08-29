@@ -5,15 +5,16 @@ import { BackLink } from '@/components/atoms/BackLink'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreatePageModal } from '@/components/organisms/CreatePageModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
+import { EditProductModal } from '@/components/organisms/EditProductModal'
 import { productsApi, pagesApi, variablesApi } from '@/services/api'
-import type { Product, Page, Variable, CreatePageRequest, UpdatePageRequest } from '@/types'
+import type { Product, Page, Variable, CreatePageRequest, UpdatePageRequest, UpdateProductRequest } from '@/types'
 
 /**
  * Product Detail Page
  * Shows product overview with pages, stats, and management options
  */
 const ProductDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>()
+  const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   
   const [product, setProduct] = useState<Product | null>(null)
@@ -24,10 +25,12 @@ const ProductDetail: React.FC = () => {
   const [createPageLoading, setCreatePageLoading] = useState(false)
   const [editPage, setEditPage] = useState<Page | null>(null)
   const [editPageLoading, setEditPageLoading] = useState(false)
+  const [showEditProductModal, setShowEditProductModal] = useState(false)
+  const [editProductLoading, setEditProductLoading] = useState(false)
 
-  const loadProduct = useCallback(async (productId: string) => {
+  const loadProduct = useCallback(async (productSlug: string) => {
     try {
-      const response = await productsApi.getById(productId)
+      const response = await productsApi.getById(productSlug)
       setProduct(response.data)
     } catch (error) {
       console.error('Error loading product:', error)
@@ -35,31 +38,31 @@ const ProductDetail: React.FC = () => {
     }
   }, [navigate])
 
-  const loadPages = useCallback(async (productId: string) => {
+  const loadPages = useCallback(async (productSlug: string) => {
     try {
-      const response = await pagesApi.getByProduct(productId)
+      const response = await pagesApi.getByProduct(productSlug)
       setPages(response.data)
     } catch (error) {
       console.error('Error loading pages:', error)
     }
   }, [])
 
-  const loadVariables = useCallback(async (productId: string) => {
+  const loadVariables = useCallback(async (productSlug: string) => {
     try {
-      const response = await variablesApi.getByProduct(productId)
+      const response = await variablesApi.getByProduct(productSlug)
       setVariables(response.data)
     } catch (error) {
       console.error('Error loading variables:', error)
     }
   }, [])
   
-  const loadData = useCallback(async (productId: string) => {
+  const loadData = useCallback(async (productSlug: string) => {
     setLoading(true)
     try {
       await Promise.all([
-        loadProduct(productId),
-        loadPages(productId),
-        loadVariables(productId)
+        loadProduct(productSlug),
+        loadPages(productSlug),
+        loadVariables(productSlug)
       ])
     } finally {
       setLoading(false)
@@ -67,23 +70,23 @@ const ProductDetail: React.FC = () => {
   }, [loadProduct, loadPages, loadVariables])
 
   useEffect(() => {
-    if (id) {
-      loadData(id)
+    if (slug) {
+      loadData(slug)
     }
-  }, [id, loadData])
+  }, [slug, loadData])
 
   const handleCreatePage = () => {
     setShowCreatePageModal(true)
   }
 
   const handleCreatePageSubmit = async (data: CreatePageRequest) => {
-    if (!id) return
+    if (!slug) return
     
     setCreatePageLoading(true)
     try {
-      const response = await pagesApi.create(id, data)
+      const response = await pagesApi.create(slug, data)
       console.log('Page created:', response.data)
-      await loadPages(id) // Reload the list
+      await loadPages(slug) // Reload the list
     } catch (error) {
       console.error('Error creating page:', error)
       throw error
@@ -101,7 +104,7 @@ const ProductDetail: React.FC = () => {
     try {
       const response = await pagesApi.update(pageId, data)
       console.log('Page updated:', response.data)
-      await loadPages(id!) // Reload the list
+      await loadPages(slug!) // Reload the list
     } catch (error) {
       console.error('Error updating page:', error)
       throw error
@@ -115,7 +118,7 @@ const ProductDetail: React.FC = () => {
       try {
         await pagesApi.delete(page.id)
         console.log('Page deleted:', page)
-        await loadPages(id!) // Reload the list
+        await loadPages(slug!) // Reload the list
       } catch (error) {
         console.error('Error deleting page:', error)
       }
@@ -123,7 +126,27 @@ const ProductDetail: React.FC = () => {
   }
 
   const handleViewPage = (page: Page) => {
-    navigate(`/pages/${page.id}`)
+    navigate(`/products/${product?.slug}/pages/${page.slug}`)
+  }
+
+  const handleEditProduct = () => {
+    setShowEditProductModal(true)
+  }
+
+  const handleEditProductSubmit = async (productId: string, data: UpdateProductRequest) => {
+    setEditProductLoading(true)
+    try {
+      const response = await productsApi.update(productId, data)
+      console.log('Product updated:', response.data)
+      if (slug) {
+        await loadProduct(slug) // Reload the product data
+      }
+    } catch (error) {
+      console.error('Error updating product:', error)
+      throw error
+    } finally {
+      setEditProductLoading(false)
+    }
   }
 
   if (!product) {
@@ -209,13 +232,13 @@ const ProductDetail: React.FC = () => {
             )}
           </div>
           <div className="flex items-center space-x-3">
-            <Button variant="secondary" onClick={() => console.log('Edit product')}>
+            <Button variant="secondary" onClick={handleEditProduct}>
               Modifier le produit
             </Button>
-            <Button variant="secondary" onClick={() => navigate(`/products/${id}/variables`)}>
+            <Button variant="secondary" onClick={() => navigate(`/products/${product.slug}/variables`)}>
               Gérer les variables
             </Button>
-            <Button variant="secondary" onClick={() => navigate(`/products/${id}/suggested-values`)}>
+            <Button variant="secondary" onClick={() => navigate(`/products/${product.slug}/suggested-values`)}>
               Valeurs suggérées
             </Button>
             <Button onClick={handleCreatePage}>
@@ -237,15 +260,15 @@ const ProductDetail: React.FC = () => {
           </div>
           <div className="bg-neutral-50 rounded-lg p-4">
             <div className="text-2xl font-bold text-neutral-900">
-              {variables.length}
-            </div>
-            <div className="text-sm text-neutral-600">Variables</div>
-          </div>
-          <div className="bg-neutral-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-neutral-900">
               {product.events_count || 0}
             </div>
             <div className="text-sm text-neutral-600">Events totaux</div>
+          </div>
+          <div className="bg-neutral-50 rounded-lg p-4">
+            <div className="text-2xl font-bold text-neutral-900">
+              {variables.length}
+            </div>
+            <div className="text-sm text-neutral-600">Variables</div>
           </div>
           <div className="bg-neutral-50 rounded-lg p-4">
             <div className="text-2xl font-bold text-green-600">
@@ -316,6 +339,15 @@ const ProductDetail: React.FC = () => {
         onClose={() => setEditPage(null)}
         onSubmit={handleEditPageSubmit}
         loading={editPageLoading}
+      />
+
+      {/* Edit Product Modal */}
+      <EditProductModal
+        isOpen={showEditProductModal}
+        product={product}
+        onClose={() => setShowEditProductModal(false)}
+        onSubmit={handleEditProductSubmit}
+        loading={editProductLoading}
       />
     </div>
   )

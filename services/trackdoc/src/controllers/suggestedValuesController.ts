@@ -14,13 +14,13 @@ const prisma = db;
  */
 export const getSuggestedValuesByProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id: productId } = req.params;
+    const { id: productSlug } = req.params;
     
-    logger.debug('Fetching suggested values for product', { productId, requestId: req.ip });
+    logger.debug('Fetching suggested values for product', { productId: product.id, requestId: req.ip });
 
     // Verify product exists
     const product = await prisma.product.findUnique({
-      where: { id: productId }
+      where: { slug: productSlug }
     });
 
     if (!product) {
@@ -31,7 +31,7 @@ export const getSuggestedValuesByProduct = async (req: Request, res: Response, n
 
     // Fetch all suggested values for the product with associated variables
     const suggestedValues = await prisma.suggestedValue.findMany({
-      where: { productId },
+      where: { productId: product.id },
       include: {
         variableValues: {
           include: {
@@ -46,7 +46,7 @@ export const getSuggestedValuesByProduct = async (req: Request, res: Response, n
     });
 
     logger.info('Suggested values fetched successfully', { 
-      productId,
+      productId: product.id,
       count: suggestedValues.length,
       requestId: req.ip 
     });
@@ -57,7 +57,7 @@ export const getSuggestedValuesByProduct = async (req: Request, res: Response, n
       count: suggestedValues.length
     });
   } catch (error) {
-    logger.error('Error fetching suggested values', { error, productId: req.params.id, requestId: req.ip });
+    logger.error('Error fetching suggested values', { error, productSlug: req.params.id, requestId: req.ip });
     next(error);
   }
 };
@@ -68,7 +68,7 @@ export const getSuggestedValuesByProduct = async (req: Request, res: Response, n
  */
 export const createSuggestedValue = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id: productId } = req.params;
+    const { id: productSlug } = req.params;
     const { value, isContextual } = req.body;
 
     // Validate required fields
@@ -80,7 +80,7 @@ export const createSuggestedValue = async (req: Request, res: Response, next: Ne
 
     // Verify product exists
     const product = await prisma.product.findUnique({
-      where: { id: productId }
+      where: { slug: productSlug }
     });
 
     if (!product) {
@@ -92,7 +92,7 @@ export const createSuggestedValue = async (req: Request, res: Response, next: Ne
     // Check if suggested value already exists for this product
     const existingSuggestedValue = await prisma.suggestedValue.findFirst({
       where: { 
-        productId,
+        productId: product.id,
         value 
       }
     });
@@ -107,7 +107,7 @@ export const createSuggestedValue = async (req: Request, res: Response, next: Ne
     const isContextualValue = isContextual !== undefined ? isContextual : value.startsWith('$');
 
     logger.debug('Creating new suggested value', { 
-      productId,
+      productId: product.id,
       value,
       isContextual: isContextualValue,
       requestId: req.ip 
@@ -116,7 +116,7 @@ export const createSuggestedValue = async (req: Request, res: Response, next: Ne
     // Create suggested value
     const suggestedValue = await prisma.suggestedValue.create({
       data: {
-        productId,
+        productId: product.id,
         value,
         isContextual: isContextualValue
       },
@@ -132,7 +132,7 @@ export const createSuggestedValue = async (req: Request, res: Response, next: Ne
     logger.info('Suggested value created successfully', { 
       suggestedValueId: suggestedValue.id,
       value: suggestedValue.value,
-      productId,
+      productId: product.id,
       requestId: req.ip 
     });
 
@@ -141,7 +141,7 @@ export const createSuggestedValue = async (req: Request, res: Response, next: Ne
       data: suggestedValue
     });
   } catch (error) {
-    logger.error('Error creating suggested value', { error, body: req.body, productId: req.params.id, requestId: req.ip });
+    logger.error('Error creating suggested value', { error, body: req.body, productSlug: req.params.id, requestId: req.ip });
     next(error);
   }
 };

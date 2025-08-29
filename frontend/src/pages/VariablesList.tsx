@@ -15,7 +15,7 @@ import type { Variable, Product, CreateVariableRequest, UpdateVariableRequest } 
  * Variables define reusable data types and structures for events
  */
 const VariablesList: React.FC = () => {
-  const { productId } = useParams<{ productId: string }>()
+  const { productSlug } = useParams<{ productSlug: string }>()
   const navigate = useNavigate()
   const [variables, setVariables] = useState<Variable[]>([])
   const [product, setProduct] = useState<Product | null>(null)
@@ -26,29 +26,29 @@ const VariablesList: React.FC = () => {
   const [editVariable, setEditVariable] = useState<Variable | null>(null)
   const [editLoading, setEditLoading] = useState(false)
 
-  // Redirect if no productId
-  if (!productId) {
+  // Redirect if no productSlug
+  if (!productSlug) {
     return <Navigate to="/products" replace />
   }
 
   const loadProduct = useCallback(async () => {
     try {
-      const response = await productsApi.getById(productId!)
+      const response = await productsApi.getById(productSlug!)
       setProduct(response.data)
     } catch (error) {
       console.error('Error loading product:', error)
       navigate('/products', { replace: true })
     }
-  }, [productId, navigate])
+  }, [productSlug, navigate])
 
   const loadVariables = useCallback(async () => {
     try {
-      const response = await variablesApi.getByProduct(productId!)
+      const response = await variablesApi.getByProduct(productSlug!)
       setVariables(response.data)
     } catch (error) {
       console.error('Error loading variables:', error)
     }
-  }, [productId])
+  }, [productSlug])
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -74,7 +74,7 @@ const VariablesList: React.FC = () => {
   const handleCreateSubmit = async (data: CreateVariableRequest) => {
     setCreateLoading(true)
     try {
-      const response = await variablesApi.create(productId!, data)
+      const response = await variablesApi.create(productSlug!, data)
       console.log('Variable created:', response.data)
       await loadVariables() // Reload the list
     } catch (error) {
@@ -187,11 +187,11 @@ const VariablesList: React.FC = () => {
     <div className="space-y-6">
       {/* Navigation */}
       <div className="flex items-center justify-between">
-        <BackLink to={`/products/${productId}`}>Retour</BackLink>
+        <BackLink to={`/products/${productSlug}`}>Retour</BackLink>
         <nav className="flex items-center space-x-2 text-sm text-neutral-600">
           <Link to="/products" className="hover:text-neutral-900">Produits</Link>
           <span>›</span>
-          <Link to={`/products/${productId}`} className="hover:text-neutral-900">{product?.name || 'Chargement...'}</Link>
+          <Link to={`/products/${productSlug}`} className="hover:text-neutral-900">{product?.name || 'Chargement...'}</Link>
           <span>›</span>
           <span className="text-neutral-900 font-medium">Variables</span>
         </nav>
@@ -210,7 +210,7 @@ const VariablesList: React.FC = () => {
         <div className="flex items-center space-x-3">
           <Button 
             variant="outline" 
-            onClick={() => navigate(`/products/${productId}/suggested-values`)}
+            onClick={() => navigate(`/products/${productSlug}/suggested-values`)}
           >
             Valeurs suggérées
           </Button>

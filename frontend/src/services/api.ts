@@ -43,15 +43,25 @@ const API_BASE_URL = '/api'
 /**
  * Transform API response data from camelCase to snake_case
  * Maps backend field names to frontend interface expectations
+ * Protected against circular references
  */
-function transformApiData(data: any): any {
+function transformApiData(data: any, visited: WeakSet<any> = new WeakSet()): any {
   if (!data) return data
   
+  // Prevent circular references
+  if (typeof data === 'object' && visited.has(data)) {
+    return '[Circular Reference]'
+  }
+  
   if (Array.isArray(data)) {
-    return data.map(item => transformApiData(item))
+    visited.add(data)
+    const result = data.map(item => transformApiData(item, visited))
+    visited.delete(data)
+    return result
   }
   
   if (typeof data === 'object') {
+    visited.add(data)
     const transformed: any = {}
     
     for (const [key, value] of Object.entries(data)) {
@@ -70,9 +80,10 @@ function transformApiData(data: any): any {
       if (key === 'oldValue') newKey = 'old_value'
       if (key === 'newValue') newKey = 'new_value'
       
-      transformed[newKey] = transformApiData(value)
+      transformed[newKey] = transformApiData(value, visited)
     }
     
+    visited.delete(data)
     return transformed
   }
   
@@ -168,6 +179,10 @@ export const pagesApi = {
   // Get single page
   getById: (id: string): Promise<ApiResponse<Page>> =>
     apiRequest(`/pages/${id}`),
+
+  // Get page by product slug and page slug
+  getBySlug: (productSlug: string, pageSlug: string): Promise<ApiResponse<Page>> =>
+    apiRequest(`/products/${productSlug}/pages/${pageSlug}`),
 
   // Create page
   create: (productId: string, data: CreatePageRequest): Promise<ApiResponse<Page>> =>

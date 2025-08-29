@@ -98,7 +98,7 @@ const ProductsList: React.FC = () => {
 
   const handleViewProduct = (product: Product) => {
     console.log('handleViewProduct called for:', product.name)
-    navigate(`/products/${product.id}`)
+    navigate(`/products/${product.slug}`)
   }
 
   // Filter products based on search query

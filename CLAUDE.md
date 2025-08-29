@@ -12,6 +12,7 @@ Le projet doit pousser sur github dans le repo flavienr24/trackmap-app
   - **Setup initial du projet** : Autorisé sur master (structure, package.json, config de base, README, .gitignore)
   - **Toute modification de code après setup initial** : Obligatoire de créer une nouvelle branche. Cette création de branche doit toujours être la première tâche de ta todo
   - **Format des branches** : `feature/nom-feature`, `fix/nom-bug`, `setup/nom-config`, `refactor/nom-refactor`
+  - **Push master** : Pousser le code sur la branche principale une fois que tous les tests auront été fait et que je t'aurais donné l'autorisation
   - **Aucun développement direct sur master** après la phase d'initialisation du projet
 - **Minimiser les lignes de code** : Privilégier la modification du code existant vs réécriture complète
 - **Code modulaire et factorisé** : Éviter la dette technique, fichiers avec peu de lignes
@@ -20,7 +21,6 @@ Le projet doit pousser sur github dans le repo flavienr24/trackmap-app
 - **Coder directement dans le repo** : Pas d'artefacts, modifications directes des fichiers
 - **Documenter le code** : Le code doit être suffisamment documenter pour être compréhensible. Ajouter des commentaires en anglais à chaque fois que c'est nécessaire.
 - **Tests obligatoires** : Demander si des tests sont nécessaires avant implémentation
-- **Push master** : Pousser le code sur la branche principale une fois que tous les tests auront été fait et que je t'aurais donné l'autorisation
 
 ## Contexte du Projet
 

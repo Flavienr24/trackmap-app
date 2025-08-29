@@ -15,7 +15,7 @@ import type { SuggestedValue, Product, CreateSuggestedValueRequest, UpdateSugges
  * Suggested values can be static ("homepage") or contextual ("$page-name")
  */
 const SuggestedValuesList: React.FC = () => {
-  const { productId } = useParams<{ productId: string }>()
+  const { productSlug } = useParams<{ productSlug: string }>()
   const [suggestedValues, setSuggestedValues] = useState<SuggestedValue[]>([])
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
@@ -25,28 +25,28 @@ const SuggestedValuesList: React.FC = () => {
   const [editSuggestedValue, setEditSuggestedValue] = useState<SuggestedValue | null>(null)
   const [editLoading, setEditLoading] = useState(false)
 
-  // Redirect if no productId
-  if (!productId) {
+  // Redirect if no productSlug
+  if (!productSlug) {
     return <Navigate to="/products" replace />
   }
 
   const loadProduct = useCallback(async () => {
     try {
-      const response = await productsApi.getById(productId!)
+      const response = await productsApi.getById(productSlug!)
       setProduct(response.data)
     } catch (error) {
       console.error('Error loading product:', error)
     }
-  }, [productId])
+  }, [productSlug])
 
   const loadSuggestedValues = useCallback(async () => {
     try {
-      const response = await suggestedValuesApi.getByProduct(productId!)
+      const response = await suggestedValuesApi.getByProduct(productSlug!)
       setSuggestedValues(response.data)
     } catch (error) {
       console.error('Error loading suggested values:', error)
     }
-  }, [productId])
+  }, [productSlug])
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -72,7 +72,7 @@ const SuggestedValuesList: React.FC = () => {
   const handleCreateSubmit = async (data: CreateSuggestedValueRequest) => {
     setCreateLoading(true)
     try {
-      const response = await suggestedValuesApi.create(productId!, data)
+      const response = await suggestedValuesApi.create(productSlug!, data)
       console.log('Suggested value created:', response.data)
       await loadSuggestedValues() // Reload the list
     } catch (error) {
@@ -185,13 +185,13 @@ const SuggestedValuesList: React.FC = () => {
     <div className="space-y-6">
       {/* Navigation */}
       <div className="flex items-center justify-between">
-        <BackLink to={`/products/${productId}/variables`}>Retour</BackLink>
+        <BackLink to={`/products/${productSlug}`}>Retour au produit</BackLink>
         <nav className="flex items-center space-x-2 text-sm text-neutral-600">
           <Link to="/products" className="hover:text-neutral-900">Produits</Link>
           <span>›</span>
-          <Link to={`/products/${productId}`} className="hover:text-neutral-900">{product?.name || 'Chargement...'}</Link>
+          <Link to={`/products/${productSlug}`} className="hover:text-neutral-900">{product?.name || 'Chargement...'}</Link>
           <span>›</span>
-          <Link to={`/products/${productId}/variables`} className="hover:text-neutral-900">Variables</Link>
+          <Link to={`/products/${productSlug}/variables`} className="hover:text-neutral-900">Variables</Link>
           <span>›</span>
           <span className="text-neutral-900 font-medium">Valeurs suggérées</span>
         </nav>

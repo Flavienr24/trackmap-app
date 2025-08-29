@@ -17,13 +17,13 @@ const VALID_TYPES = ['STRING', 'NUMBER', 'BOOLEAN', 'ARRAY', 'OBJECT'];
  */
 export const getVariablesByProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id: productId } = req.params;
+    const { id: productSlug } = req.params;
     
-    logger.debug('Fetching variables for product', { productId, requestId: req.ip });
+    logger.debug('Fetching variables for product', { productSlug, requestId: req.ip });
 
     // Verify product exists
     const product = await prisma.product.findUnique({
-      where: { id: productId }
+      where: { slug: productSlug }
     });
 
     if (!product) {
@@ -34,7 +34,7 @@ export const getVariablesByProduct = async (req: Request, res: Response, next: N
 
     // Fetch all variables for the product with associated suggested values
     const variables = await prisma.variable.findMany({
-      where: { productId },
+      where: { productId: product.id },
       include: {
         variableValues: {
           include: {
@@ -48,7 +48,7 @@ export const getVariablesByProduct = async (req: Request, res: Response, next: N
     });
 
     logger.info('Variables fetched successfully', { 
-      productId,
+      productId: product.id,
       count: variables.length,
       requestId: req.ip 
     });
@@ -59,7 +59,7 @@ export const getVariablesByProduct = async (req: Request, res: Response, next: N
       count: variables.length
     });
   } catch (error) {
-    logger.error('Error fetching variables', { error, productId: req.params.id, requestId: req.ip });
+    logger.error('Error fetching variables', { error, productSlug: req.params.id, requestId: req.ip });
     next(error);
   }
 };
@@ -70,7 +70,7 @@ export const getVariablesByProduct = async (req: Request, res: Response, next: N
  */
 export const createVariable = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id: productId } = req.params;
+    const { id: productSlug } = req.params;
     const { name, type, description } = req.body;
 
     // Validate required fields
@@ -95,7 +95,7 @@ export const createVariable = async (req: Request, res: Response, next: NextFunc
 
     // Verify product exists
     const product = await prisma.product.findUnique({
-      where: { id: productId }
+      where: { slug: productSlug }
     });
 
     if (!product) {
@@ -107,7 +107,7 @@ export const createVariable = async (req: Request, res: Response, next: NextFunc
     // Check if variable name already exists for this product
     const existingVariable = await prisma.variable.findFirst({
       where: { 
-        productId,
+        productId: product.id,
         name 
       }
     });
@@ -119,7 +119,7 @@ export const createVariable = async (req: Request, res: Response, next: NextFunc
     }
 
     logger.debug('Creating new variable', { 
-      productId,
+      productId: product.id,
       name,
       type: type.toUpperCase(),
       requestId: req.ip 
@@ -128,7 +128,7 @@ export const createVariable = async (req: Request, res: Response, next: NextFunc
     // Create variable
     const variable = await prisma.variable.create({
       data: {
-        productId,
+        productId: product.id,
         name,
         type: type.toUpperCase(),
         description: description || null
@@ -145,7 +145,7 @@ export const createVariable = async (req: Request, res: Response, next: NextFunc
     logger.info('Variable created successfully', { 
       variableId: variable.id,
       variableName: variable.name,
-      productId,
+      productId: product.id,
       requestId: req.ip 
     });
 
@@ -154,7 +154,7 @@ export const createVariable = async (req: Request, res: Response, next: NextFunc
       data: variable
     });
   } catch (error) {
-    logger.error('Error creating variable', { error, body: req.body, productId: req.params.id, requestId: req.ip });
+    logger.error('Error creating variable', { error, body: req.body, productSlug: req.params.id, requestId: req.ip });
     next(error);
   }
 };
@@ -419,7 +419,7 @@ export const associateSuggestedValue = async (req: Request, res: Response, next:
       return next(error);
     }
 
-    if (suggestedValue.productId !== variable.productId) {
+    if (suggestedValue.productSlug !== variable.productSlug) {
       const error: AppError = new Error('Suggested value does not belong to the same product as the variable');
       error.statusCode = 400;
       return next(error);

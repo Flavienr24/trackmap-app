@@ -17,7 +17,7 @@ import type { Page, Event, Product, EventStatus, CreateEventRequest, UpdateEvent
  * Shows page info with all its tracking events and management
  */
 const PageDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>()
+  const { productSlug, pageSlug } = useParams<{ productSlug: string; pageSlug: string }>()
   const navigate = useNavigate()
   
   const [page, setPage] = useState<Page | null>(null)
@@ -31,54 +31,45 @@ const PageDetail: React.FC = () => {
   const [editPageLoading, setEditPageLoading] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
 
-  const loadPage = useCallback(async (pageId: string) => {
-    try {
-      const response = await pagesApi.getById(pageId)
-      setPage(response.data)
-    } catch (error) {
-      console.error('Error loading page:', error)
-    }
-  }, [])
-
-  const loadEvents = useCallback(async (pageId: string) => {
-    try {
-      const response = await eventsApi.getByPage(pageId)
-      setEvents(response.data)
-    } catch (error) {
-      console.error('Error loading events:', error)
-    }
-  }, [])
-
-  const loadData = useCallback(async () => {
-    if (!id) return
-    
-    setLoading(true)
-    try {
-      await Promise.all([
-        loadPage(id),
-        loadEvents(id)
-      ])
-    } finally {
-      setLoading(false)
-    }
-  }, [id, loadPage, loadEvents])
-
+  // Load page and events data
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    if (!productSlug || !pageSlug) return
+    
+    const loadAllData = async () => {
+      setLoading(true)
+      try {
+        // Load page first
+        const pageResponse = await pagesApi.getBySlug(productSlug, pageSlug)
+        setPage(pageResponse.data)
+        
+        // Then load events for that page
+        if (pageResponse.data?.id) {
+          const eventsResponse = await eventsApi.getByPage(pageResponse.data.id)
+          setEvents(eventsResponse.data)
+        }
+      } catch (error) {
+        console.error('Error loading page or events:', error)
+        navigate('/products', { replace: true })
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadAllData()
+  }, [productSlug, pageSlug, navigate])
 
   const handleCreateEvent = () => {
     setShowCreateEventModal(true)
   }
 
   const handleCreateEventSubmit = async (data: CreateEventRequest) => {
-    if (!id) return
+    if (!page?.id) return
     
     setCreateEventLoading(true)
     try {
-      const response = await eventsApi.create(id, data)
+      const response = await eventsApi.create(page.id, data)
       console.log('Event created:', response.data)
-      await loadEvents(id) // Reload the list
+      await loadEvents(page.id) // Reload the list
     } catch (error) {
       console.error('Error creating event:', error)
       throw error
@@ -96,7 +87,9 @@ const PageDetail: React.FC = () => {
     try {
       const response = await eventsApi.update(eventId, data)
       console.log('Event updated:', response.data)
-      await loadEvents(id!) // Reload the list
+      if (page?.id) {
+        await loadEvents(page.id) // Reload the list
+      }
     } catch (error) {
       console.error('Error updating event:', error)
       throw error
@@ -116,7 +109,9 @@ const PageDetail: React.FC = () => {
     try {
       const response = await pagesApi.update(pageId, data)
       console.log('Page updated:', response.data)
-      await loadPage(id!) // Reload the page data
+      if (productSlug && pageSlug) {
+        await loadPage(productSlug, pageSlug) // Reload the page data
+      }
     } catch (error) {
       console.error('Error updating page:', error)
       throw error
@@ -130,7 +125,9 @@ const PageDetail: React.FC = () => {
       try {
         await eventsApi.delete(event.id)
         console.log('Event deleted:', event)
-        await loadEvents(id!) // Reload the list
+        if (page?.id) {
+          await loadEvents(page.id) // Reload the list
+        }
       } catch (error) {
         console.error('Error deleting event:', error)
       }
@@ -141,16 +138,45 @@ const PageDetail: React.FC = () => {
     setSelectedEvent(event)
   }
 
-  if (!id) {
-    return <div>Page ID manquant</div>
+  if (!productSlug || !pageSlug) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h2 className="text-xl font-semibold text-neutral-900">Paramètres manquants</h2>
+          <p className="text-neutral-600 mt-2">Les paramètres de produit et de page sont requis.</p>
+          <Link to="/products" className="inline-block mt-4">
+            <Button variant="primary">← Retour aux produits</Button>
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
-    return <div>Chargement...</div>
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-center">
+          <div className="text-4xl mb-4">⏳</div>
+          <p className="text-neutral-600">Chargement de la page...</p>
+        </div>
+      </div>
+    )
   }
 
   if (!page) {
-    return <div>Page non trouvée</div>
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔍</div>
+          <h2 className="text-xl font-semibold text-neutral-900">Page introuvable</h2>
+          <p className="text-neutral-600 mt-2">Cette page n'existe pas ou a été supprimée.</p>
+          <Link to="/products" className="inline-block mt-4">
+            <Button variant="primary">← Retour aux produits</Button>
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   // Status color mapping
@@ -236,11 +262,11 @@ const PageDetail: React.FC = () => {
     <div className="space-y-6">
       {/* Navigation */}
       <div className="flex items-center justify-between">
-        <BackLink to={`/products/${page.product_id}`}>Retour au produit</BackLink>
+        <BackLink to={`/products/${page.product?.slug || productSlug}`}>Retour au produit</BackLink>
         <nav className="flex items-center space-x-2 text-sm text-neutral-600">
           <Link to="/products" className="hover:text-neutral-900">Produits</Link>
           <span>›</span>
-          <Link to={`/products/${page.product_id}`} className="hover:text-neutral-900">Produit</Link>
+          <Link to={`/products/${page.product?.slug || productSlug}`} className="hover:text-neutral-900">Produit</Link>
           <span>›</span>
           <span className="text-neutral-900 font-medium">{page.name}</span>
         </nav>
@@ -295,8 +321,8 @@ const PageDetail: React.FC = () => {
         onClose={() => setShowCreateEventModal(false)}
         onSubmit={handleCreateEventSubmit}
         loading={createEventLoading}
-        pageId={id}
-        productId={page.product_id}
+        pageId={page?.id}
+        productId={page?.productId}
       />
 
       {/* Edit Event Modal */}
@@ -322,7 +348,7 @@ const PageDetail: React.FC = () => {
         isOpen={!!selectedEvent}
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}
-        productId={page.product_id}
+        productId={page.productId}
       />
     </div>
   )

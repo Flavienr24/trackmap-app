@@ -15,6 +15,7 @@ export type VariableType = 'string' | 'number' | 'boolean' | 'array' | 'object'
 export interface Product {
   id: string
   name: string
+  slug: string
   description?: string
   created_at: string
   updated_at: string
@@ -31,6 +32,7 @@ export interface Page {
   id: string
   product_id: string
   name: string
+  slug: string
   url: string
   created_at: string
   updated_at: string
@@ -142,6 +144,7 @@ export interface PaginatedResponse<T> {
  */
 export interface CreateProductRequest {
   name: string
+  slug?: string
   description?: string
 }
 
@@ -149,6 +152,7 @@ export interface UpdateProductRequest extends Partial<CreateProductRequest> {}
 
 export interface CreatePageRequest {
   name: string
+  slug?: string
   url: string
 }
 
