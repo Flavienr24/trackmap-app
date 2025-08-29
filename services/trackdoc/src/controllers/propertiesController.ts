@@ -1,5 +1,5 @@
-// Variables controller - handles all variable-related HTTP requests
-// Variables define reusable variable schemas for events
+// Properties controller - handles all property-related HTTP requests
+// Properties define reusable property schemas for events
 import { Request, Response, NextFunction } from 'express';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
@@ -8,18 +8,18 @@ import { db } from '../config/database';
 // Use centralized database instance
 const prisma = db;
 
-// Valid variable types
+// Valid property types
 const VALID_TYPES = ['STRING', 'NUMBER', 'BOOLEAN', 'ARRAY', 'OBJECT'];
 
 /**
- * Get all variables for a specific product
- * GET /api/products/:id/variables
+ * Get all properties for a specific product
+ * GET /api/products/:id/properties
  */
-export const getVariablesByProduct = async (req: Request, res: Response, next: NextFunction) => {
+export const getPropertiesByProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id: productSlug } = req.params;
     
-    logger.debug('Fetching variables for product', { productSlug, requestId: req.ip });
+    logger.debug('Fetching properties for product', { productSlug, requestId: req.ip });
 
     // Verify product exists
     const product = await prisma.product.findUnique({
@@ -32,11 +32,11 @@ export const getVariablesByProduct = async (req: Request, res: Response, next: N
       return next(error);
     }
 
-    // Fetch all variables for the product with associated suggested values
-    const variables = await prisma.variable.findMany({
+    // Fetch all properties for the product with associated suggested values
+    const properties = await prisma.property.findMany({
       where: { productId: product.id },
       include: {
-        variableValues: {
+        propertyValues: {
           include: {
             suggestedValue: true
           }
@@ -47,41 +47,41 @@ export const getVariablesByProduct = async (req: Request, res: Response, next: N
       }
     });
 
-    logger.info('Variables fetched successfully', { 
+    logger.info('Properties fetched successfully', { 
       productId: product.id,
-      count: variables.length,
+      count: properties.length,
       requestId: req.ip 
     });
 
     res.json({
       success: true,
-      data: variables,
-      count: variables.length
+      data: properties,
+      count: properties.length
     });
   } catch (error) {
-    logger.error('Error fetching variables', { error, productSlug: req.params.id, requestId: req.ip });
+    logger.error('Error fetching properties', { error, productSlug: req.params.id, requestId: req.ip });
     next(error);
   }
 };
 
 /**
- * Create a new variable for a product
- * POST /api/products/:id/variables
+ * Create a new property for a product
+ * POST /api/products/:id/properties
  */
-export const createVariable = async (req: Request, res: Response, next: NextFunction) => {
+export const createProperty = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id: productSlug } = req.params;
     const { name, type, description } = req.body;
 
     // Validate required fields
     if (!name) {
-      const error: AppError = new Error('Variable name is required');
+      const error: AppError = new Error('Property name is required');
       error.statusCode = 400;
       return next(error);
     }
 
     if (!type) {
-      const error: AppError = new Error('Variable type is required');
+      const error: AppError = new Error('Property type is required');
       error.statusCode = 400;
       return next(error);
     }
@@ -104,29 +104,29 @@ export const createVariable = async (req: Request, res: Response, next: NextFunc
       return next(error);
     }
 
-    // Check if variable name already exists for this product
-    const existingVariable = await prisma.variable.findFirst({
+    // Check if property name already exists for this product
+    const existingProperty = await prisma.property.findFirst({
       where: { 
         productId: product.id,
         name 
       }
     });
 
-    if (existingVariable) {
-      const error: AppError = new Error('Variable name already exists for this product');
+    if (existingProperty) {
+      const error: AppError = new Error('Property name already exists for this product');
       error.statusCode = 409;
       return next(error);
     }
 
-    logger.debug('Creating new variable', { 
+    logger.debug('Creating new property', { 
       productId: product.id,
       name,
       type: type.toUpperCase(),
       requestId: req.ip 
     });
 
-    // Create variable
-    const variable = await prisma.variable.create({
+    // Create property
+    const property = await prisma.property.create({
       data: {
         productId: product.id,
         name,
@@ -134,7 +134,7 @@ export const createVariable = async (req: Request, res: Response, next: NextFunc
         description: description || null
       },
       include: {
-        variableValues: {
+        propertyValues: {
           include: {
             suggestedValue: true
           }
@@ -142,38 +142,38 @@ export const createVariable = async (req: Request, res: Response, next: NextFunc
       }
     });
 
-    logger.info('Variable created successfully', { 
-      variableId: variable.id,
-      variableName: variable.name,
+    logger.info('Property created successfully', { 
+      propertyId: property.id,
+      propertyName: property.name,
       productId: product.id,
       requestId: req.ip 
     });
 
     res.status(201).json({
       success: true,
-      data: variable
+      data: property
     });
   } catch (error) {
-    logger.error('Error creating variable', { error, body: req.body, productSlug: req.params.id, requestId: req.ip });
+    logger.error('Error creating property', { error, body: req.body, productSlug: req.params.id, requestId: req.ip });
     next(error);
   }
 };
 
 /**
- * Get a single variable by ID with all related data
- * GET /api/variables/:id
+ * Get a single property by ID with all related data
+ * GET /api/properties/:id
  */
-export const getVariableById = async (req: Request, res: Response, next: NextFunction) => {
+export const getPropertyById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     
-    logger.debug('Fetching variable by ID', { variableId: id, requestId: req.ip });
+    logger.debug('Fetching property by ID', { propertyId: id, requestId: req.ip });
 
-    const variable = await prisma.variable.findUnique({
+    const property = await prisma.property.findUnique({
       where: { id },
       include: {
         product: true,
-        variableValues: {
+        propertyValues: {
           include: {
             suggestedValue: true
           }
@@ -181,39 +181,39 @@ export const getVariableById = async (req: Request, res: Response, next: NextFun
       }
     });
 
-    if (!variable) {
-      const error: AppError = new Error('Variable not found');
+    if (!property) {
+      const error: AppError = new Error('Property not found');
       error.statusCode = 404;
       return next(error);
     }
 
-    logger.info('Variable fetched successfully', { 
-      variableId: id,
-      variableName: variable.name,
+    logger.info('Property fetched successfully', { 
+      propertyId: id,
+      propertyName: property.name,
       requestId: req.ip 
     });
 
     res.json({
       success: true,
-      data: variable
+      data: property
     });
   } catch (error) {
-    logger.error('Error fetching variable', { error, variableId: req.params.id, requestId: req.ip });
+    logger.error('Error fetching property', { error, propertyId: req.params.id, requestId: req.ip });
     next(error);
   }
 };
 
 /**
- * Update an existing variable
- * PUT /api/variables/:id
+ * Update an existing property
+ * PUT /api/properties/:id
  */
-export const updateVariable = async (req: Request, res: Response, next: NextFunction) => {
+export const updateProperty = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { name, type, description } = req.body;
 
-    logger.debug('Updating variable', { 
-      variableId: id, 
+    logger.debug('Updating property', { 
+      propertyId: id, 
       updates: req.body,
       requestId: req.ip 
     });
@@ -225,36 +225,36 @@ export const updateVariable = async (req: Request, res: Response, next: NextFunc
       return next(error);
     }
 
-    // Check if variable exists
-    const existingVariable = await prisma.variable.findUnique({
+    // Check if property exists
+    const existingProperty = await prisma.property.findUnique({
       where: { id }
     });
 
-    if (!existingVariable) {
-      const error: AppError = new Error('Variable not found');
+    if (!existingProperty) {
+      const error: AppError = new Error('Property not found');
       error.statusCode = 404;
       return next(error);
     }
 
-    // Check if new name conflicts with existing variables
-    if (name && name !== existingVariable.name) {
-      const conflictingVariable = await prisma.variable.findFirst({
+    // Check if new name conflicts with existing properties
+    if (name && name !== existingProperty.name) {
+      const conflictingProperty = await prisma.property.findFirst({
         where: { 
-          productId: existingVariable.productId,
+          productId: existingProperty.productId,
           name,
           id: { not: id }
         }
       });
 
-      if (conflictingVariable) {
-        const error: AppError = new Error('Variable name already exists for this product');
+      if (conflictingProperty) {
+        const error: AppError = new Error('Property name already exists for this product');
         error.statusCode = 409;
         return next(error);
       }
     }
 
-    // Update variable
-    const variable = await prisma.variable.update({
+    // Update property
+    const property = await prisma.property.update({
       where: { id },
       data: {
         ...(name !== undefined && { name }),
@@ -263,7 +263,7 @@ export const updateVariable = async (req: Request, res: Response, next: NextFunc
       },
       include: {
         product: true,
-        variableValues: {
+        propertyValues: {
           include: {
             suggestedValue: true
           }
@@ -271,96 +271,96 @@ export const updateVariable = async (req: Request, res: Response, next: NextFunc
       }
     });
 
-    logger.info('Variable updated successfully', { 
-      variableId: id,
-      variableName: variable.name,
+    logger.info('Property updated successfully', { 
+      propertyId: id,
+      propertyName: property.name,
       requestId: req.ip 
     });
 
     res.json({
       success: true,
-      data: variable
+      data: property
     });
   } catch (error) {
-    logger.error('Error updating variable', { error, variableId: req.params.id, requestId: req.ip });
+    logger.error('Error updating property', { error, propertyId: req.params.id, requestId: req.ip });
     next(error);
   }
 };
 
 /**
- * Delete a variable and all associations
- * DELETE /api/variables/:id
+ * Delete a property and all associations
+ * DELETE /api/properties/:id
  */
-export const deleteVariable = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteProperty = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
 
-    logger.debug('Deleting variable', { variableId: id, requestId: req.ip });
+    logger.debug('Deleting property', { propertyId: id, requestId: req.ip });
 
-    const existingVariable = await prisma.variable.findUnique({
+    const existingProperty = await prisma.property.findUnique({
       where: { id }
     });
 
-    if (!existingVariable) {
-      const error: AppError = new Error('Variable not found');
+    if (!existingProperty) {
+      const error: AppError = new Error('Property not found');
       error.statusCode = 404;
       return next(error);
     }
 
-    // Delete variable (cascade will handle related variableValues)
-    await prisma.variable.delete({
+    // Delete property (cascade will handle related propertyValues)
+    await prisma.property.delete({
       where: { id }
     });
 
-    logger.info('Variable deleted successfully', { 
-      variableId: id,
-      variableName: existingVariable.name,
+    logger.info('Property deleted successfully', { 
+      propertyId: id,
+      propertyName: existingProperty.name,
       requestId: req.ip 
     });
 
     res.json({
       success: true,
-      message: 'Variable deleted successfully'
+      message: 'Property deleted successfully'
     });
   } catch (error) {
-    logger.error('Error deleting variable', { error, variableId: req.params.id, requestId: req.ip });
+    logger.error('Error deleting property', { error, propertyId: req.params.id, requestId: req.ip });
     next(error);
   }
 };
 
 /**
- * Get suggested values for a specific variable
- * GET /api/variables/:id/suggested-values
+ * Get suggested values for a specific property
+ * GET /api/properties/:id/suggested-values
  */
-export const getSuggestedValuesByVariable = async (req: Request, res: Response, next: NextFunction) => {
+export const getSuggestedValuesByProperty = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id: variableId } = req.params;
+    const { id: propertyId } = req.params;
     
-    logger.debug('Fetching suggested values for variable', { variableId, requestId: req.ip });
+    logger.debug('Fetching suggested values for property', { propertyId, requestId: req.ip });
 
-    // Verify variable exists
-    const variable = await prisma.variable.findUnique({
-      where: { id: variableId }
+    // Verify property exists
+    const property = await prisma.property.findUnique({
+      where: { id: propertyId }
     });
 
-    if (!variable) {
-      const error: AppError = new Error('Variable not found');
+    if (!property) {
+      const error: AppError = new Error('Property not found');
       error.statusCode = 404;
       return next(error);
     }
 
     // Fetch associated suggested values
-    const variableValues = await prisma.variableValue.findMany({
-      where: { variableId },
+    const propertyValues = await prisma.propertyValue.findMany({
+      where: { propertyId },
       include: {
         suggestedValue: true
       }
     });
 
-    const suggestedValues = variableValues.map((vv: any) => vv.suggestedValue);
+    const suggestedValues = propertyValues.map((pv: any) => pv.suggestedValue);
 
     logger.info('Suggested values fetched successfully', { 
-      variableId,
+      propertyId,
       count: suggestedValues.length,
       requestId: req.ip 
     });
@@ -371,18 +371,18 @@ export const getSuggestedValuesByVariable = async (req: Request, res: Response, 
       count: suggestedValues.length
     });
   } catch (error) {
-    logger.error('Error fetching suggested values', { error, variableId: req.params.id, requestId: req.ip });
+    logger.error('Error fetching suggested values', { error, propertyId: req.params.id, requestId: req.ip });
     next(error);
   }
 };
 
 /**
- * Associate a suggested value with a variable
- * POST /api/variables/:id/suggested-values
+ * Associate a suggested value with a property
+ * POST /api/properties/:id/suggested-values
  */
 export const associateSuggestedValue = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id: variableId } = req.params;
+    const { id: propertyId } = req.params;
     const { suggestedValueId } = req.body;
 
     if (!suggestedValueId) {
@@ -391,19 +391,19 @@ export const associateSuggestedValue = async (req: Request, res: Response, next:
       return next(error);
     }
 
-    logger.debug('Associating suggested value with variable', { 
-      variableId,
+    logger.debug('Associating suggested value with property', { 
+      propertyId,
       suggestedValueId,
       requestId: req.ip 
     });
 
-    // Verify variable exists
-    const variable = await prisma.variable.findUnique({
-      where: { id: variableId }
+    // Verify property exists
+    const property = await prisma.property.findUnique({
+      where: { id: propertyId }
     });
 
-    if (!variable) {
-      const error: AppError = new Error('Variable not found');
+    if (!property) {
+      const error: AppError = new Error('Property not found');
       error.statusCode = 404;
       return next(error);
     }
@@ -419,17 +419,17 @@ export const associateSuggestedValue = async (req: Request, res: Response, next:
       return next(error);
     }
 
-    if (suggestedValue.productSlug !== variable.productSlug) {
-      const error: AppError = new Error('Suggested value does not belong to the same product as the variable');
+    if (suggestedValue.productId !== property.productId) {
+      const error: AppError = new Error('Suggested value does not belong to the same product as the property');
       error.statusCode = 400;
       return next(error);
     }
 
     // Check if association already exists
-    const existingAssociation = await prisma.variableValue.findUnique({
+    const existingAssociation = await prisma.propertyValue.findUnique({
       where: {
-        variableId_suggestedValueId: {
-          variableId,
+        propertyId_suggestedValueId: {
+          propertyId,
           suggestedValueId
         }
       }
@@ -442,19 +442,19 @@ export const associateSuggestedValue = async (req: Request, res: Response, next:
     }
 
     // Create association
-    const association = await prisma.variableValue.create({
+    const association = await prisma.propertyValue.create({
       data: {
-        variableId,
+        propertyId,
         suggestedValueId
       },
       include: {
-        variable: true,
+        property: true,
         suggestedValue: true
       }
     });
 
     logger.info('Association created successfully', { 
-      variableId,
+      propertyId,
       suggestedValueId,
       requestId: req.ip 
     });
@@ -464,7 +464,7 @@ export const associateSuggestedValue = async (req: Request, res: Response, next:
       data: association
     });
   } catch (error) {
-    logger.error('Error creating association', { error, variableId: req.params.id, requestId: req.ip });
+    logger.error('Error creating association', { error, propertyId: req.params.id, requestId: req.ip });
     next(error);
   }
 };

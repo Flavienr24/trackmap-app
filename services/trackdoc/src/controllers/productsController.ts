@@ -25,7 +25,7 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
             events: true // Include events for each page
           }
         },
-        variables: true,
+        properties: true,
         suggestedValues: true
       },
       orderBy: {
@@ -92,7 +92,7 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
             events: true // Include events for comprehensive view
           }
         },
-        variables: true,
+        properties: true,
         suggestedValues: true
       }
     });
@@ -159,7 +159,7 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       },
       include: {
         pages: true,
-        variables: true,
+        properties: true,
         suggestedValues: true
       }
     });
@@ -239,7 +239,7 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
       data: updateData,
       include: {
         pages: true,
-        variables: true,
+        properties: true,
         suggestedValues: true
       }
     });

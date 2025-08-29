@@ -24,7 +24,7 @@ model Product {
 
   // Related entities
   pages           Page[]           // Product pages
-  variables       Variable[]       // Shared variable definitions
+  properties      Property[]       // Shared property definitions
   suggestedValues SuggestedValue[] // Shared suggested values
 
   @@map("products")
@@ -70,53 +70,53 @@ model Event {
   @@map("events")
 }
 
-// Variable model - defines reusable variable schemas for events
-// Provides type information and description for consistent variable usage
-model Variable {
+// Property model - defines reusable property schemas for events
+// Provides type information and description for consistent property usage
+model Property {
   id          String      @id @default(cuid())
   productId   String      @map("product_id") // Foreign key to Product
-  name        String      // Variable name (e.g., "page_name", "user_id")
+  name        String      // Property name (e.g., "page_name", "user_id")
   type        String       // Data type (STRING, NUMBER, BOOLEAN, etc.)
-  description String?     // Optional description of variable usage
+  description String?     // Optional description of property usage
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
   // Relationships
   product             Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  variableValues      VariableValue[] // Associations with suggested values
+  propertyValues      PropertyValue[] // Associations with suggested values
 
-  @@map("variables")
+  @@map("properties")
 }
 
-// SuggestedValue model - stores reusable values for variables
+// SuggestedValue model - stores reusable values for properties
 // Can be static values or contextual placeholders (e.g., $page-name)
 model SuggestedValue {
   id            String    @id @default(cuid())
   productId     String    @map("product_id") // Foreign key to Product
   value         String    // The suggested value (static or contextual)
-  isContextual  Boolean   @map("is_contextual") @default(false) // True for $variable-name format
+  isContextual  Boolean   @map("is_contextual") @default(false) // True for $property-name format
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   // Relationships
   product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  variableValues    VariableValue[] // Associations with variables
+  propertyValues    PropertyValue[] // Associations with properties
 
   @@map("suggested_values")
 }
 
-// VariableValue model - many-to-many relationship between Variables and SuggestedValues
-// Associates which suggested values are appropriate for which variables
-model VariableValue {
-  variableId       String @map("variable_id") // Foreign key to Variable
+// PropertyValue model - many-to-many relationship between Properties and SuggestedValues
+// Associates which suggested values are appropriate for which properties
+model PropertyValue {
+  propertyId       String @map("property_id") // Foreign key to Property
   suggestedValueId String @map("suggested_value_id") // Foreign key to SuggestedValue
 
   // Relationships
-  variable        Variable       @relation(fields: [variableId], references: [id], onDelete: Cascade)
+  property        Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   suggestedValue  SuggestedValue @relation(fields: [suggestedValueId], references: [id], onDelete: Cascade)
 
-  @@id([variableId, suggestedValueId]) // Composite primary key
-  @@map("variable_values")
+  @@id([propertyId, suggestedValueId]) // Composite primary key
+  @@map("property_values")
 }
 
 // Comment model - stores user comments on events
@@ -153,6 +153,6 @@ model EventHistory {
 
 // SQLite doesn't support enums, so we use string constraints
 // Event status values: TO_IMPLEMENT, TO_TEST, ERROR, VALIDATED
-// Variable type values: STRING, NUMBER, BOOLEAN, ARRAY, OBJECT
+// Property type values: STRING, NUMBER, BOOLEAN, ARRAY, OBJECT
 
 // Removed models: Instance (replaced by separate Products)

@@ -11,7 +11,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import productsRoutes from './routes/products';
 import pagesRoutes from './routes/pages';
 import eventsRoutes from './routes/events';
-import variablesRoutes from './routes/variables';
+import propertiesRoutes from './routes/properties';
 import suggestedValuesRoutes from './routes/suggestedValues';
 
 // Load environment variables from .env file
@@ -73,7 +73,7 @@ app.get('/api/health', async (req, res) => {
 app.use('/api/products', productsRoutes);
 app.use('/api/pages', pagesRoutes);
 app.use('/api/events', eventsRoutes);
-app.use('/api/variables', variablesRoutes);
+app.use('/api/properties', propertiesRoutes);
 app.use('/api/suggested-values', suggestedValuesRoutes);
 
 // Error handling middleware (must be last)

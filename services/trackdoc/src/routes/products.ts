@@ -14,9 +14,9 @@ import {
   getPageBySlug
 } from '../controllers/pagesController';
 import {
-  getVariablesByProduct,
-  createVariable
-} from '../controllers/variablesController';
+  getPropertiesByProduct,
+  createProperty
+} from '../controllers/propertiesController';
 import {
   getSuggestedValuesByProduct,
   createSuggestedValue
@@ -50,12 +50,12 @@ router.post('/:id/pages', createPage);
 // GET /api/products/:productSlug/pages/:pageSlug - Get a specific page by slugs
 router.get('/:productSlug/pages/:pageSlug', getPageBySlug);
 
-// Variable routes nested under products
-// GET /api/products/:id/variables - Get all variables for a product
-router.get('/:id/variables', getVariablesByProduct);
+// Property routes nested under products
+// GET /api/products/:id/properties - Get all properties for a product
+router.get('/:id/properties', getPropertiesByProduct);
 
-// POST /api/products/:id/variables - Create a new variable for a product
-router.post('/:id/variables', createVariable);
+// POST /api/products/:id/properties - Create a new property for a product
+router.post('/:id/properties', createProperty);
 
 // Suggested Value routes nested under products
 // GET /api/products/:id/suggested-values - Get all suggested values for a product
