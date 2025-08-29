@@ -7,9 +7,9 @@ import type {
   Product,
   Page,
   Event,
-  Variable,
+  Property,
   SuggestedValue,
-  VariableValue,
+  PropertyValue,
   Comment,
   EventHistory,
   ApiResponse,
@@ -19,18 +19,18 @@ import type {
   UpdatePageRequest,
   CreateEventRequest,
   UpdateEventRequest,
-  CreateVariableRequest,
-  UpdateVariableRequest,
+  CreatePropertyRequest,
+  UpdatePropertyRequest,
   CreateSuggestedValueRequest,
   UpdateSuggestedValueRequest,
-  CreateVariableValueRequest,
-  DeleteVariableValueRequest,
+  CreatePropertyValueRequest,
+  DeletePropertyValueRequest,
   CreateCommentRequest,
   UpdateCommentRequest,
   ProductsFilter,
   PagesFilter,
   EventsFilter,
-  VariablesFilter,
+  PropertiesFilter,
   SuggestedValuesFilter,
   CommentsFilter,
   EventHistoryFilter,
@@ -73,7 +73,7 @@ function transformApiData(data: any, visited: WeakSet<any> = new WeakSet()): any
       if (key === 'productId') newKey = 'product_id'
       if (key === 'pageId') newKey = 'page_id'
       if (key === 'eventId') newKey = 'event_id'
-      if (key === 'variableId') newKey = 'variable_id'
+      if (key === 'propertyId') newKey = 'property_id'
       if (key === 'suggestedValueId') newKey = 'suggested_value_id'
       if (key === 'testDate') newKey = 'test_date'
       if (key === 'isContextual') newKey = 'is_contextual'
@@ -246,34 +246,34 @@ export const eventsApi = {
 }
 
 /**
- * Variables API
+ * Properties API
  */
-export const variablesApi = {
-  // Get variables for a product
-  getByProduct: (productId: string, filters?: VariablesFilter): Promise<ApiResponse<Variable[]>> =>
-    apiRequest(`/products/${productId}/variables` + (filters ? `?${new URLSearchParams(filters as any)}` : '')),
+export const propertiesApi = {
+  // Get properties for a product
+  getByProduct: (productId: string, filters?: PropertiesFilter): Promise<ApiResponse<Property[]>> =>
+    apiRequest(`/products/${productId}/properties` + (filters ? `?${new URLSearchParams(filters as any)}` : '')),
 
-  // Get single variable
-  getById: (id: string): Promise<ApiResponse<Variable>> =>
-    apiRequest(`/variables/${id}`),
+  // Get single property
+  getById: (id: string): Promise<ApiResponse<Property>> =>
+    apiRequest(`/properties/${id}`),
 
-  // Create variable
-  create: (productId: string, data: CreateVariableRequest): Promise<ApiResponse<Variable>> =>
-    apiRequest(`/products/${productId}/variables`, {
+  // Create property
+  create: (productId: string, data: CreatePropertyRequest): Promise<ApiResponse<Property>> =>
+    apiRequest(`/products/${productId}/properties`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  // Update variable
-  update: (id: string, data: UpdateVariableRequest): Promise<ApiResponse<Variable>> =>
-    apiRequest(`/variables/${id}`, {
+  // Update property
+  update: (id: string, data: UpdatePropertyRequest): Promise<ApiResponse<Property>> =>
+    apiRequest(`/properties/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
-  // Delete variable
+  // Delete property
   delete: (id: string): Promise<ApiResponse<void>> =>
-    apiRequest(`/variables/${id}`, {
+    apiRequest(`/properties/${id}`, {
       method: 'DELETE',
     }),
 }
@@ -312,27 +312,27 @@ export const suggestedValuesApi = {
 }
 
 /**
- * Variable Values API (Junction table)
+ * Property Values API (Junction table)
  */
-export const variableValuesApi = {
-  // Get suggested values for a specific variable
-  getByVariable: (variableId: string): Promise<ApiResponse<VariableValue[]>> =>
-    apiRequest(`/variables/${variableId}/suggested-values`),
+export const propertyValuesApi = {
+  // Get suggested values for a specific property
+  getByProperty: (propertyId: string): Promise<ApiResponse<PropertyValue[]>> =>
+    apiRequest(`/properties/${propertyId}/suggested-values`),
 
-  // Get variables that use a specific suggested value
-  getBySuggestedValue: (suggestedValueId: string): Promise<ApiResponse<VariableValue[]>> =>
-    apiRequest(`/suggested-values/${suggestedValueId}/variables`),
+  // Get properties that use a specific suggested value
+  getBySuggestedValue: (suggestedValueId: string): Promise<ApiResponse<PropertyValue[]>> =>
+    apiRequest(`/suggested-values/${suggestedValueId}/properties`),
 
-  // Associate a variable with a suggested value
-  create: (data: CreateVariableValueRequest): Promise<ApiResponse<VariableValue>> =>
-    apiRequest(`/variables/${data.variable_id}/suggested-values`, {
+  // Associate a property with a suggested value
+  create: (data: CreatePropertyValueRequest): Promise<ApiResponse<PropertyValue>> =>
+    apiRequest(`/properties/${data.property_id}/suggested-values`, {
       method: 'POST',
       body: JSON.stringify({ suggested_value_id: data.suggested_value_id }),
     }),
 
-  // Remove association between variable and suggested value
-  delete: (data: DeleteVariableValueRequest): Promise<ApiResponse<void>> =>
-    apiRequest(`/variables/${data.variable_id}/suggested-values/${data.suggested_value_id}`, {
+  // Remove association between property and suggested value
+  delete: (data: DeletePropertyValueRequest): Promise<ApiResponse<void>> =>
+    apiRequest(`/properties/${data.property_id}/suggested-values/${data.suggested_value_id}`, {
       method: 'DELETE',
     }),
 }

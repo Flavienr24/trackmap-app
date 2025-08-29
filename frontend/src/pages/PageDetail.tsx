@@ -9,7 +9,7 @@ import { EditEventModal } from '@/components/organisms/EditEventModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { EventDetailModal } from '@/components/organisms/EventDetailModal'
 import { pagesApi, eventsApi } from '@/services/api'
-import { getVariableCount } from '@/utils/variables'
+import { getPropertyCount } from '@/utils/properties'
 import type { Page, Event, Product, EventStatus, CreateEventRequest, UpdateEventRequest, UpdatePageRequest } from '@/types'
 
 /**
@@ -205,7 +205,7 @@ const PageDetail: React.FC = () => {
       key: 'name',
       title: 'Event',
       render: (value, record) => {
-        const variableCount = getVariableCount(record.variables)
+        const variableCount = getPropertyCount(record.variables)
         
         return (
           <div>

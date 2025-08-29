@@ -2,19 +2,19 @@ import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
 import { FormField } from '@/components/molecules/FormField'
-import { CreateVariableModal } from '@/components/organisms/CreateVariableModal'
+import { CreatePropertyModal } from '@/components/organisms/CreatePropertyModal'
 // import { mockData } from '@/services/api' // Removed - using real API
-import type { Variable, SuggestedValue, CreateVariableRequest } from '@/types'
+import type { Property, SuggestedValue, CreatePropertyRequest } from '@/types'
 
-interface EventVariablesInputProps {
+interface EventPropertiesInputProps {
   productId: string
   value: Record<string, any>
-  onChange: (variables: Record<string, any>) => void
+  onChange: (properties: Record<string, any>) => void
   disabled?: boolean
   error?: string
 }
 
-interface VariableEntry {
+interface PropertyEntry {
   key: string
   value: string
   keyError?: string
@@ -22,31 +22,31 @@ interface VariableEntry {
 }
 
 /**
- * Event Variables Input Component
- * Smart input for event variables with autocomplete from Variables library
+ * Event Properties Input Component
+ * Smart input for event properties with autocomplete from Properties library
  */
-const EventVariablesInput: React.FC<EventVariablesInputProps> = ({
+const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
   productId,
   value,
   onChange,
   disabled = false,
   error,
 }) => {
-  const [variables, setVariables] = useState<Variable[]>([])
+  const [properties, setProperties] = useState<Property[]>([])
   const [suggestedValues, setSuggestedValues] = useState<SuggestedValue[]>([])
-  const [variableEntries, setVariableEntries] = useState<VariableEntry[]>([])
-  const [showCreateVariableModal, setShowCreateVariableModal] = useState(false)
-  const [createVariableLoading, setCreateVariableLoading] = useState(false)
-  const [newVariableKey, setNewVariableKey] = useState('')
+  const [propertyEntries, setPropertyEntries] = useState<PropertyEntry[]>([])
+  const [showCreatePropertyModal, setShowCreatePropertyModal] = useState(false)
+  const [createPropertyLoading, setCreatePropertyLoading] = useState(false)
+  const [newPropertyKey, setNewPropertyKey] = useState('')
 
-  // Load variables and suggested values for the product
+  // Load properties and suggested values for the product
   useEffect(() => {
-    loadVariablesAndValues()
+    loadPropertiesAndValues()
   }, [productId])
 
   // Convert value object to entries when value changes
   useEffect(() => {
-    const entries: VariableEntry[] = Object.entries(value || {}).map(([key, val]) => ({
+    const entries: PropertyEntry[] = Object.entries(value || {}).map(([key, val]) => ({
       key,
       value: typeof val === 'string' ? val : JSON.stringify(val),
     }))
@@ -56,14 +56,14 @@ const EventVariablesInput: React.FC<EventVariablesInputProps> = ({
       entries.push({ key: '', value: '' })
     }
     
-    setVariableEntries(entries)
+    setPropertyEntries(entries)
   }, [value])
 
-  const loadVariablesAndValues = async () => {
+  const loadPropertiesAndValues = async () => {
     try {
       // Load variables for this product
       const productVariables = mockData.variables.filter(v => v.product_id === productId)
-      setVariables(productVariables)
+      setProperties(productVariables)
       
       // Load suggested values for this product
       const productSuggestedValues = mockData.suggestedValues.filter(sv => sv.product_id === productId)
@@ -74,7 +74,7 @@ const EventVariablesInput: React.FC<EventVariablesInputProps> = ({
   }
 
   const updateEntry = (index: number, field: 'key' | 'value', newValue: string) => {
-    const newEntries = [...variableEntries]
+    const newEntries = [...propertyEntries]
     newEntries[index] = { ...newEntries[index], [field]: newValue }
     
     // Clear errors when user types
@@ -89,13 +89,13 @@ const EventVariablesInput: React.FC<EventVariablesInputProps> = ({
   }
 
   const addEntry = () => {
-    const newEntries = [...variableEntries, { key: '', value: '' }]
+    const newEntries = [...propertyEntries, { key: '', value: '' }]
     setVariableEntries(newEntries)
   }
 
   const removeEntry = (index: number) => {
-    if (variableEntries.length > 1) {
-      const newEntries = variableEntries.filter((_, i) => i !== index)
+    if (propertyEntries.length > 1) {
+      const newEntries = propertyEntries.filter((_, i) => i !== index)
       setVariableEntries(newEntries)
       emitChange(newEntries)
     }
@@ -120,7 +120,7 @@ const EventVariablesInput: React.FC<EventVariablesInputProps> = ({
   }
 
   const getKeyAutocomplete = (currentKey: string): string[] => {
-    const existing = variableEntries.map(e => e.key.toLowerCase())
+    const existing = propertyEntries.map(e => e.key.toLowerCase())
     return variables
       .map(v => v.name)
       .filter(name => 
@@ -155,11 +155,11 @@ const EventVariablesInput: React.FC<EventVariablesInputProps> = ({
     return suggestedValues.map(sv => sv.value).slice(0, 5)
   }
 
-  const handleCreateVariable = async (data: CreateVariableRequest) => {
+  const handleCreateProperty = async (data: CreateVariableRequest) => {
     setCreateVariableLoading(true)
     try {
       // Create variable
-      const newVariable: Variable = {
+      const newProperty: Variable = {
         id: String(Date.now()) + '-' + Math.random().toString(36).slice(2),
         product_id: productId,
         name: data.name,
@@ -170,17 +170,17 @@ const EventVariablesInput: React.FC<EventVariablesInputProps> = ({
       }
       
       // Add to mock data and update local state
-      mockData.variables.push(newVariable)
-      setVariables(prev => [...prev, newVariable])
+      mockData.variables.push(newProperty)
+      setProperties(prev => [...prev, newProperty])
       
       // Update the entry that triggered the creation
-      const entryIndex = variableEntries.findIndex(e => e.key === newVariableKey)
+      const entryIndex = propertyEntries.findIndex(e => e.key === newPropertyKey)
       if (entryIndex !== -1) {
         updateEntry(entryIndex, 'key', data.name)
       }
       
       setNewVariableKey('')
-      console.log('Variable created on the fly:', newVariable)
+      console.log('Variable created on the fly:', newProperty)
     } catch (error) {
       console.error('Error creating variable:', error)
       throw error
@@ -189,7 +189,7 @@ const EventVariablesInput: React.FC<EventVariablesInputProps> = ({
     }
   }
 
-  const handleCreateVariableFromKey = (key: string) => {
+  const handleCreatePropertyFromKey = (key: string) => {
     setNewVariableKey(key)
     setShowCreateVariableModal(true)
   }
@@ -217,7 +217,7 @@ const EventVariablesInput: React.FC<EventVariablesInputProps> = ({
 
       {/* Variable Entries */}
       <div className="space-y-3">
-        {variableEntries.map((entry, index) => (
+        {propertyEntries.map((entry, index) => (
           <div key={index} className="flex items-start space-x-3">
             {/* Key Input */}
             <div className="flex-1">
@@ -246,7 +246,7 @@ const EventVariablesInput: React.FC<EventVariablesInputProps> = ({
                       variant="outline"
                       size="sm"
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-xs"
-                      onClick={() => handleCreateVariableFromKey(entry.key)}
+                      onClick={() => handleCreatePropertyFromKey(entry.key)}
                     >
                       Créer
                     </Button>
@@ -283,7 +283,7 @@ const EventVariablesInput: React.FC<EventVariablesInputProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => removeEntry(index)}
-                disabled={disabled || variableEntries.length === 1}
+                disabled={disabled || propertyEntries.length === 1}
                 className="text-red-600 hover:bg-red-50 border-red-200"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -304,21 +304,21 @@ const EventVariablesInput: React.FC<EventVariablesInputProps> = ({
 
       {/* Info */}
       <div className="text-sm text-neutral-500">
-        <p>💡 <strong>Astuce :</strong> Tapez pour voir les suggestions automatiques basées sur vos variables existantes.</p>
+        <p>💡 <strong>Astuce :</strong> Tapez pour voir les suggestions automatiques basées sur vos propriétés existantes.</p>
       </div>
 
-      {/* Create Variable Modal */}
-      <CreateVariableModal
-        isOpen={showCreateVariableModal}
+      {/* Create Property Modal */}
+      <CreatePropertyModal
+        isOpen={showCreatePropertyModal}
         onClose={() => {
-          setShowCreateVariableModal(false)
-          setNewVariableKey('')
+          setShowCreatePropertyModal(false)
+          setNewPropertyKey('')
         }}
-        onSubmit={handleCreateVariable}
-        loading={createVariableLoading}
+        onSubmit={handleCreateProperty}
+        loading={createPropertyLoading}
       />
     </div>
   )
 }
 
-export { EventVariablesInput }
+export { EventPropertiesInput }

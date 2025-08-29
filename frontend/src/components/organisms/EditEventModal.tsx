@@ -3,7 +3,7 @@ import { Modal } from './Modal'
 import { Button } from '@/components/atoms/Button'
 import { Badge } from '@/components/atoms/Badge'
 import { FormField } from '@/components/molecules/FormField'
-import { parseVariables } from '@/utils/variables'
+import { parseProperties } from '@/utils/properties'
 import type { Event, UpdateEventRequest, EventStatus } from '@/types'
 
 interface EditEventModalProps {
@@ -28,7 +28,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     test_date: ''
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [variablesJson, setVariablesJson] = useState('{}')
+  const [propertiesJson, setPropertiesJson] = useState('{}')
 
   const eventStatuses: { value: EventStatus; label: string }[] = [
     { value: 'to_implement', label: 'À implémenter' },
@@ -40,15 +40,15 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   // Initialize form when event changes
   useEffect(() => {
     if (event) {
-      const parsedVariables = parseVariables(event.variables)
+      const parsedProperties = parseProperties(event.variables)
       
       setFormData({
         name: event.name,
         status: event.status,
-        variables: parsedVariables,
+        variables: parsedProperties,
         test_date: event.test_date || ''
       })
-      setVariablesJson(JSON.stringify(parsedVariables, null, 2))
+      setPropertiesJson(JSON.stringify(parsedVariables, null, 2))
     }
   }, [event])
 
@@ -63,7 +63,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   }
 
   const handleVariablesChange = (value: string) => {
-    setVariablesJson(value)
+    setPropertiesJson(value)
     
     try {
       const parsed = JSON.parse(value || '{}')
@@ -88,7 +88,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     
     // Validate JSON
     try {
-      JSON.parse(variablesJson || '{}')
+      JSON.parse(propertiesJson || '{}')
     } catch (error) {
       newErrors.variables = 'Format JSON invalide'
     }
@@ -111,7 +111,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     if (!event || !validateForm()) return
     
     try {
-      const variables = JSON.parse(variablesJson || '{}')
+      const variables = JSON.parse(propertiesJson || '{}')
       
       await onSubmit(event.id, {
         name: formData.name?.trim(),
@@ -237,7 +237,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
           hint="Variables de l'événement au format JSON. Laisser vide pour aucune variable."
         >
           <textarea
-            value={variablesJson}
+            value={propertiesJson}
             onChange={(e) => handleVariablesChange(e.target.value)}
             placeholder={`{
   "page_name": "homepage",

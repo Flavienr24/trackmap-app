@@ -4,26 +4,26 @@ import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
 import { BackLink } from '@/components/atoms/BackLink'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
-import { CreateVariableModal } from '@/components/organisms/CreateVariableModal'
-import { EditVariableModal } from '@/components/organisms/EditVariableModal'
-import { variablesApi, productsApi } from '@/services/api'
-import type { Variable, Product, CreateVariableRequest, UpdateVariableRequest } from '@/types'
+import { CreatePropertyModal } from '@/components/organisms/CreatePropertyModal'
+import { EditPropertyModal } from '@/components/organisms/EditPropertyModal'
+import { propertiesApi, productsApi } from '@/services/api'
+import type { Property, Product, CreatePropertyRequest, UpdatePropertyRequest } from '@/types'
 
 /**
- * Variables List Page
- * Manages the variables library for a specific product
- * Variables define reusable data types and structures for events
+ * Properties List Page
+ * Manages the properties library for a specific product
+ * Properties define reusable data types and structures for events
  */
-const VariablesList: React.FC = () => {
+const PropertiesList: React.FC = () => {
   const { productSlug } = useParams<{ productSlug: string }>()
   const navigate = useNavigate()
-  const [variables, setVariables] = useState<Variable[]>([])
+  const [properties, setProperties] = useState<Property[]>([])
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
-  const [editVariable, setEditVariable] = useState<Variable | null>(null)
+  const [editProperty, setEditProperty] = useState<Property | null>(null)
   const [editLoading, setEditLoading] = useState(false)
 
   // Redirect if no productSlug
@@ -41,12 +41,12 @@ const VariablesList: React.FC = () => {
     }
   }, [productSlug, navigate])
 
-  const loadVariables = useCallback(async () => {
+  const loadProperties = useCallback(async () => {
     try {
-      const response = await variablesApi.getByProduct(productSlug!)
-      setVariables(response.data)
+      const response = await propertiesApi.getByProduct(productSlug!)
+      setProperties(response.data)
     } catch (error) {
-      console.error('Error loading variables:', error)
+      console.error('Error loading properties:', error)
     }
   }, [productSlug])
 
@@ -55,79 +55,79 @@ const VariablesList: React.FC = () => {
     try {
       await Promise.all([
         loadProduct(),
-        loadVariables()
+        loadProperties()
       ])
     } finally {
       setLoading(false)
     }
-  }, [loadProduct, loadVariables])
+  }, [loadProduct, loadProperties])
 
   // Load data on component mount
   useEffect(() => {
     loadData()
   }, [loadData])
 
-  const handleCreateVariable = () => {
+  const handleCreateProperty = () => {
     setShowCreateModal(true)
   }
 
-  const handleCreateSubmit = async (data: CreateVariableRequest) => {
+  const handleCreateSubmit = async (data: CreatePropertyRequest) => {
     setCreateLoading(true)
     try {
-      const response = await variablesApi.create(productSlug!, data)
-      console.log('Variable created:', response.data)
-      await loadVariables() // Reload the list
+      const response = await propertiesApi.create(productSlug!, data)
+      console.log('Property created:', response.data)
+      await loadProperties() // Reload the list
     } catch (error) {
-      console.error('Error creating variable:', error)
+      console.error('Error creating property:', error)
       throw error
     } finally {
       setCreateLoading(false)
     }
   }
 
-  const handleEditVariable = (variable: Variable) => {
-    setEditVariable(variable)
+  const handleEditProperty = (property: Property) => {
+    setEditProperty(property)
   }
 
-  const handleEditSubmit = async (id: string, data: UpdateVariableRequest) => {
+  const handleEditSubmit = async (id: string, data: UpdatePropertyRequest) => {
     setEditLoading(true)
     try {
-      const response = await variablesApi.update(id, data)
-      console.log('Variable updated:', response.data)
-      await loadVariables() // Reload the list
+      const response = await propertiesApi.update(id, data)
+      console.log('Property updated:', response.data)
+      await loadProperties() // Reload the list
     } catch (error) {
-      console.error('Error updating variable:', error)
+      console.error('Error updating property:', error)
       throw error
     } finally {
       setEditLoading(false)
     }
   }
 
-  const handleDeleteVariable = async (variable: Variable) => {
-    console.log('handleDeleteVariable called for:', variable.name)
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la variable "${variable.name}" ?`)) {
+  const handleDeleteProperty = async (property: Property) => {
+    console.log('handleDeleteProperty called for:', property.name)
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la propriété "${property.name}" ?`)) {
       try {
-        await variablesApi.delete(variable.id)
-        console.log('Variable deleted:', variable)
-        await loadVariables() // Reload the list
+        await propertiesApi.delete(property.id)
+        console.log('Property deleted:', property)
+        await loadProperties() // Reload the list
       } catch (error) {
-        console.error('Error deleting variable:', error)
+        console.error('Error deleting property:', error)
       }
     }
   }
 
-  // Filter variables based on search query
-  const filteredVariables = variables.filter(variable => 
-    variable.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (variable.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
-    variable.type.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filter properties based on search query
+  const filteredProperties = properties.filter(property => 
+    property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (property.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+    property.type.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   // Table columns configuration
-  const columns: Column<Variable>[] = [
+  const columns: Column<Property>[] = [
     {
       key: 'name',
-      title: 'Nom de la variable',
+      title: 'Nom de la propriété',
       render: (value, record) => (
         <div>
           <div className="font-medium text-neutral-900">{value}</div>
@@ -170,15 +170,15 @@ const VariablesList: React.FC = () => {
   ]
 
   // Table actions
-  const actions: Action<Variable>[] = [
+  const actions: Action<Property>[] = [
     {
       label: 'Modifier',
-      onClick: handleEditVariable,
+      onClick: handleEditProperty,
       variant: 'secondary',
     },
     {
       label: 'Supprimer',
-      onClick: handleDeleteVariable,
+      onClick: handleDeleteProperty,
       variant: 'danger',
     },
   ]
@@ -193,7 +193,7 @@ const VariablesList: React.FC = () => {
           <span>›</span>
           <Link to={`/products/${productSlug}`} className="hover:text-neutral-900">{product?.name || 'Chargement...'}</Link>
           <span>›</span>
-          <span className="text-neutral-900 font-medium">Variables</span>
+          <span className="text-neutral-900 font-medium">Propriétés</span>
         </nav>
       </div>
 
@@ -201,10 +201,10 @@ const VariablesList: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-neutral-900">
-            Variables Library
+            Bibliothèque des Propriétés
           </h1>
           <p className="text-neutral-600 mt-1">
-            Variables de "{product?.name || 'Chargement...'}" • {variables.length} variable{variables.length !== 1 ? 's' : ''}
+            Propriétés de "{product?.name || 'Chargement...'}" • {properties.length} propriété{properties.length !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -214,11 +214,11 @@ const VariablesList: React.FC = () => {
           >
             Valeurs suggérées
           </Button>
-          <Button variant="primary" onClick={handleCreateVariable}>
+          <Button variant="primary" onClick={handleCreateProperty}>
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Créer une variable
+            Créer une propriété
           </Button>
         </div>
       </div>
@@ -228,7 +228,7 @@ const VariablesList: React.FC = () => {
         <div className="flex-1 max-w-md">
           <Input
             type="search"
-            placeholder="Rechercher une variable..."
+            placeholder="Rechercher une propriété..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full"
@@ -236,7 +236,7 @@ const VariablesList: React.FC = () => {
         </div>
         <Button 
           variant="outline" 
-          onClick={loadVariables}
+          onClick={loadProperties}
           title="Actualiser la liste"
           className="w-10 h-10 p-0 flex items-center justify-center ml-4"
         >
@@ -246,36 +246,36 @@ const VariablesList: React.FC = () => {
         </Button>
       </div>
 
-      {/* Variables Table */}
+      {/* Properties Table */}
       <DataTable
-        data={filteredVariables}
+        data={filteredProperties}
         columns={columns}
         actions={actions}
         loading={loading}
-        emptyMessage="Aucune variable trouvée. Créez votre première variable pour commencer."
+        emptyMessage="Aucune propriété trouvée. Créez votre première propriété pour commencer."
       />
 
       {/* Stats Footer */}
-      {!loading && variables.length > 0 && (
+      {!loading && properties.length > 0 && (
         <div className="text-sm text-neutral-500">
-          {filteredVariables.length} variable{filteredVariables.length !== 1 ? 's' : ''} 
-          {searchQuery && ` (filtré${filteredVariables.length !== 1 ? 's' : ''} sur ${variables.length})`}
+          {filteredProperties.length} propriété{filteredProperties.length !== 1 ? 's' : ''} 
+          {searchQuery && ` (filtré${filteredProperties.length !== 1 ? 's' : ''} sur ${properties.length})`}
         </div>
       )}
 
-      {/* Create Variable Modal */}
-      <CreateVariableModal
+      {/* Create Property Modal */}
+      <CreatePropertyModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSubmit={handleCreateSubmit}
         loading={createLoading}
       />
 
-      {/* Edit Variable Modal */}
-      <EditVariableModal
-        isOpen={!!editVariable}
-        variable={editVariable}
-        onClose={() => setEditVariable(null)}
+      {/* Edit Property Modal */}
+      <EditPropertyModal
+        isOpen={!!editProperty}
+        property={editProperty}
+        onClose={() => setEditProperty(null)}
         onSubmit={handleEditSubmit}
         loading={editLoading}
       />
@@ -283,4 +283,4 @@ const VariablesList: React.FC = () => {
   )
 }
 
-export { VariablesList }
+export { PropertiesList }

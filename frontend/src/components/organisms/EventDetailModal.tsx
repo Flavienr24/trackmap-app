@@ -4,6 +4,7 @@ import { Button } from '@/components/atoms/Button'
 import { Badge } from '@/components/atoms/Badge'
 import { CommentsSection } from '@/components/organisms/CommentsSection'
 import { EventHistorySection } from '@/components/organisms/EventHistorySection'
+import { parseProperties } from '@/utils/properties'
 import type { Event } from '@/types'
 
 interface EventDetailModalProps {
@@ -138,16 +139,16 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                 </div>
               )}
 
-              {/* Variables */}
+              {/* Properties */}
               <div>
-                <h3 className="text-sm font-medium text-neutral-600 mb-2">Variables</h3>
+                <h3 className="text-sm font-medium text-neutral-600 mb-2">Propriétés</h3>
                 {(() => {
-                  const parsedVariables = parseVariables(event.variables)
+                  const parsedProperties = parseProperties(event.variables)
                   
-                  return Object.keys(parsedVariables).length > 0 ? (
+                  return Object.keys(parsedProperties).length > 0 ? (
                     <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
                       <div className="space-y-2">
-                        {Object.entries(parsedVariables).map(([key, value]) => (
+                        {Object.entries(parsedProperties).map(([key, value]) => (
                         <div key={key} className="flex items-start">
                           <div className="font-medium text-neutral-700 w-1/3 font-mono text-sm">
                             {key}:

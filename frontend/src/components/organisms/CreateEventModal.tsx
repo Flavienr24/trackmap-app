@@ -3,7 +3,7 @@ import { Modal } from './Modal'
 import { Button } from '@/components/atoms/Button'
 import { Badge } from '@/components/atoms/Badge'
 import { FormField } from '@/components/molecules/FormField'
-import { EventVariablesInput } from '@/components/organisms/EventVariablesInput'
+import { EventPropertiesInput } from '@/components/organisms/EventPropertiesInput'
 import type { CreateEventRequest, EventStatus } from '@/types'
 
 interface CreateEventModalProps {
@@ -45,9 +45,9 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     }
   }
 
-  const handleVariablesChange = (variables: Record<string, any>) => {
+  const handlePropertiesChange = (variables: Record<string, any>) => {
     setFormData(prev => ({ ...prev, variables }))
-    // Clear variables error
+    // Clear properties error
     if (errors.variables) {
       const newErrors = { ...errors }
       delete newErrors.variables
@@ -177,10 +177,10 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
           </div>
         </FormField>
 
-        <EventVariablesInput
+        <EventPropertiesInput
           productId={productId}
           value={formData.variables || {}}
-          onChange={handleVariablesChange}
+          onChange={handlePropertiesChange}
           disabled={loading}
           error={errors.variables}
         />

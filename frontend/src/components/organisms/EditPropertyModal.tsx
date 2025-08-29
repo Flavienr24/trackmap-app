@@ -1,34 +1,47 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Modal } from '@/components/organisms/Modal'
 import { FormField } from '@/components/molecules/FormField'
 import { Input } from '@/components/atoms/Input'
 import { Select } from '@/components/atoms/Select'
 import { Button } from '@/components/atoms/Button'
-import type { CreateVariableRequest, VariableType } from '@/types'
+import type { Property, UpdatePropertyRequest, PropertyType } from '@/types'
 
-interface CreateVariableModalProps {
+interface EditPropertyModalProps {
   isOpen: boolean
+  property: Property | null
   onClose: () => void
-  onSubmit: (data: CreateVariableRequest) => Promise<void>
+  onSubmit: (id: string, data: UpdatePropertyRequest) => Promise<void>
   loading?: boolean
 }
 
-const CreateVariableModal: React.FC<CreateVariableModalProps> = ({
+const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
   isOpen,
+  property,
   onClose,
   onSubmit,
   loading = false,
 }) => {
-  const [formData, setFormData] = useState<CreateVariableRequest>({
+  const [formData, setFormData] = useState<UpdatePropertyRequest>({
     name: '',
     type: 'string',
     description: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  // Update form data when property changes
+  useEffect(() => {
+    if (property) {
+      setFormData({
+        name: property.name,
+        type: property.type,
+        description: property.description || '',
+      })
+      setErrors({})
+    }
+  }, [property])
+
   const handleClose = () => {
     if (!loading) {
-      setFormData({ name: '', type: 'string', description: '' })
       setErrors({})
       onClose()
     }
@@ -37,12 +50,12 @@ const CreateVariableModal: React.FC<CreateVariableModalProps> = ({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Le nom de la variable est requis'
+    if (!formData.name?.trim()) {
+      newErrors.name = 'Le nom de la propriété est requis'
     }
 
     if (!formData.type) {
-      newErrors.type = 'Le type de variable est requis'
+      newErrors.type = 'Le type de propriété est requis'
     }
 
     setErrors(newErrors)
@@ -52,24 +65,24 @@ const CreateVariableModal: React.FC<CreateVariableModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!validateForm()) {
+    if (!property || !validateForm()) {
       return
     }
 
     try {
-      await onSubmit({
-        name: formData.name.trim(),
+      await onSubmit(property.id, {
+        name: formData.name?.trim(),
         type: formData.type,
         description: formData.description?.trim() || undefined,
       })
       handleClose()
     } catch (error) {
-      console.error('Error creating variable:', error)
-      setErrors({ submit: 'Erreur lors de la création de la variable' })
+      console.error('Error updating property:', error)
+      setErrors({ submit: 'Erreur lors de la modification de la propriété' })
     }
   }
 
-  const typeOptions: { value: VariableType; label: string }[] = [
+  const typeOptions: { value: PropertyType; label: string }[] = [
     { value: 'string', label: 'String (Texte)' },
     { value: 'number', label: 'Number (Nombre)' },
     { value: 'boolean', label: 'Boolean (Vrai/Faux)' },
@@ -77,29 +90,31 @@ const CreateVariableModal: React.FC<CreateVariableModalProps> = ({
     { value: 'object', label: 'Object (Objet)' },
   ]
 
+  if (!property) return null
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Créer une variable"
+      title="Modifier la propriété"
       size="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Variable Name */}
+        {/* Property Name */}
         <FormField
-          label="Nom de la variable"
+          label="Nom de la propriété"
           required
           error={errors.name}
         >
           <Input
-            value={formData.name}
+            value={formData.name || ''}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="page_name, user_id, transaction_value..."
             disabled={loading}
           />
         </FormField>
 
-        {/* Variable Type */}
+        {/* Property Type */}
         <FormField
           label="Type de données"
           required
@@ -107,7 +122,7 @@ const CreateVariableModal: React.FC<CreateVariableModalProps> = ({
         >
           <Select
             value={formData.type}
-            onChange={(value) => setFormData({ ...formData, type: value as VariableType })}
+            onChange={(value) => setFormData({ ...formData, type: value as PropertyType })}
             options={typeOptions}
             disabled={loading}
           />
@@ -121,7 +136,7 @@ const CreateVariableModal: React.FC<CreateVariableModalProps> = ({
           <textarea
             value={formData.description || ''}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Description de l'usage de cette variable..."
+            placeholder="Description de l'usage de cette propriété..."
             disabled={loading}
             rows={3}
             className="block w-full rounded-md border border-neutral-300 bg-white text-neutral-900 px-3 py-2 text-sm transition-colors duration-200 hover:border-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed resize-none"
@@ -150,7 +165,7 @@ const CreateVariableModal: React.FC<CreateVariableModalProps> = ({
             variant="primary"
             loading={loading}
           >
-            Créer la variable
+            Modifier la propriété
           </Button>
         </div>
       </form>
@@ -158,4 +173,4 @@ const CreateVariableModal: React.FC<CreateVariableModalProps> = ({
   )
 }
 
-export { CreateVariableModal }
+export { EditPropertyModal }

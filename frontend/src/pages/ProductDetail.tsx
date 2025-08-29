@@ -6,8 +6,8 @@ import { DataTable, type Column, type Action } from '@/components/organisms/Data
 import { CreatePageModal } from '@/components/organisms/CreatePageModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { EditProductModal } from '@/components/organisms/EditProductModal'
-import { productsApi, pagesApi, variablesApi } from '@/services/api'
-import type { Product, Page, Variable, CreatePageRequest, UpdatePageRequest, UpdateProductRequest } from '@/types'
+import { productsApi, pagesApi, propertiesApi } from '@/services/api'
+import type { Product, Page, Property, CreatePageRequest, UpdatePageRequest, UpdateProductRequest } from '@/types'
 
 /**
  * Product Detail Page
@@ -19,7 +19,7 @@ const ProductDetail: React.FC = () => {
   
   const [product, setProduct] = useState<Product | null>(null)
   const [pages, setPages] = useState<Page[]>([])
-  const [variables, setVariables] = useState<Variable[]>([])
+  const [properties, setProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreatePageModal, setShowCreatePageModal] = useState(false)
   const [createPageLoading, setCreatePageLoading] = useState(false)
@@ -47,12 +47,12 @@ const ProductDetail: React.FC = () => {
     }
   }, [])
 
-  const loadVariables = useCallback(async (productSlug: string) => {
+  const loadProperties = useCallback(async (productSlug: string) => {
     try {
-      const response = await variablesApi.getByProduct(productSlug)
-      setVariables(response.data)
+      const response = await propertiesApi.getByProduct(productSlug)
+      setProperties(response.data)
     } catch (error) {
-      console.error('Error loading variables:', error)
+      console.error('Error loading properties:', error)
     }
   }, [])
   
@@ -62,12 +62,12 @@ const ProductDetail: React.FC = () => {
       await Promise.all([
         loadProduct(productSlug),
         loadPages(productSlug),
-        loadVariables(productSlug)
+        loadProperties(productSlug)
       ])
     } finally {
       setLoading(false)
     }
-  }, [loadProduct, loadPages, loadVariables])
+  }, [loadProduct, loadPages, loadProperties])
 
   useEffect(() => {
     if (slug) {
@@ -235,8 +235,8 @@ const ProductDetail: React.FC = () => {
             <Button variant="secondary" onClick={handleEditProduct}>
               Modifier le produit
             </Button>
-            <Button variant="secondary" onClick={() => navigate(`/products/${product.slug}/variables`)}>
-              Gérer les variables
+            <Button variant="secondary" onClick={() => navigate(`/products/${product.slug}/properties`)}>
+              Gérer les propriétés
             </Button>
             <Button variant="secondary" onClick={() => navigate(`/products/${product.slug}/suggested-values`)}>
               Valeurs suggérées
@@ -266,7 +266,7 @@ const ProductDetail: React.FC = () => {
           </div>
           <div className="bg-neutral-50 rounded-lg p-4">
             <div className="text-2xl font-bold text-neutral-900">
-              {variables.length}
+              {properties.length}
             </div>
             <div className="text-sm text-neutral-600">Variables</div>
           </div>

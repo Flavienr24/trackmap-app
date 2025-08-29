@@ -3,7 +3,7 @@ import Layout from './components/Layout'
 import { ProductsList } from './pages/ProductsList'
 import { ProductDetail } from './pages/ProductDetail'
 import { PageDetail } from './pages/PageDetail'
-import { VariablesList } from './pages/VariablesList'
+import { PropertiesList } from './pages/PropertiesList'
 import { SuggestedValuesList } from './pages/SuggestedValuesList'
 
 function App() {
@@ -14,7 +14,7 @@ function App() {
           <Route path="/" element={<ProductsList />} />
           <Route path="/products" element={<ProductsList />} />
           <Route path="/products/:slug" element={<ProductDetail />} />
-          <Route path="/products/:productSlug/variables" element={<VariablesList />} />
+          <Route path="/products/:productSlug/properties" element={<PropertiesList />} />
           <Route path="/products/:productSlug/suggested-values" element={<SuggestedValuesList />} />
           <Route path="/products/:productSlug/pages/:pageSlug" element={<PageDetail />} />
         </Routes>

@@ -360,4 +360,41 @@ npm run build && npm start
 
 **Avantages** : Économie ressources, environnement propre, ports disponibles, meilleur contrôle
 
+### Gestion des Migrations de Base de Données
+
+**RÈGLE CRITIQUE** : Toujours préserver les données lors des migrations
+
+#### ✅ Bonnes Pratiques - Migrations Sûres
+```bash
+# 1. Sauvegarde AVANT migration
+cp services/trackdoc/prisma/dev.db services/trackdoc/prisma/dev.db.backup
+
+# 2. Créer une migration propre (PRÉFÉRÉ)
+cd services/trackdoc
+npx prisma migrate dev --name description-de-la-migration
+
+# 3. Générer le client Prisma après migration
+npx prisma generate
+```
+
+#### ❌ À ÉVITER ABSOLUMENT
+- **`npx prisma db push --force-reset`** : SUPPRIME TOUTES LES DONNÉES définitivement
+- **Migrations sans sauvegarde sur données importantes**
+- **Modifications de schéma sans migration trackée**
+
+#### 🛡️ Procédure de Sécurité
+1. **Sauvegarde** : Toujours faire une copie de `dev.db` avant migration majeure
+2. **Migration incrémentale** : Utiliser `migrate dev` pour préserver l'historique
+3. **Test** : Vérifier que l'application fonctionne après migration
+4. **Rollback** : En cas de problème, restaurer depuis la sauvegarde
+
+#### 🔄 Récupération d'urgence
+```bash
+# Si données perdues, restaurer depuis sauvegarde
+cp services/trackdoc/prisma/dev.db.backup services/trackdoc/prisma/dev.db
+
+# Ou recréer avec script de seed
+npx prisma db seed
+```
+
 Garde ces principes à l'esprit pour maintenir la cohérence et la qualité du code dans le développement de TrackMap Web App.

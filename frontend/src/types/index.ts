@@ -1,13 +1,13 @@
 /**
  * TrackMap Application Types
- * Core data models for products, pages, events, and variables
+ * Core data models for products, pages, events, and properties
  */
 
 // Status types for events
 export type EventStatus = 'to_implement' | 'to_test' | 'validated' | 'error'
 
-// Variable types
-export type VariableType = 'string' | 'number' | 'boolean' | 'array' | 'object'
+// Property types
+export type PropertyType = 'string' | 'number' | 'boolean' | 'array' | 'object'
 
 /**
  * Product Model
@@ -58,13 +58,13 @@ export interface Event {
 }
 
 /**
- * Variable Model (Variables Library)
+ * Property Model (Properties Library)
  */
-export interface Variable {
+export interface Property {
   id: string
   product_id: string
   name: string
-  type: VariableType
+  type: PropertyType
   description?: string
   created_at: string
   updated_at: string
@@ -83,13 +83,13 @@ export interface SuggestedValue {
 }
 
 /**
- * Variable Value Model (Junction table)
+ * Property Value Model (Junction table)
  */
-export interface VariableValue {
-  variable_id: string
+export interface PropertyValue {
+  property_id: string
   suggested_value_id: string
   // Relations
-  variable?: Variable
+  property?: Property
   suggested_value?: SuggestedValue
 }
 
@@ -168,13 +168,13 @@ export interface UpdateEventRequest extends Partial<CreateEventRequest> {
   test_date?: string
 }
 
-export interface CreateVariableRequest {
+export interface CreatePropertyRequest {
   name: string
-  type: VariableType
+  type: PropertyType
   description?: string
 }
 
-export interface UpdateVariableRequest extends Partial<CreateVariableRequest> {}
+export interface UpdatePropertyRequest extends Partial<CreatePropertyRequest> {}
 
 export interface CreateSuggestedValueRequest {
   value: string
@@ -183,13 +183,13 @@ export interface CreateSuggestedValueRequest {
 
 export interface UpdateSuggestedValueRequest extends Partial<CreateSuggestedValueRequest> {}
 
-export interface CreateVariableValueRequest {
-  variable_id: string
+export interface CreatePropertyValueRequest {
+  property_id: string
   suggested_value_id: string
 }
 
-export interface DeleteVariableValueRequest {
-  variable_id: string
+export interface DeletePropertyValueRequest {
+  property_id: string
   suggested_value_id: string
 }
 
@@ -224,9 +224,9 @@ export interface EventsFilter {
   sortOrder?: 'asc' | 'desc'
 }
 
-export interface VariablesFilter {
+export interface PropertiesFilter {
   search?: string
-  type?: VariableType[]
+  type?: PropertyType[]
   sortBy?: 'name' | 'type' | 'created_at' | 'updated_at'
   sortOrder?: 'asc' | 'desc'
 }
