@@ -5,8 +5,9 @@ import { BackLink } from '@/components/atoms/BackLink'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreatePageModal } from '@/components/organisms/CreatePageModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
+import { EditProductModal } from '@/components/organisms/EditProductModal'
 import { productsApi, pagesApi, variablesApi } from '@/services/api'
-import type { Product, Page, Variable, CreatePageRequest, UpdatePageRequest } from '@/types'
+import type { Product, Page, Variable, CreatePageRequest, UpdatePageRequest, UpdateProductRequest } from '@/types'
 
 /**
  * Product Detail Page
@@ -24,6 +25,8 @@ const ProductDetail: React.FC = () => {
   const [createPageLoading, setCreatePageLoading] = useState(false)
   const [editPage, setEditPage] = useState<Page | null>(null)
   const [editPageLoading, setEditPageLoading] = useState(false)
+  const [showEditProductModal, setShowEditProductModal] = useState(false)
+  const [editProductLoading, setEditProductLoading] = useState(false)
 
   const loadProduct = useCallback(async (productId: string) => {
     try {
@@ -107,6 +110,24 @@ const ProductDetail: React.FC = () => {
       throw error
     } finally {
       setEditPageLoading(false)
+    }
+  }
+
+  const handleEditProduct = () => {
+    setShowEditProductModal(true)
+  }
+
+  const handleEditProductSubmit = async (productId: string, data: UpdateProductRequest) => {
+    setEditProductLoading(true)
+    try {
+      const response = await productsApi.update(productId, data)
+      console.log('Product updated:', response.data)
+      await loadProduct(id!) // Reload the product data
+    } catch (error) {
+      console.error('Error updating product:', error)
+      throw error
+    } finally {
+      setEditProductLoading(false)
     }
   }
 
@@ -209,7 +230,7 @@ const ProductDetail: React.FC = () => {
             )}
           </div>
           <div className="flex items-center space-x-3">
-            <Button variant="secondary" onClick={() => console.log('Edit product')}>
+            <Button variant="secondary" onClick={handleEditProduct}>
               Modifier le produit
             </Button>
             <Button variant="secondary" onClick={() => navigate(`/products/${id}/variables`)}>
@@ -316,6 +337,15 @@ const ProductDetail: React.FC = () => {
         onClose={() => setEditPage(null)}
         onSubmit={handleEditPageSubmit}
         loading={editPageLoading}
+      />
+
+      {/* Edit Product Modal */}
+      <EditProductModal
+        isOpen={showEditProductModal}
+        product={product}
+        onClose={() => setShowEditProductModal(false)}
+        onSubmit={handleEditProductSubmit}
+        loading={editProductLoading}
       />
     </div>
   )
