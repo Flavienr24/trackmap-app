@@ -9,6 +9,7 @@ import { EditEventModal } from '@/components/organisms/EditEventModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { EventDetailModal } from '@/components/organisms/EventDetailModal'
 import { pagesApi, eventsApi } from '@/services/api'
+import { getVariableCount } from '@/utils/variables'
 import type { Page, Event, Product, EventStatus, CreateEventRequest, UpdateEventRequest, UpdatePageRequest } from '@/types'
 
 /**
@@ -20,29 +21,24 @@ const PageDetail: React.FC = () => {
   const navigate = useNavigate()
   
   const [page, setPage] = useState<Page | null>(null)
-  const [product, setProduct] = useState<Product | null>(null)
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateEventModal, setShowCreateEventModal] = useState(false)
   const [createEventLoading, setCreateEventLoading] = useState(false)
   const [editEvent, setEditEvent] = useState<Event | null>(null)
   const [editEventLoading, setEditEventLoading] = useState(false)
-  const [showAllEventsPreview, setShowAllEventsPreview] = useState(false)
-  const [showEditPageModal, setShowEditPageModal] = useState(false)
+  const [editPage, setEditPage] = useState<Page | null>(null)
   const [editPageLoading, setEditPageLoading] = useState(false)
-  const [detailEvent, setDetailEvent] = useState<Event | null>(null)
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
 
   const loadPage = useCallback(async (pageId: string) => {
     try {
       const response = await pagesApi.getById(pageId)
       setPage(response.data)
-      // Product info is included in the page response
-      setProduct(response.data.product || null)
     } catch (error) {
       console.error('Error loading page:', error)
-      navigate('/products', { replace: true })
     }
-  }, [navigate])
+  }, [])
 
   const loadEvents = useCallback(async (pageId: string) => {
     try {
@@ -53,23 +49,23 @@ const PageDetail: React.FC = () => {
     }
   }, [])
 
-  const loadData = useCallback(async (pageId: string) => {
+  const loadData = useCallback(async () => {
+    if (!id) return
+    
     setLoading(true)
     try {
       await Promise.all([
-        loadPage(pageId),
-        loadEvents(pageId)
+        loadPage(id),
+        loadEvents(id)
       ])
     } finally {
       setLoading(false)
     }
-  }, [loadPage, loadEvents])
+  }, [id, loadPage, loadEvents])
 
   useEffect(() => {
-    if (id) {
-      loadData(id)
-    }
-  }, [id, loadData])
+    loadData()
+  }, [loadData])
 
   const handleCreateEvent = () => {
     setShowCreateEventModal(true)
@@ -80,23 +76,9 @@ const PageDetail: React.FC = () => {
     
     setCreateEventLoading(true)
     try {
-      // TODO: Replace with real API call
-      // const response = await eventsApi.create(id, data)
-      
-      // Mock data simulation
-      const newEvent: Event = {
-        id: String(Date.now()),
-        page_id: id,
-        name: data.name,
-        status: data.status || 'to_implement',
-        variables: data.variables || {},
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-      
-      setEvents(prev => [newEvent, ...prev])
-      mockData.events.push(newEvent)
-      console.log('Event created:', newEvent)
+      const response = await eventsApi.create(id, data)
+      console.log('Event created:', response.data)
+      await loadEvents(id) // Reload the list
     } catch (error) {
       console.error('Error creating event:', error)
       throw error
@@ -109,19 +91,12 @@ const PageDetail: React.FC = () => {
     setEditEvent(event)
   }
 
-  const handleEditEventSubmit = async (id: string, data: UpdateEventRequest) => {
+  const handleEditEventSubmit = async (eventId: string, data: UpdateEventRequest) => {
     setEditEventLoading(true)
     try {
-      // Update in global mockData and reload
-      const updatedEvent = { ...data, updated_at: new Date().toISOString() }
-      const index = mockData.events.findIndex(e => e.id === id)
-      if (index !== -1) {
-        [].events[index], ...updatedEvent }
-      }
-      // Reload events from mockData
-      const updatedEvents = []
-      setEvents(updatedEvents)
-      console.log('Event updated:', { id, ...data })
+      const response = await eventsApi.update(eventId, data)
+      console.log('Event updated:', response.data)
+      await loadEvents(id!) // Reload the list
     } catch (error) {
       console.error('Error updating event:', error)
       throw error
@@ -130,18 +105,18 @@ const PageDetail: React.FC = () => {
     }
   }
 
-  const handleEditPageSubmit = async (id: string, data: UpdatePageRequest) => {
+  const handleEditPage = () => {
+    if (page) {
+      setEditPage(page)
+    }
+  }
+
+  const handleEditPageSubmit = async (pageId: string, data: UpdatePageRequest) => {
     setEditPageLoading(true)
     try {
-      // Update in global mockData and reload
-      const updatedPage = { ...data, updated_at: new Date().toISOString() }
-      const index = mockData.pages.findIndex(p => p.id === id)
-      if (index !== -1) {
-        [].pages[index], ...updatedPage }
-        // Update local page state
-        setPage({ ...mockData.pages[index] })
-      }
-      console.log('Page updated:', { id, ...data })
+      const response = await pagesApi.update(pageId, data)
+      console.log('Page updated:', response.data)
+      await loadPage(id!) // Reload the page data
     } catch (error) {
       console.error('Error updating page:', error)
       throw error
@@ -153,76 +128,96 @@ const PageDetail: React.FC = () => {
   const handleDeleteEvent = async (event: Event) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer l'event "${event.name}" ?`)) {
       try {
-        // TODO: Replace with real API call
-        // await eventsApi.delete(event.id)
-        
-        // Mock data simulation
-        setEvents(prev => prev.filter(e => e.id !== event.id))
-        const index = []
-        if (index !== -1) {
-          mockData.events.splice(index, 1)
-        }
+        await eventsApi.delete(event.id)
         console.log('Event deleted:', event)
+        await loadEvents(id!) // Reload the list
       } catch (error) {
         console.error('Error deleting event:', error)
       }
     }
   }
 
-
-  if (!page || !product) {
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🔍</div>
-          <h2 className="text-xl font-semibold text-neutral-900">Page introuvable</h2>
-          <p className="text-neutral-600 mt-2">Cette page n'existe pas ou a été supprimée.</p>
-          <Link to="/products" className="inline-block mt-4">
-            <Button variant="primary">← Retour aux produits</Button>
-          </Link>
-        </div>
-      </div>
-    )
+  const handleViewEvent = (event: Event) => {
+    setSelectedEvent(event)
   }
 
-  // Events table columns with expandable variables
+  if (!id) {
+    return <div>Page ID manquant</div>
+  }
+
+  if (loading) {
+    return <div>Chargement...</div>
+  }
+
+  if (!page) {
+    return <div>Page non trouvée</div>
+  }
+
+  // Status color mapping
+  const getStatusColor = (status: EventStatus) => {
+    switch (status) {
+      case 'validated': return 'success'
+      case 'to_test': return 'warning' 
+      case 'error': return 'danger'
+      default: return 'secondary'
+    }
+  }
+
+  const getStatusLabel = (status: EventStatus) => {
+    switch (status) {
+      case 'to_implement': return 'À implémenter'
+      case 'to_test': return 'À tester'
+      case 'validated': return 'Validé'
+      case 'error': return 'Erreur'
+      default: return status
+    }
+  }
+
+  // Table columns configuration
   const columns: Column<Event>[] = [
     {
       key: 'name',
       title: 'Event',
-      render: (value, record) => (
-        <div>
-          <div className="font-medium text-neutral-900 font-mono">{value}</div>
-          <div className="text-xs text-neutral-500 mt-1">
-            {Object.keys(record.variables || {}).length} variable{Object.keys(record.variables || {}).length !== 1 ? 's' : ''}
+      render: (value, record) => {
+        const variableCount = getVariableCount(record.variables)
+        
+        return (
+          <div>
+            <div className="font-medium text-neutral-900">{value}</div>
+            <div className="text-sm text-neutral-500">
+              {variableCount} variable{variableCount !== 1 ? 's' : ''}
+            </div>
           </div>
-        </div>
-      ),
+        )
+      },
     },
     {
       key: 'status',
       title: 'Statut',
-      width: '140px',
-      render: (value) => <Badge status={value as EventStatus}>{value}</Badge>,
+      width: '120px',
+      render: (value) => (
+        <Badge variant={getStatusColor(value as EventStatus)}>
+          {getStatusLabel(value as EventStatus)}
+        </Badge>
+      ),
     },
     {
-      key: 'test_date',
-      title: 'Date de test',
-      width: '120px',
-      render: (value) => value ? new Date(value).toLocaleDateString('fr-FR') : '-',
+      key: 'created_at',
+      title: 'Créé le',
+      width: '140px',
     },
     {
       key: 'updated_at',
-      title: 'Modifié',
-      width: '120px',
+      title: 'Modifié le',
+      width: '140px',
     },
   ]
 
-  // Events table actions with status updates
+  // Table actions
   const actions: Action<Event>[] = [
     {
-      label: 'Voir détails',
-      onClick: (event: Event) => setDetailEvent(event),
+      label: 'Voir',
+      onClick: handleViewEvent,
       variant: 'primary',
     },
     {
@@ -231,185 +226,77 @@ const PageDetail: React.FC = () => {
       variant: 'secondary',
     },
     {
-      label: 'Supprimer', 
+      label: 'Supprimer',
       onClick: handleDeleteEvent,
       variant: 'danger',
     },
   ]
 
-  // Status stats
-  const statusStats = events.reduce((acc, event) => {
-    acc[event.status] = (acc[event.status] || 0) + 1
-    return acc
-  }, {} as Record<EventStatus, number>)
-
   return (
     <div className="space-y-6">
       {/* Navigation */}
       <div className="flex items-center justify-between">
-        <BackLink to={`/products/${product.id}`}>Retour</BackLink>
+        <BackLink to={`/products/${page.product_id}`}>Retour au produit</BackLink>
         <nav className="flex items-center space-x-2 text-sm text-neutral-600">
           <Link to="/products" className="hover:text-neutral-900">Produits</Link>
           <span>›</span>
-          <Link to={`/products/${product.id}`} className="hover:text-neutral-900">{product.name}</Link>
+          <Link to={`/products/${page.product_id}`} className="hover:text-neutral-900">Produit</Link>
           <span>›</span>
           <span className="text-neutral-900 font-medium">{page.name}</span>
         </nav>
       </div>
 
       {/* Page Header */}
-      <div className="bg-white rounded-lg border border-neutral-200 p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white rounded-lg border border-slate-200 p-6">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-neutral-900">{page.name}</h1>
-            <p className="text-neutral-600 mt-1 font-mono text-sm">{page.url}</p>
+            <h1 className="text-2xl font-bold text-neutral-900">{page.name}</h1>
+            <p className="text-neutral-600 mt-1">{page.url}</p>
+            <div className="flex items-center space-x-4 mt-4">
+              <div className="text-sm text-neutral-500">
+                <strong>{events.length}</strong> event{events.length !== 1 ? 's' : ''}
+              </div>
+            </div>
           </div>
-          <div className="flex items-center space-x-3">
-            <Button variant="secondary" onClick={() => setShowEditPageModal(true)}>
+          <div className="flex space-x-3">
+            <Button variant="outline" onClick={handleEditPage}>
               Modifier la page
             </Button>
-            <Button onClick={handleCreateEvent}>
+            <Button variant="primary" onClick={handleCreateEvent}>
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              Ajouter un event
+              Créer un event
             </Button>
           </div>
         </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="bg-neutral-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-neutral-900">{events.length}</div>
-            <div className="text-sm text-neutral-600">Events totaux</div>
-          </div>
-          <div className="bg-yellow-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-yellow-700">{statusStats.to_implement || 0}</div>
-            <div className="text-sm text-yellow-600">À implémenter</div>
-          </div>
-          <div className="bg-blue-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-blue-700">{statusStats.to_test || 0}</div>
-            <div className="text-sm text-blue-600">À tester</div>
-          </div>
-          <div className="bg-green-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-green-700">{statusStats.validated || 0}</div>
-            <div className="text-sm text-green-600">Validés</div>
-          </div>
-          <div className="bg-red-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-red-700">{statusStats.error || 0}</div>
-            <div className="text-sm text-red-600">Erreurs</div>
-          </div>
-        </div>
       </div>
 
-      {/* Events Section */}
-      <div className="bg-white rounded-lg border border-neutral-200">
-        <div className="px-6 py-4 border-b border-neutral-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-neutral-900">Events de tracking</h2>
-              <p className="text-neutral-600 text-sm mt-1">
-                Gérez les événements GA4 de cette page
-              </p>
-            </div>
-            <div className="flex items-center space-x-3">
-              {/* Status filter buttons */}
-              <div className="flex items-center space-x-2">
-                <Button size="sm" variant="outline">
-                  <Badge status="to_implement" className="mr-1">●</Badge>
-                  Implémenter
-                </Button>
-                <Button size="sm" variant="outline">
-                  <Badge status="to_test" className="mr-1">●</Badge>
-                  Tester
-                </Button>
-                <Button size="sm" variant="outline">
-                  <Badge status="error" className="mr-1">●</Badge>
-                  Erreur
-                </Button>
-              </div>
-              <Button onClick={handleCreateEvent} size="sm">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Nouvel event
-              </Button>
-            </div>
-          </div>
-        </div>
+      {/* Events Table */}
+      <DataTable
+        data={events}
+        columns={columns}
+        actions={actions}
+        loading={loading}
+        emptyMessage="Aucun event trouvé. Créez votre premier event pour cette page."
+        onRowClick={handleViewEvent}
+      />
 
-        <div className="p-6">
-          <DataTable
-            data={events}
-            columns={columns}
-            actions={actions}
-            loading={loading}
-            emptyMessage="Aucun event trouvé. Créez votre premier événement de tracking."
-            onRowClick={(event) => console.log('View event details:', event)}
-          />
-        </div>
-      </div>
-
-      {/* Variables Preview for selected events */}
-      {events.length > 0 && (
-        <div className="bg-white rounded-lg border border-neutral-200 p-6">
-          <h3 className="text-lg font-semibold text-neutral-900 mb-4">
-            Aperçu des variables
-          </h3>
-          <div className="space-y-4">
-            {(showAllEventsPreview ? events : events.slice(0, 2)).map((event) => (
-              <div key={event.id} className="border border-neutral-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <span className="font-mono font-medium">{event.name}</span>
-                    <Badge status={event.status as EventStatus}>{event.status}</Badge>
-                  </div>
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    onClick={() => handleEditEvent(event)}
-                  >
-                    Modifier →
-                  </Button>
-                </div>
-                <div className="bg-neutral-50 rounded p-3">
-                  <pre className="text-sm text-neutral-700">
-                    {JSON.stringify(event.variables, null, 2)}
-                  </pre>
-                </div>
-              </div>
-            ))}
-            {events.length > 2 && (
-              <div className="text-center">
-                <Button 
-                  variant="outline"
-                  onClick={() => setShowAllEventsPreview(!showAllEventsPreview)}
-                >
-                  {showAllEventsPreview 
-                    ? 'Réduire l\'aperçu' 
-                    : `Voir tous les events (${events.length - 2} autres)`
-                  }
-                </Button>
-              </div>
-            )}
-          </div>
+      {/* Stats Footer */}
+      {!loading && events.length > 0 && (
+        <div className="text-sm text-neutral-500">
+          {events.length} event{events.length !== 1 ? 's' : ''} sur cette page
         </div>
       )}
-
-      {/* Page Info */}
-      <div className="flex justify-end pt-4">
-        <div className="text-sm text-neutral-500">
-          Page créée le {new Date(page.created_at).toLocaleDateString('fr-FR')}
-        </div>
-      </div>
 
       {/* Create Event Modal */}
       <CreateEventModal
         isOpen={showCreateEventModal}
-        productId={product?.id || ''}
         onClose={() => setShowCreateEventModal(false)}
         onSubmit={handleCreateEventSubmit}
         loading={createEventLoading}
+        pageId={id}
+        productId={page.product_id}
       />
 
       {/* Edit Event Modal */}
@@ -423,22 +310,19 @@ const PageDetail: React.FC = () => {
 
       {/* Edit Page Modal */}
       <EditPageModal
-        isOpen={showEditPageModal}
-        page={page}
-        onClose={() => setShowEditPageModal(false)}
+        isOpen={!!editPage}
+        page={editPage}
+        onClose={() => setEditPage(null)}
         onSubmit={handleEditPageSubmit}
         loading={editPageLoading}
       />
 
       {/* Event Detail Modal */}
       <EventDetailModal
-        isOpen={!!detailEvent}
-        event={detailEvent}
-        onClose={() => setDetailEvent(null)}
-        onEdit={(event) => {
-          setDetailEvent(null)
-          setEditEvent(event)
-        }}
+        isOpen={!!selectedEvent}
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        productId={page.product_id}
       />
     </div>
   )
