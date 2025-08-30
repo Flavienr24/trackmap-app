@@ -104,15 +104,26 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
       return next(error);
     }
 
+    // Add computed fields like in getAllProducts
+    const totalEvents = product.pages.reduce((acc, page) => acc + page.events.length, 0);
+    
+    const enrichedProduct = {
+      ...product,
+      pages_count: product.pages.length,
+      events_count: totalEvents,
+      health_score: totalEvents > 0 ? Math.round((product.pages.length * 20) + (totalEvents * 10)) : 0
+    };
+
     logger.info('Product fetched successfully', { 
       productId: id,
       productName: product.name,
+      eventsCount: totalEvents,
       requestId: req.ip 
     });
 
     res.json({
       success: true,
-      data: product
+      data: enrichedProduct
     });
   } catch (error) {
     logger.error('Error fetching product', { error, productId: req.params.id, requestId: req.ip });

@@ -86,7 +86,7 @@ export const getEventsByPage = async (req: Request, res: Response, next: NextFun
       }
     });
 
-    // Parse properties JSON for each event
+    // Parse properties JSON for each event (temporary: read from variables column)
     const eventsWithParsedProperties = events.map((event: any) => ({
       ...event,
       properties: safeJsonParse(event.properties, {})

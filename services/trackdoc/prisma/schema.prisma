@@ -58,7 +58,7 @@ model Event {
   name      String      // Event name (e.g., "purchase", "page_view")
   status    String @default("TO_IMPLEMENT") // Implementation status
   testDate  DateTime?   @map("test_date") // Date when event was tested
-  variables String      // Event variables as JSON string
+  properties String     // Event properties as JSON string
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
 
