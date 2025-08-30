@@ -75,6 +75,27 @@ const ProductDetail: React.FC = () => {
     }
   }, [slug, loadData])
 
+  // Reload data when component gains focus to ensure fresh event counts
+  useEffect(() => {
+    const handleFocusOrVisibility = () => {
+      if (!document.hidden && slug) {
+        // Reload product data to get fresh event counts
+        loadProduct(slug)
+        // Also reload pages to update their event counts
+        loadPages(slug)
+      }
+    }
+
+    // Listen to focus and visibility changes
+    window.addEventListener('focus', handleFocusOrVisibility)
+    document.addEventListener('visibilitychange', handleFocusOrVisibility)
+
+    return () => {
+      window.removeEventListener('focus', handleFocusOrVisibility)
+      document.removeEventListener('visibilitychange', handleFocusOrVisibility)
+    }
+  }, [slug, loadProduct, loadPages])
+
   const handleCreatePage = () => {
     setShowCreatePageModal(true)
   }
@@ -180,8 +201,8 @@ const ProductDetail: React.FC = () => {
       key: 'events_count',
       title: 'Events',
       width: '100px',
-      render: (value) => (
-        <span className="text-neutral-600">{value || 0}</span>
+      render: (value, record) => (
+        <span className="text-neutral-600">{record.events?.length || 0}</span>
       ),
     },
     {

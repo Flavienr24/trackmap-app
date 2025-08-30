@@ -58,6 +58,15 @@ const PageDetail: React.FC = () => {
     loadAllData()
   }, [productSlug, pageSlug, navigate])
 
+  const loadEvents = useCallback(async (pageId: string) => {
+    try {
+      const eventsResponse = await eventsApi.getByPage(pageId)
+      setEvents(eventsResponse.data)
+    } catch (error) {
+      console.error('Error loading events:', error)
+    }
+  }, [])
+
   const handleCreateEvent = () => {
     setShowCreateEventModal(true)
   }
@@ -205,7 +214,7 @@ const PageDetail: React.FC = () => {
       key: 'name',
       title: 'Event',
       render: (value, record) => {
-        const variableCount = getPropertyCount(record.variables)
+        const variableCount = getPropertyCount(record.properties)
         
         return (
           <div>

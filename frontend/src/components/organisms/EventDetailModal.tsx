@@ -143,7 +143,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
               <div>
                 <h3 className="text-sm font-medium text-neutral-600 mb-2">Propriétés</h3>
                 {(() => {
-                  const parsedProperties = parseProperties(event.variables)
+                  const parsedProperties = parseProperties(event.properties)
                   
                   return Object.keys(parsedProperties).length > 0 ? (
                     <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">

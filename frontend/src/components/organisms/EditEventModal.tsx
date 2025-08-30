@@ -24,7 +24,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   const [formData, setFormData] = useState<UpdateEventRequest>({
     name: '',
     status: 'to_implement',
-    variables: {},
+    properties: {},
     test_date: ''
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -40,15 +40,15 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   // Initialize form when event changes
   useEffect(() => {
     if (event) {
-      const parsedProperties = parseProperties(event.variables)
+      const parsedProperties = parseProperties(event.properties)
       
       setFormData({
         name: event.name,
         status: event.status,
-        variables: parsedProperties,
+        properties: parsedProperties,
         test_date: event.test_date || ''
       })
-      setPropertiesJson(JSON.stringify(parsedVariables, null, 2))
+      setPropertiesJson(JSON.stringify(parsedProperties, null, 2))
     }
   }, [event])
 
@@ -67,11 +67,11 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     
     try {
       const parsed = JSON.parse(value || '{}')
-      setFormData(prev => ({ ...prev, variables: parsed }))
-      // Clear variables error if JSON is valid
-      if (errors.variables) {
+      setFormData(prev => ({ ...prev, properties: parsed }))
+      // Clear properties error if JSON is valid
+      if (errors.properties) {
         const newErrors = { ...errors }
-        delete newErrors.variables
+        delete newErrors.properties
         setErrors(newErrors)
       }
     } catch (error) {
@@ -90,7 +90,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     try {
       JSON.parse(propertiesJson || '{}')
     } catch (error) {
-      newErrors.variables = 'Format JSON invalide'
+      newErrors.properties = 'Format JSON invalide'
     }
 
     // Validate test_date if provided
@@ -232,9 +232,9 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
         </FormField>
 
         <FormField
-          label="Variables (JSON)"
-          error={errors.variables}
-          hint="Variables de l'événement au format JSON. Laisser vide pour aucune variable."
+          label="Propriétés (JSON)"
+          error={errors.properties}
+          hint="Propriétés de l'événement au format JSON. Laisser vide pour aucune propriété."
         >
           <textarea
             value={propertiesJson}
