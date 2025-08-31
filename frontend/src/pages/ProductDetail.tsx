@@ -194,6 +194,20 @@ const ProductDetail: React.FC = () => {
     }
   }
 
+  // Show loading state while data is being fetched
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⏳</div>
+          <h2 className="text-xl font-semibold text-neutral-900">Chargement...</h2>
+          <p className="text-neutral-600 mt-2">Récupération des données du produit</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show not found only after loading is complete and no product
   if (!product) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -354,7 +368,7 @@ const ProductDetail: React.FC = () => {
             data={pages}
             columns={columns}
             actions={actions}
-            loading={loading}
+            loading={false}
             emptyMessage="Aucune page trouvée. Créez votre première page pour commencer le tracking."
             onRowClick={handleViewPage}
           />
