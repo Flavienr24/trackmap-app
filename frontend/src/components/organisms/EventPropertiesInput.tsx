@@ -63,17 +63,15 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     try {
       // Load properties for this product
       const propertiesResponse = await propertiesApi.getByProduct(productId)
-      if (propertiesResponse.success) {
-        setProperties(propertiesResponse.data)
-      }
+      setProperties(propertiesResponse.data || [])
       
       // Load suggested values for this product
       const suggestedValuesResponse = await suggestedValuesApi.getByProduct(productId)
-      if (suggestedValuesResponse.success) {
-        setSuggestedValues(suggestedValuesResponse.data)
-      }
+      setSuggestedValues(suggestedValuesResponse.data || [])
     } catch (error) {
       console.error('Error loading properties and suggested values:', error)
+      setProperties([])
+      setSuggestedValues([])
     }
   }
 
@@ -146,10 +144,8 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     }
     
     // Get associated suggested values for this property
-    const propertyValueAssociations = []
-    const associatedSuggestedValues = propertyValueAssociations
-      .map(pv => suggestedValues.find(sv => sv.id === pv.suggested_value_id))
-      .filter(Boolean) as SuggestedValue[]
+    // TODO: Implement proper property-value associations when API is ready
+    const associatedSuggestedValues: SuggestedValue[] = []
     
     if (associatedSuggestedValues.length > 0) {
       return associatedSuggestedValues.map(sv => sv.value)
@@ -164,21 +160,19 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     try {
       // Create property via API
       const response = await propertiesApi.create(productId, data)
-      if (response.success) {
-        const newProperty = response.data
-        
-        // Update local state
-        setProperties(prev => [...prev, newProperty])
-        
-        // Update the entry that triggered the creation
-        const entryIndex = propertyEntries.findIndex(e => e.key === newPropertyKey)
-        if (entryIndex !== -1) {
-          updateEntry(entryIndex, 'key', data.name)
-        }
-        
-        setNewPropertyKey('')
-        console.log('Property created on the fly:', newProperty)
+      const newProperty = response.data
+      
+      // Update local state
+      setProperties(prev => [...prev, newProperty])
+      
+      // Update the entry that triggered the creation
+      const entryIndex = propertyEntries.findIndex(e => e.key === newPropertyKey)
+      if (entryIndex !== -1) {
+        updateEntry(entryIndex, 'key', data.name)
       }
+      
+      setNewPropertyKey('')
+      console.log('Property created on the fly:', newProperty)
     } catch (error) {
       console.error('Error creating property:', error)
       throw error
