@@ -3,6 +3,7 @@ import { Modal } from './Modal'
 import { Button } from '@/components/atoms/Button'
 import { Badge } from '@/components/atoms/Badge'
 import { FormField } from '@/components/molecules/FormField'
+import { EventPropertiesInput } from '@/components/organisms/EventPropertiesInput'
 import { parseProperties } from '@/utils/properties'
 import type { Event, UpdateEventRequest, EventStatus } from '@/types'
 
@@ -12,6 +13,7 @@ interface EditEventModalProps {
   onClose: () => void
   onSubmit: (id: string, data: UpdateEventRequest) => Promise<void>
   loading?: boolean
+  productId?: string
 }
 
 const EditEventModal: React.FC<EditEventModalProps> = ({
@@ -19,7 +21,8 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   event,
   onClose,
   onSubmit,
-  loading = false
+  loading = false,
+  productId
 }) => {
   const [formData, setFormData] = useState<UpdateEventRequest>({
     name: '',
@@ -28,7 +31,6 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     test_date: ''
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [propertiesJson, setPropertiesJson] = useState('{}')
 
   const eventStatuses: { value: EventStatus; label: string }[] = [
     { value: 'to_implement', label: 'À implémenter' },
@@ -48,7 +50,6 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
         properties: parsedProperties,
         test_date: event.test_date || ''
       })
-      setPropertiesJson(JSON.stringify(parsedProperties, null, 2))
     }
   }, [event])
 
@@ -62,20 +63,13 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     }
   }
 
-  const handleVariablesChange = (value: string) => {
-    setPropertiesJson(value)
-    
-    try {
-      const parsed = JSON.parse(value || '{}')
-      setFormData(prev => ({ ...prev, properties: parsed }))
-      // Clear properties error if JSON is valid
-      if (errors.properties) {
-        const newErrors = { ...errors }
-        delete newErrors.properties
-        setErrors(newErrors)
-      }
-    } catch (error) {
-      // Don't update variables if JSON is invalid, but don't show error yet
+  const handlePropertiesChange = (properties: Record<string, any>) => {
+    setFormData(prev => ({ ...prev, properties }))
+    // Clear properties error
+    if (errors.properties) {
+      const newErrors = { ...errors }
+      delete newErrors.properties
+      setErrors(newErrors)
     }
   }
 
@@ -86,12 +80,6 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
       newErrors.name = 'Le nom de l\'event est requis'
     }
     
-    // Validate JSON
-    try {
-      JSON.parse(propertiesJson || '{}')
-    } catch (error) {
-      newErrors.properties = 'Format JSON invalide'
-    }
 
     // Validate test_date if provided
     if (formData.test_date && formData.test_date.trim()) {
@@ -111,12 +99,10 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     if (!event || !validateForm()) return
     
     try {
-      const variables = JSON.parse(propertiesJson || '{}')
-      
       await onSubmit(event.id, {
         name: formData.name?.trim(),
         status: formData.status,
-        variables: Object.keys(variables).length > 0 ? variables : {},
+        properties: formData.properties && Object.keys(formData.properties).length > 0 ? formData.properties : {},
         test_date: formData.test_date?.trim() || undefined
       })
       
@@ -231,24 +217,13 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
           />
         </FormField>
 
-        <FormField
-          label="Propriétés (JSON)"
+        <EventPropertiesInput
+          productId={productId || ''}
+          value={formData.properties || {}}
+          onChange={handlePropertiesChange}
+          disabled={loading}
           error={errors.properties}
-          hint="Propriétés de l'événement au format JSON. Laisser vide pour aucune propriété."
-        >
-          <textarea
-            value={propertiesJson}
-            onChange={(e) => handleVariablesChange(e.target.value)}
-            placeholder={`{
-  "page_name": "homepage",
-  "page_category": "landing",
-  "user_id": "$user-id"
-}`}
-            rows={6}
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm resize-none"
-            disabled={loading}
-          />
-        </FormField>
+        />
       </form>
     </Modal>
   )

@@ -8,7 +8,8 @@ import type { CreateEventRequest, EventStatus } from '@/types'
 
 interface CreateEventModalProps {
   isOpen: boolean
-  productId: string
+  pageId?: string
+  productId?: string
   onClose: () => void
   onSubmit: (data: CreateEventRequest) => Promise<void>
   loading?: boolean
@@ -16,6 +17,7 @@ interface CreateEventModalProps {
 
 const CreateEventModal: React.FC<CreateEventModalProps> = ({
   isOpen,
+  pageId,
   productId,
   onClose,
   onSubmit,
@@ -88,7 +90,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
   }
 
   const handleClose = () => {
-    setFormData({ name: '', status: 'to_implement', variables: {} })
+    setFormData({ name: '', status: 'to_implement', properties: {} })
     setErrors({})
     onClose()
   }
@@ -178,7 +180,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
         </FormField>
 
         <EventPropertiesInput
-          productId={productId}
+          productId={productId || ''}
           value={formData.properties || {}}
           onChange={handlePropertiesChange}
           disabled={loading}

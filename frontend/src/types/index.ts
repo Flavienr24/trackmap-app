@@ -23,6 +23,8 @@ export interface Product {
   pages_count?: number
   events_count?: number
   health_score?: number
+  // Relations
+  pages?: Page[]
 }
 
 /**
@@ -39,6 +41,7 @@ export interface Page {
   // Computed fields
   events_count?: number
   product?: Product
+  events?: Event[]
 }
 
 /**
@@ -92,6 +95,7 @@ export interface PropertyValue {
   property?: Property
   suggested_value?: SuggestedValue
 }
+
 
 /**
  * Comment Model

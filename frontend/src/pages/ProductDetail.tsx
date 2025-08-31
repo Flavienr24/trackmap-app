@@ -32,6 +32,8 @@ const ProductDetail: React.FC = () => {
     try {
       const response = await productsApi.getById(productSlug)
       setProduct(response.data)
+      // Extract pages with events from product data
+      setPages(response.data.pages || [])
     } catch (error) {
       console.error('Error loading product:', error)
       navigate('/products', { replace: true })
@@ -55,19 +57,43 @@ const ProductDetail: React.FC = () => {
       console.error('Error loading properties:', error)
     }
   }, [])
+
+
+  // Calculate unique properties used across all events
+  const getUsedPropertiesCount = useCallback(() => {
+    const usedProperties = new Set<string>()
+    
+    pages.forEach((page: any) => {
+      if (page.events) {
+        page.events.forEach((event: any) => {
+          if (event.properties) {
+            try {
+              const parsed = typeof event.properties === 'string' 
+                ? JSON.parse(event.properties) 
+                : event.properties
+              Object.keys(parsed || {}).forEach(key => usedProperties.add(key))
+            } catch (error) {
+              console.warn('Error parsing event properties:', error, event.properties)
+            }
+          }
+        })
+      }
+    })
+    
+    return usedProperties.size
+  }, [pages])
   
   const loadData = useCallback(async (productSlug: string) => {
     setLoading(true)
     try {
       await Promise.all([
         loadProduct(productSlug),
-        loadPages(productSlug),
         loadProperties(productSlug)
       ])
     } finally {
       setLoading(false)
     }
-  }, [loadProduct, loadPages, loadProperties])
+  }, [loadProduct, loadProperties])
 
   useEffect(() => {
     if (slug) {
@@ -79,10 +105,8 @@ const ProductDetail: React.FC = () => {
   useEffect(() => {
     const handleFocusOrVisibility = () => {
       if (!document.hidden && slug) {
-        // Reload product data to get fresh event counts
+        // Reload product data to get fresh event counts and pages with events
         loadProduct(slug)
-        // Also reload pages to update their event counts
-        loadPages(slug)
       }
     }
 
@@ -94,7 +118,7 @@ const ProductDetail: React.FC = () => {
       window.removeEventListener('focus', handleFocusOrVisibility)
       document.removeEventListener('visibilitychange', handleFocusOrVisibility)
     }
-  }, [slug, loadProduct, loadPages])
+  }, [slug, loadProduct])
 
   const handleCreatePage = () => {
     setShowCreatePageModal(true)
@@ -287,9 +311,9 @@ const ProductDetail: React.FC = () => {
           </div>
           <div className="bg-neutral-50 rounded-lg p-4">
             <div className="text-2xl font-bold text-neutral-900">
-              {properties.length}
+              {getUsedPropertiesCount()}
             </div>
-            <div className="text-sm text-neutral-600">Variables</div>
+            <div className="text-sm text-neutral-600">Propriétés utilisées</div>
           </div>
           <div className="bg-neutral-50 rounded-lg p-4">
             <div className="text-2xl font-bold text-green-600">

@@ -12,6 +12,7 @@ interface EventDetailModalProps {
   event: Event | null
   onClose: () => void
   onEdit?: (event: Event) => void
+  productId?: string
 }
 
 type TabType = 'details' | 'comments' | 'history'
@@ -25,6 +26,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
   event,
   onClose,
   onEdit,
+  productId,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('details')
 
@@ -161,7 +163,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                     </div>
                   </div>
                   ) : (
-                    <p className="text-neutral-500 italic">Aucune variable définie</p>
+                    <p className="text-neutral-500 italic">Aucune propriété définie</p>
                   )
                 })()}
               </div>

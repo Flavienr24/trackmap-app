@@ -10,7 +10,7 @@ import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { EventDetailModal } from '@/components/organisms/EventDetailModal'
 import { pagesApi, eventsApi } from '@/services/api'
 import { getPropertyCount } from '@/utils/properties'
-import type { Page, Event, Product, EventStatus, CreateEventRequest, UpdateEventRequest, UpdatePageRequest } from '@/types'
+import type { Page, Event, EventStatus, CreateEventRequest, UpdateEventRequest, UpdatePageRequest } from '@/types'
 
 /**
  * Page Detail 
@@ -119,7 +119,9 @@ const PageDetail: React.FC = () => {
       const response = await pagesApi.update(pageId, data)
       console.log('Page updated:', response.data)
       if (productSlug && pageSlug) {
-        await loadPage(productSlug, pageSlug) // Reload the page data
+        // Reload the page data
+        const pageResponse = await pagesApi.getBySlug(productSlug, pageSlug)
+        setPage(pageResponse.data)
       }
     } catch (error) {
       console.error('Error updating page:', error)
@@ -188,14 +190,9 @@ const PageDetail: React.FC = () => {
     )
   }
 
-  // Status color mapping
+  // Status color mapping - return the status directly as Badge supports EventStatus
   const getStatusColor = (status: EventStatus) => {
-    switch (status) {
-      case 'validated': return 'success'
-      case 'to_test': return 'warning' 
-      case 'error': return 'danger'
-      default: return 'secondary'
-    }
+    return status
   }
 
   const getStatusLabel = (status: EventStatus) => {
@@ -220,7 +217,7 @@ const PageDetail: React.FC = () => {
           <div>
             <div className="font-medium text-neutral-900">{value}</div>
             <div className="text-sm text-neutral-500">
-              {variableCount} variable{variableCount !== 1 ? 's' : ''}
+              {variableCount} propriété{variableCount !== 1 ? 's' : ''}
             </div>
           </div>
         )
@@ -331,7 +328,7 @@ const PageDetail: React.FC = () => {
         onSubmit={handleCreateEventSubmit}
         loading={createEventLoading}
         pageId={page?.id}
-        productId={page?.productId}
+        productId={page?.product_id}
       />
 
       {/* Edit Event Modal */}
@@ -341,6 +338,7 @@ const PageDetail: React.FC = () => {
         onClose={() => setEditEvent(null)}
         onSubmit={handleEditEventSubmit}
         loading={editEventLoading}
+        productId={page?.product_id}
       />
 
       {/* Edit Page Modal */}
@@ -357,7 +355,7 @@ const PageDetail: React.FC = () => {
         isOpen={!!selectedEvent}
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}
-        productId={page.productId}
+        productId={page.product_id}
       />
     </div>
   )

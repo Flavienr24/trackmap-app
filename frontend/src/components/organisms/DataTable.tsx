@@ -12,10 +12,11 @@ export interface Column<T = any> {
 }
 
 export interface Action<T = any> {
-  label: string
+  label: string | ((record: T) => string)
   onClick: (record: T) => void
   variant?: 'primary' | 'secondary' | 'danger'
   icon?: React.ReactNode
+  show?: (record: T) => boolean
 }
 
 export interface DataTableProps<T = any> {
@@ -144,7 +145,9 @@ function DataTable<T extends Record<string, any>>({
                 {actions && actions.length > 0 && (
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
-                      {actions.map((action, actionIndex) => (
+                      {actions
+                        .filter(action => !action.show || action.show(record))
+                        .map((action, actionIndex) => (
                         <Button
                           key={actionIndex}
                           size="sm"
@@ -155,7 +158,7 @@ function DataTable<T extends Record<string, any>>({
                           }}
                         >
                           {action.icon && <span className="mr-1">{action.icon}</span>}
-                          {action.label}
+                          {typeof action.label === 'function' ? action.label(record) : action.label}
                         </Button>
                       ))}
                     </div>

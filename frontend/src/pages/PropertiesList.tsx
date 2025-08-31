@@ -35,6 +35,7 @@ const PropertiesList: React.FC = () => {
     try {
       const response = await productsApi.getById(productSlug!)
       setProduct(response.data)
+      return response.data
     } catch (error) {
       console.error('Error loading product:', error)
       navigate('/products', { replace: true })
@@ -43,8 +44,9 @@ const PropertiesList: React.FC = () => {
 
   const loadProperties = useCallback(async () => {
     try {
-      const response = await propertiesApi.getByProduct(productSlug!)
-      setProperties(response.data)
+      // Load properties from library
+      const propertiesResponse = await propertiesApi.getByProduct(productSlug!)
+      setProperties(propertiesResponse.data)
     } catch (error) {
       console.error('Error loading properties:', error)
     }
@@ -53,10 +55,11 @@ const PropertiesList: React.FC = () => {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      await Promise.all([
-        loadProduct(),
-        loadProperties()
-      ])
+      // Load product first, then properties (which depends on product data)
+      const productData = await loadProduct()
+      if (productData) {
+        await loadProperties()
+      }
     } finally {
       setLoading(false)
     }
@@ -130,7 +133,9 @@ const PropertiesList: React.FC = () => {
       title: 'Nom de la propriété',
       render: (value, record) => (
         <div>
-          <div className="font-medium text-neutral-900">{value}</div>
+          <div className="flex items-center">
+            <span className="font-medium text-neutral-900">{value}</span>
+          </div>
           {record.description && (
             <div className="text-sm text-neutral-500">{record.description}</div>
           )}

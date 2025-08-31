@@ -13,6 +13,56 @@ const prisma = db;
 const VALID_STATUS = ['TO_IMPLEMENT', 'TO_TEST', 'ERROR', 'VALIDATED'];
 
 /**
+ * Auto-create properties in the library when they are used in events
+ */
+const autoCreateProperties = async (productId: string, properties: Record<string, any>) => {
+  if (!properties || Object.keys(properties).length === 0) {
+    return;
+  }
+
+  for (const [propertyName, propertyValue] of Object.entries(properties)) {
+    // Check if property already exists
+    const existingProperty = await prisma.property.findFirst({
+      where: { 
+        productId,
+        name: propertyName 
+      }
+    });
+
+    if (!existingProperty) {
+      // Infer type from value
+      let propertyType = 'STRING';
+      if (typeof propertyValue === 'number') {
+        propertyType = 'NUMBER';
+      } else if (typeof propertyValue === 'boolean') {
+        propertyType = 'BOOLEAN';
+      } else if (Array.isArray(propertyValue)) {
+        propertyType = 'ARRAY';
+      } else if (typeof propertyValue === 'object' && propertyValue !== null) {
+        propertyType = 'OBJECT';
+      }
+
+      // Create property
+      await prisma.property.create({
+        data: {
+          productId,
+          name: propertyName,
+          type: propertyType,
+          description: `Auto-créée depuis l'utilisation dans les événements`
+        }
+      });
+
+      logger.info('Auto-created property', { 
+        productId,
+        propertyName,
+        propertyType,
+        inferredFromValue: propertyValue
+      });
+    }
+  }
+};
+
+/**
  * Get all events for a specific page with optional filters
  * GET /api/pages/:id/events?status=error,to_test&modified_since=2025-07-01
  */
@@ -150,6 +200,11 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
       requestId: req.ip 
     });
 
+    // Auto-create properties if they don't exist
+    if (properties) {
+      await autoCreateProperties(page.productId, properties);
+    }
+
     // Create event
     const event = await prisma.event.create({
       data: {
@@ -272,7 +327,14 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
 
     // Check if event exists
     const existingEvent = await prisma.event.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        page: {
+          include: {
+            product: true
+          }
+        }
+      }
     });
 
     if (!existingEvent) {
@@ -292,6 +354,11 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
           author: 'system' // Could be replaced with authenticated user
         }
       });
+    }
+
+    // Auto-create properties if they don't exist
+    if (properties !== undefined && existingEvent.page) {
+      await autoCreateProperties(existingEvent.page.productId, properties);
     }
 
     // Update event
