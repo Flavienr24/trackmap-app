@@ -24,21 +24,16 @@ const ProductsList: React.FC = () => {
   const [editLoading, setEditLoading] = useState(false)
 
   const loadProducts = useCallback(async () => {
-    console.log('ProductsList: Starting to load products')
     setLoading(true)
     try {
-      console.log('ProductsList: Calling productsApi.getAll()')
       const response = await productsApi.getAll()
-      console.log('ProductsList: API response received:', response)
       setProducts(response.data)
-      console.log('ProductsList: Products state updated:', response.data)
     } catch (error) {
-      console.error('ProductsList: Error loading products:', error)
+      console.error('Error loading products:', error)
       // Set empty array on error to ensure component still renders
       setProducts([])
     } finally {
       setLoading(false)
-      console.log('ProductsList: Loading finished')
     }
   }, [])
 
