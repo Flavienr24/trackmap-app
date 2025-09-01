@@ -49,24 +49,36 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
 
   // Convert value object to entries when value changes
   useEffect(() => {
-    const newEntries: PropertyEntry[] = Object.entries(value || {}).map(([key, val]) => {
-      // Try to preserve existing entry data (especially description and partially filled entries)
-      const existingEntry = propertyEntries.find(entry => entry.key === key)
-      return {
-        key,
-        value: typeof val === 'string' ? val : JSON.stringify(val),
-        description: existingEntry?.description || '',
-      }
-    })
+    const valueKeys = new Set(Object.keys(value || {}))
+    const newEntries: PropertyEntry[] = []
     
-    // Preserve existing entries that are partially filled but not in the value prop
+    // First, preserve existing entries in their original order
     propertyEntries.forEach(existingEntry => {
       if (existingEntry.key.trim() || existingEntry.value.trim() || existingEntry.description.trim()) {
-        const alreadyExists = newEntries.some(entry => entry.key === existingEntry.key)
-        if (!alreadyExists) {
+        if (valueKeys.has(existingEntry.key) && existingEntry.key.trim()) {
+          // Update with new value from prop but keep description and order
+          const val = value[existingEntry.key]
+          newEntries.push({
+            key: existingEntry.key,
+            value: typeof val === 'string' ? val : JSON.stringify(val),
+            description: existingEntry.description,
+          })
+          valueKeys.delete(existingEntry.key) // Mark as processed
+        } else {
+          // Keep existing entry as-is (partially filled or cleared)
           newEntries.push(existingEntry)
         }
       }
+    })
+    
+    // Add any new entries from value that weren't in existing entries
+    valueKeys.forEach(key => {
+      const val = value[key]
+      newEntries.push({
+        key,
+        value: typeof val === 'string' ? val : JSON.stringify(val),
+        description: '',
+      })
     })
     
     // Add empty entry if none exist
