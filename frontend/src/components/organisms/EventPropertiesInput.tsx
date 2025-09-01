@@ -105,7 +105,11 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     }
     
     setPropertyEntries(newEntries)
-    emitChange(newEntries)
+    
+    // Only emit change for key/value changes, not description
+    if (field !== 'description') {
+      emitChange(newEntries)
+    }
   }
 
   const addEntry = () => {
