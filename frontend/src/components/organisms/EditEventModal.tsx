@@ -176,7 +176,8 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
       onClose={handleClose} 
       title={`Modifier "${event.name}"`}
       footer={footer}
-      size="lg"
+      size="2xl"
+      fixedHeight={true}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <FormField

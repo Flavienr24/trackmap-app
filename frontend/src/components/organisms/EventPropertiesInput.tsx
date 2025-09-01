@@ -17,8 +17,10 @@ interface EventPropertiesInputProps {
 interface PropertyEntry {
   key: string
   value: string
+  description: string
   keyError?: string
   valueError?: string
+  descriptionError?: string
 }
 
 /**
@@ -50,11 +52,12 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     const entries: PropertyEntry[] = Object.entries(value || {}).map(([key, val]) => ({
       key,
       value: typeof val === 'string' ? val : JSON.stringify(val),
+      description: '',
     }))
     
     // Add empty entry if none exist
     if (entries.length === 0) {
-      entries.push({ key: '', value: '' })
+      entries.push({ key: '', value: '', description: '' })
     }
     
     setPropertyEntries(entries)
@@ -88,15 +91,17 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     }
   }
 
-  const updateEntry = (index: number, field: 'key' | 'value', newValue: string) => {
+  const updateEntry = (index: number, field: 'key' | 'value' | 'description', newValue: string) => {
     const newEntries = [...propertyEntries]
     newEntries[index] = { ...newEntries[index], [field]: newValue }
     
     // Clear errors when user types
     if (field === 'key') {
       delete newEntries[index].keyError
-    } else {
+    } else if (field === 'value') {
       delete newEntries[index].valueError
+    } else if (field === 'description') {
+      delete newEntries[index].descriptionError
     }
     
     setPropertyEntries(newEntries)
@@ -104,7 +109,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
   }
 
   const addEntry = () => {
-    const newEntries = [...propertyEntries, { key: '', value: '' }]
+    const newEntries = [...propertyEntries, { key: '', value: '', description: '' }]
     setPropertyEntries(newEntries)
   }
 
@@ -215,30 +220,18 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div>
         <label className="block text-sm font-medium text-neutral-700">
           Propriétés de l'événement
         </label>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={addEntry}
-          disabled={disabled}
-        >
-          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Ajouter
-        </Button>
       </div>
 
       {/* Property Entries */}
       <div className="space-y-3">
         {propertyEntries.map((entry, index) => (
-          <div key={index} className="flex items-start space-x-3">
+          <div key={index} className="grid grid-cols-12 gap-3 items-start">
             {/* Key Input */}
-            <div className="flex-1">
+            <div className="col-span-3">
               <FormField
                 label={index === 0 ? "Clé" : ""}
                 error={entry.keyError}
@@ -256,25 +249,12 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
                       <option key={suggestion} value={suggestion} />
                     ))}
                   </datalist>
-                  
-                  {/* Create Property Button */}
-                  {entry.key && !properties.find(p => p.name === entry.key) && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-xs"
-                      onClick={() => handleCreatePropertyFromKey(entry.key)}
-                    >
-                      Créer
-                    </Button>
-                  )}
                 </div>
               </FormField>
             </div>
 
             {/* Value Input */}
-            <div className="flex-1">
+            <div className="col-span-3">
               <FormField
                 label={index === 0 ? "Valeur" : ""}
                 error={entry.valueError}
@@ -294,15 +274,30 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
               </FormField>
             </div>
 
+            {/* Description Input */}
+            <div className="col-span-5">
+              <FormField
+                label={index === 0 ? "Description" : ""}
+                error={entry.descriptionError}
+              >
+                <Input
+                  value={entry.description}
+                  onChange={(e) => updateEntry(index, 'description', e.target.value)}
+                  placeholder="Description de la propriété..."
+                  disabled={disabled}
+                />
+              </FormField>
+            </div>
+
             {/* Remove Button */}
-            <div className={index === 0 ? "pt-6" : "pt-1"}>
+            <div className={`col-span-1 ${index === 0 ? "pt-6" : "pt-1"}`}>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => removeEntry(index)}
                 disabled={disabled || propertyEntries.length === 1}
-                className="text-red-600 hover:bg-red-50 border-red-200"
+                className="text-red-600 hover:bg-red-50 border-red-200 w-full"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -311,6 +306,22 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
             </div>
           </div>
         ))}
+        
+        {/* Add Button */}
+        <div className="flex justify-start">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addEntry}
+            disabled={disabled}
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Ajouter
+          </Button>
+        </div>
       </div>
 
       {/* Global Error */}

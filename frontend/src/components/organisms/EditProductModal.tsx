@@ -101,7 +101,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
           onClick={handleDelete} 
           disabled={loading}
         >
-          Supprimer le produit
+          Supprimer
         </Button>
       )}
       <div className="flex space-x-3 ml-auto">
