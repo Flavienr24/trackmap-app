@@ -9,6 +9,7 @@ interface EditProductModalProps {
   product: Product | null
   onClose: () => void
   onSubmit: (id: string, data: UpdateProductRequest) => Promise<void>
+  onDelete?: (product: Product) => Promise<void>
   loading?: boolean
 }
 
@@ -17,6 +18,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
   product,
   onClose,
   onSubmit,
+  onDelete,
   loading = false
 }) => {
   const [formData, setFormData] = useState<UpdateProductRequest>({
@@ -76,16 +78,40 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     onClose()
   }
 
+  const handleDelete = async () => {
+    if (!product || !onDelete) return
+    
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le produit "${product.name}" ?`)) {
+      try {
+        await onDelete(product)
+        onClose()
+      } catch (error) {
+        console.error('Error deleting product:', error)
+      }
+    }
+  }
+
   if (!product) return null
 
   const footer = (
-    <div className="flex justify-end space-x-3">
-      <Button variant="secondary" onClick={handleClose} disabled={loading}>
-        Annuler
-      </Button>
-      <Button onClick={handleSubmit} loading={loading}>
-        Sauvegarder
-      </Button>
+    <div className="flex justify-between">
+      {onDelete && (
+        <Button 
+          variant="danger" 
+          onClick={handleDelete} 
+          disabled={loading}
+        >
+          Supprimer le produit
+        </Button>
+      )}
+      <div className="flex space-x-3 ml-auto">
+        <Button variant="secondary" onClick={handleClose} disabled={loading}>
+          Annuler
+        </Button>
+        <Button onClick={handleSubmit} loading={loading}>
+          Sauvegarder
+        </Button>
+      </div>
     </div>
   )
 

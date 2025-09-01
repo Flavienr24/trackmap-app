@@ -9,6 +9,7 @@ interface EditPageModalProps {
   page: Page | null
   onClose: () => void
   onSubmit: (id: string, data: UpdatePageRequest) => Promise<void>
+  onDelete?: (page: Page) => Promise<void>
   loading?: boolean
 }
 
@@ -17,6 +18,7 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
   page,
   onClose,
   onSubmit,
+  onDelete,
   loading = false
 }) => {
   const [formData, setFormData] = useState<UpdatePageRequest>({
@@ -92,16 +94,40 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
     onClose()
   }
 
+  const handleDelete = async () => {
+    if (!page || !onDelete) return
+    
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la page "${page.name}" ?`)) {
+      try {
+        await onDelete(page)
+        onClose()
+      } catch (error) {
+        console.error('Error deleting page:', error)
+      }
+    }
+  }
+
   if (!page) return null
 
   const footer = (
-    <div className="flex justify-end space-x-3">
-      <Button variant="secondary" onClick={handleClose} disabled={loading}>
-        Annuler
-      </Button>
-      <Button onClick={handleSubmit} loading={loading}>
-        Sauvegarder
-      </Button>
+    <div className="flex justify-between">
+      {onDelete && (
+        <Button 
+          variant="danger" 
+          onClick={handleDelete} 
+          disabled={loading}
+        >
+          Supprimer
+        </Button>
+      )}
+      <div className="flex space-x-3 ml-auto">
+        <Button variant="secondary" onClick={handleClose} disabled={loading}>
+          Annuler
+        </Button>
+        <Button onClick={handleSubmit} loading={loading}>
+          Sauvegarder
+        </Button>
+      </div>
     </div>
   )
 

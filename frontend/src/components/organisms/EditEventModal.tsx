@@ -12,6 +12,7 @@ interface EditEventModalProps {
   event: Event | null
   onClose: () => void
   onSubmit: (id: string, data: UpdateEventRequest) => Promise<void>
+  onDelete?: (event: Event) => Promise<void>
   loading?: boolean
   productId?: string
 }
@@ -21,6 +22,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   event,
   onClose,
   onSubmit,
+  onDelete,
   loading = false,
   productId
 }) => {
@@ -117,6 +119,19 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     onClose()
   }
 
+  const handleDelete = async () => {
+    if (!event || !onDelete) return
+    
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer l'event "${event.name}" ?`)) {
+      try {
+        await onDelete(event)
+        onClose()
+      } catch (error) {
+        console.error('Error deleting event:', error)
+      }
+    }
+  }
+
   if (!event) return null
 
   // Suggest common event names
@@ -134,13 +149,24 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   ]
 
   const footer = (
-    <div className="flex justify-end space-x-3">
-      <Button variant="secondary" onClick={handleClose} disabled={loading}>
-        Annuler
-      </Button>
-      <Button onClick={handleSubmit} loading={loading}>
-        Sauvegarder
-      </Button>
+    <div className="flex justify-between">
+      {onDelete && (
+        <Button 
+          variant="danger" 
+          onClick={handleDelete} 
+          disabled={loading}
+        >
+          Supprimer l'event
+        </Button>
+      )}
+      <div className="flex space-x-3 ml-auto">
+        <Button variant="secondary" onClick={handleClose} disabled={loading}>
+          Annuler
+        </Button>
+        <Button onClick={handleSubmit} loading={loading}>
+          Sauvegarder
+        </Button>
+      </div>
     </div>
   )
 

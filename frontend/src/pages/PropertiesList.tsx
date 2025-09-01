@@ -181,11 +181,6 @@ const PropertiesList: React.FC = () => {
       onClick: handleEditProperty,
       variant: 'secondary',
     },
-    {
-      label: 'Supprimer',
-      onClick: handleDeleteProperty,
-      variant: 'danger',
-    },
   ]
 
   return (
@@ -282,6 +277,7 @@ const PropertiesList: React.FC = () => {
         property={editProperty}
         onClose={() => setEditProperty(null)}
         onSubmit={handleEditSubmit}
+        onDelete={handleDeleteProperty}
         loading={editLoading}
       />
     </div>

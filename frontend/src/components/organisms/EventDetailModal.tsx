@@ -59,21 +59,14 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
     >
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-neutral-200">
-          <div className="flex items-center space-x-4">
-            <Badge status={event.status}>
-              {event.status}
-            </Badge>
-            {event.test_date && (
-              <div className="text-sm text-neutral-600">
-                Testé le {new Date(event.test_date).toLocaleDateString('fr-FR')}
-              </div>
-            )}
-          </div>
-          {onEdit && (
-            <Button variant="secondary" onClick={() => onEdit(event)}>
-              Modifier
-            </Button>
+        <div className="flex items-center space-x-4 pb-4 border-b border-neutral-200">
+          <Badge status={event.status}>
+            {event.status}
+          </Badge>
+          {event.test_date && (
+            <div className="text-sm text-neutral-600">
+              Testé le {new Date(event.test_date).toLocaleDateString('fr-FR')}
+            </div>
           )}
         </div>
 
@@ -180,10 +173,17 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end pt-4 border-t border-neutral-200">
-          <Button variant="outline" onClick={onClose}>
-            Fermer
-          </Button>
+        <div className="flex justify-between pt-4 border-t border-neutral-200">
+          {onEdit && (
+            <Button variant="primary" onClick={() => onEdit(event)}>
+              Modifier l'event
+            </Button>
+          )}
+          <div className={`flex space-x-3 ${!onEdit ? 'w-full justify-end' : 'ml-auto'}`}>
+            <Button variant="outline" onClick={onClose}>
+              Fermer
+            </Button>
+          </div>
         </div>
       </div>
     </Modal>

@@ -11,6 +11,7 @@ interface EditPropertyModalProps {
   property: Property | null
   onClose: () => void
   onSubmit: (id: string, data: UpdatePropertyRequest) => Promise<void>
+  onDelete?: (property: Property) => Promise<void>
   loading?: boolean
 }
 
@@ -19,6 +20,7 @@ const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
   property,
   onClose,
   onSubmit,
+  onDelete,
   loading = false,
 }) => {
   const [formData, setFormData] = useState<UpdatePropertyRequest>({
@@ -44,6 +46,19 @@ const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
     if (!loading) {
       setErrors({})
       onClose()
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!property || !onDelete) return
+    
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la propriété "${property.name}" ?`)) {
+      try {
+        await onDelete(property)
+        handleClose()
+      } catch (error) {
+        console.error('Error deleting property:', error)
+      }
     }
   }
 
@@ -151,22 +166,34 @@ const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
         )}
 
         {/* Actions */}
-        <div className="flex justify-end space-x-3 pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={loading}
-          >
-            Annuler
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            loading={loading}
-          >
-            Modifier la propriété
-          </Button>
+        <div className="flex justify-between pt-4">
+          {onDelete && (
+            <Button
+              type="button"
+              variant="danger"
+              onClick={handleDelete}
+              disabled={loading}
+            >
+              Supprimer la propriété
+            </Button>
+          )}
+          <div className="flex space-x-3 ml-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={loading}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={loading}
+            >
+              Modifier la propriété
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>

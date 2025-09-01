@@ -152,20 +152,10 @@ const ProductsList: React.FC = () => {
   // Table actions
   const actions: Action<Product>[] = [
     {
-      label: 'Voir',
-      onClick: handleViewProduct,
-      variant: 'primary',
-    },
-    {
       label: 'Modifier',
       onClick: handleEditProduct,
       variant: 'secondary',
-    },
-    {
-      label: 'Supprimer',
-      onClick: handleDeleteProduct,
-      variant: 'danger',
-    },
+    }
   ]
 
   return (
@@ -243,6 +233,7 @@ const ProductsList: React.FC = () => {
         product={editProduct}
         onClose={() => setEditProduct(null)}
         onSubmit={handleEditSubmit}
+        onDelete={handleDeleteProduct}
         loading={editLoading}
       />
     </div>

@@ -174,11 +174,6 @@ const SuggestedValuesList: React.FC = () => {
       onClick: handleEditSuggestedValue,
       variant: 'secondary',
     },
-    {
-      label: 'Supprimer',
-      onClick: handleDeleteSuggestedValue,
-      variant: 'danger',
-    },
   ]
 
   return (
@@ -287,6 +282,7 @@ const SuggestedValuesList: React.FC = () => {
         suggestedValue={editSuggestedValue}
         onClose={() => setEditSuggestedValue(null)}
         onSubmit={handleEditSubmit}
+        onDelete={handleDeleteSuggestedValue}
         onRefresh={loadSuggestedValues}
         loading={editLoading}
       />

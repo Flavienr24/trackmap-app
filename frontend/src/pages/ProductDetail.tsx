@@ -253,20 +253,10 @@ const ProductDetail: React.FC = () => {
   // Pages table actions
   const actions: Action<Page>[] = [
     {
-      label: 'Events',
-      onClick: handleViewPage,
-      variant: 'primary',
-    },
-    {
       label: 'Modifier',
       onClick: handleEditPage,
       variant: 'secondary',
-    },
-    {
-      label: 'Supprimer',
-      onClick: handleDeletePage,
-      variant: 'danger',
-    },
+    }
   ]
 
   return (
@@ -397,6 +387,7 @@ const ProductDetail: React.FC = () => {
         page={editPage}
         onClose={() => setEditPage(null)}
         onSubmit={handleEditPageSubmit}
+        onDelete={handleDeletePage}
         loading={editPageLoading}
       />
 

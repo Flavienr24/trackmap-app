@@ -37,9 +37,9 @@ export const buttonVariants = cva(
           'active:bg-neutral-200',
         ],
         danger: [
-          'bg-red-600 text-white border border-transparent',
-          'hover:bg-red-700 focus:ring-red-500',
-          'active:bg-red-800',
+          'bg-transparent text-red-600 border border-red-300',
+          'hover:bg-red-50 hover:border-red-400 focus:ring-red-500',
+          'active:bg-red-100',
         ],
         success: [
           'bg-green-600 text-white border border-transparent',

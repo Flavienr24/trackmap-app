@@ -12,6 +12,7 @@ interface EditSuggestedValueModalProps {
   suggestedValue: SuggestedValue | null
   onClose: () => void
   onSubmit: (id: string, data: UpdateSuggestedValueRequest) => Promise<void>
+  onDelete?: (suggestedValue: SuggestedValue) => Promise<void>
   onRefresh?: () => Promise<void>
   loading?: boolean
 }
@@ -21,6 +22,7 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
   suggestedValue,
   onClose,
   onSubmit,
+  onDelete,
   onRefresh,
   loading = false,
 }) => {
@@ -126,6 +128,19 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
     setConflictData(null)
   }
 
+  const handleDelete = async () => {
+    if (!suggestedValue || !onDelete) return
+    
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la valeur "${suggestedValue.value}" ?`)) {
+      try {
+        await onDelete(suggestedValue)
+        handleClose()
+      } catch (error) {
+        console.error('Error deleting suggested value:', error)
+      }
+    }
+  }
+
   const handleValueChange = (value: string) => {
     const isContextual = value.startsWith('$')
     setFormData({ 
@@ -185,22 +200,34 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
         )}
 
         {/* Actions */}
-        <div className="flex justify-end space-x-3 pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={loading}
-          >
-            Annuler
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            loading={loading}
-          >
-            Modifier la valeur
-          </Button>
+        <div className="flex justify-between pt-4">
+          {onDelete && (
+            <Button
+              type="button"
+              variant="danger"
+              onClick={handleDelete}
+              disabled={loading}
+            >
+              Supprimer la valeur
+            </Button>
+          )}
+          <div className="flex space-x-3 ml-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={loading}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={loading}
+            >
+              Modifier la valeur
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>

@@ -91,6 +91,11 @@ const PageDetail: React.FC = () => {
     setEditEvent(event)
   }
 
+  const handleEditEventFromDetail = (event: Event) => {
+    setSelectedEvent(null) // Fermer le modal de détail
+    setEditEvent(event)    // Ouvrir le modal d'édition
+  }
+
   const handleEditEventSubmit = async (eventId: string, data: UpdateEventRequest) => {
     setEditEventLoading(true)
     try {
@@ -248,19 +253,9 @@ const PageDetail: React.FC = () => {
   // Table actions
   const actions: Action<Event>[] = [
     {
-      label: 'Voir',
-      onClick: handleViewEvent,
-      variant: 'primary',
-    },
-    {
       label: 'Modifier',
       onClick: handleEditEvent,
       variant: 'secondary',
-    },
-    {
-      label: 'Supprimer',
-      onClick: handleDeleteEvent,
-      variant: 'danger',
     },
   ]
 
@@ -337,6 +332,7 @@ const PageDetail: React.FC = () => {
         event={editEvent}
         onClose={() => setEditEvent(null)}
         onSubmit={handleEditEventSubmit}
+        onDelete={handleDeleteEvent}
         loading={editEventLoading}
         productId={page?.product_id}
       />
@@ -355,6 +351,7 @@ const PageDetail: React.FC = () => {
         isOpen={!!selectedEvent}
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}
+        onEdit={handleEditEventFromDetail}
         productId={page.product_id}
       />
     </div>
