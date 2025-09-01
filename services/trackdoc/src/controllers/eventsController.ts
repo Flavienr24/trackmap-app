@@ -63,6 +63,124 @@ const autoCreateProperties = async (productId: string, properties: Record<string
 };
 
 /**
+ * Auto-create suggested values when they are used in events
+ */
+const autoCreateSuggestedValues = async (productId: string, properties: Record<string, any>) => {
+  if (!properties || Object.keys(properties).length === 0) {
+    return;
+  }
+
+  for (const [propertyName, propertyValue] of Object.entries(properties)) {
+    // Convert property value to string for comparison
+    const stringValue = String(propertyValue);
+    
+    // Auto-detect contextual values (those starting with $)
+    const isContextual = stringValue.startsWith('$');
+
+    // Check if suggested value already exists for this product
+    const existingSuggestedValue = await prisma.suggestedValue.findFirst({
+      where: { 
+        productId,
+        value: stringValue 
+      }
+    });
+
+    if (!existingSuggestedValue) {
+      // Try to create suggested value - handle race conditions
+      try {
+        const suggestedValue = await prisma.suggestedValue.create({
+          data: {
+            productId,
+            value: stringValue,
+            isContextual
+          }
+        });
+
+        logger.info('Auto-created suggested value', { 
+          productId,
+          propertyName,
+          suggestedValueId: suggestedValue.id,
+          value: stringValue,
+          isContextual
+        });
+      } catch (error: any) {
+        // If creation fails due to unique constraint, silently continue
+        if (error.code === 'P2002') {
+          logger.debug('Suggested value already exists due to race condition', { 
+            productId,
+            propertyName,
+            value: stringValue
+          });
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    // Associate with property if it exists
+    const property = await prisma.property.findFirst({
+      where: { 
+        productId,
+        name: propertyName 
+      }
+    });
+
+    if (property) {
+      const suggestedValue = existingSuggestedValue || await prisma.suggestedValue.findFirst({
+        where: { 
+          productId,
+          value: stringValue 
+        }
+      });
+
+      if (suggestedValue) {
+        // Check if association already exists
+        const existingAssociation = await prisma.propertyValue.findUnique({
+          where: {
+            propertyId_suggestedValueId: {
+              propertyId: property.id,
+              suggestedValueId: suggestedValue.id
+            }
+          }
+        });
+
+        if (!existingAssociation) {
+          try {
+            await prisma.propertyValue.create({
+              data: {
+                propertyId: property.id,
+                suggestedValueId: suggestedValue.id
+              }
+            });
+
+            logger.info('Auto-created property-value association', { 
+              productId,
+              propertyId: property.id,
+              propertyName,
+              suggestedValueId: suggestedValue.id,
+              value: stringValue
+            });
+          } catch (error: any) {
+            // If association fails due to unique constraint, silently continue
+            if (error.code === 'P2002') {
+              logger.debug('Property-value association already exists due to race condition', { 
+                productId,
+                propertyId: property.id,
+                propertyName,
+                suggestedValueId: suggestedValue.id,
+                value: stringValue
+              });
+            } else {
+              throw error;
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
+/**
  * Get all events for a specific page with optional filters
  * GET /api/pages/:id/events?status=error,to_test&modified_since=2025-07-01
  */
@@ -200,9 +318,10 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
       requestId: req.ip 
     });
 
-    // Auto-create properties if they don't exist
+    // Auto-create properties and suggested values if they don't exist
     if (properties) {
       await autoCreateProperties(page.productId, properties);
+      await autoCreateSuggestedValues(page.productId, properties);
     }
 
     // Create event
@@ -356,9 +475,10 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
       });
     }
 
-    // Auto-create properties if they don't exist
+    // Auto-create properties and suggested values if they don't exist
     if (properties !== undefined && existingEvent.page) {
       await autoCreateProperties(existingEvent.page.productId, properties);
+      await autoCreateSuggestedValues(existingEvent.page.productId, properties);
     }
 
     // Update event

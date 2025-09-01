@@ -227,9 +227,23 @@ export const updateSuggestedValue = async (req: Request, res: Response, next: Ne
       });
 
       if (conflictingSuggestedValue) {
-        const error: AppError = new Error('Suggested value already exists for this product');
-        error.statusCode = 409;
-        return next(error);
+        // Return conflict information for frontend to handle merge proposal
+        return res.status(409).json({
+          success: false,
+          error: 'suggested_value_exists',
+          message: 'Suggested value already exists for this product',
+          conflictData: {
+            existingValue: {
+              id: conflictingSuggestedValue.id,
+              value: conflictingSuggestedValue.value,
+              is_contextual: conflictingSuggestedValue.isContextual
+            },
+            mergeProposal: {
+              keepValue: conflictingSuggestedValue.value,
+              removeValue: existingSuggestedValue.value
+            }
+          }
+        });
       }
     }
 
@@ -268,6 +282,103 @@ export const updateSuggestedValue = async (req: Request, res: Response, next: Ne
     });
   } catch (error) {
     logger.error('Error updating suggested value', { error, suggestedValueId: req.params.id, requestId: req.ip });
+    next(error);
+  }
+};
+
+/**
+ * Merge two suggested values - keep target, remove source, transfer all associations
+ * POST /api/suggested-values/:sourceId/merge/:targetId
+ */
+export const mergeSuggestedValues = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { sourceId, targetId } = req.params;
+
+    logger.debug('Merging suggested values', { 
+      sourceId, 
+      targetId,
+      requestId: req.ip 
+    });
+
+    // Get both suggested values
+    const sourceSuggestedValue = await prisma.suggestedValue.findUnique({
+      where: { id: sourceId },
+      include: {
+        propertyValues: {
+          include: {
+            property: true
+          }
+        }
+      }
+    });
+
+    const targetSuggestedValue = await prisma.suggestedValue.findUnique({
+      where: { id: targetId }
+    });
+
+    if (!sourceSuggestedValue || !targetSuggestedValue) {
+      const error: AppError = new Error('One or both suggested values not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // Ensure they belong to the same product
+    if (sourceSuggestedValue.productId !== targetSuggestedValue.productId) {
+      const error: AppError = new Error('Cannot merge suggested values from different products');
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    // Transfer all associations from source to target
+    const transferredAssociations = [];
+    for (const propertyValue of sourceSuggestedValue.propertyValues) {
+      // Check if target already has association with this property
+      const existingAssociation = await prisma.propertyValue.findUnique({
+        where: {
+          propertyId_suggestedValueId: {
+            propertyId: propertyValue.propertyId,
+            suggestedValueId: targetId
+          }
+        }
+      });
+
+      if (!existingAssociation) {
+        // Create new association with target
+        await prisma.propertyValue.create({
+          data: {
+            propertyId: propertyValue.propertyId,
+            suggestedValueId: targetId
+          }
+        });
+        transferredAssociations.push(propertyValue.property.name);
+      }
+    }
+
+    // Delete the source suggested value (cascade will handle its property values)
+    await prisma.suggestedValue.delete({
+      where: { id: sourceId }
+    });
+
+    logger.info('Suggested values merged successfully', { 
+      sourceId,
+      targetId,
+      sourceValue: sourceSuggestedValue.value,
+      targetValue: targetSuggestedValue.value,
+      transferredAssociations,
+      requestId: req.ip 
+    });
+
+    res.json({
+      success: true,
+      message: 'Suggested values merged successfully',
+      result: {
+        keptValue: targetSuggestedValue.value,
+        removedValue: sourceSuggestedValue.value,
+        transferredAssociations
+      }
+    });
+  } catch (error) {
+    logger.error('Error merging suggested values', { error, sourceId: req.params.sourceId, targetId: req.params.targetId, requestId: req.ip });
     next(error);
   }
 };

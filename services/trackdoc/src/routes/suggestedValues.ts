@@ -4,7 +4,8 @@ import { Router } from 'express';
 import {
   getSuggestedValueById,
   updateSuggestedValue,
-  deleteSuggestedValue
+  deleteSuggestedValue,
+  mergeSuggestedValues
 } from '../controllers/suggestedValuesController';
 
 const router = Router();
@@ -14,6 +15,9 @@ router.get('/:id', getSuggestedValueById);
 
 // PUT /api/suggested-values/:id - Update an existing suggested value
 router.put('/:id', updateSuggestedValue);
+
+// POST /api/suggested-values/:sourceId/merge/:targetId - Merge two suggested values
+router.post('/:sourceId/merge/:targetId', mergeSuggestedValues);
 
 // DELETE /api/suggested-values/:id - Delete a suggested value and all associations
 router.delete('/:id', deleteSuggestedValue);
