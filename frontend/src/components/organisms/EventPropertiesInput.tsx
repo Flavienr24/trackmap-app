@@ -18,6 +18,7 @@ interface PropertyEntry {
   key: string
   value: string
   description: string
+  isValidated: boolean // true = propriété créée/validée, false = en cours d'édition
   keyError?: string
   valueError?: string
   descriptionError?: string
@@ -62,6 +63,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
             key: existingEntry.key,
             value: typeof val === 'string' ? val : JSON.stringify(val),
             description: existingEntry.description,
+            isValidated: true, // Si c'est dans value, c'est validé
           })
           valueKeys.delete(existingEntry.key) // Mark as processed
         } else {
@@ -78,12 +80,13 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
         key,
         value: typeof val === 'string' ? val : JSON.stringify(val),
         description: '',
+        isValidated: true, // Si c'est dans value, c'est validé
       })
     })
     
     // Add empty entry if none exist
     if (newEntries.length === 0) {
-      newEntries.push({ key: '', value: '', description: '' })
+      newEntries.push({ key: '', value: '', description: '', isValidated: false })
     }
     
     setPropertyEntries(newEntries)
@@ -130,16 +133,19 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
       delete newEntries[index].descriptionError
     }
     
+    // Mark as not validated when modified (except for description-only changes)
+    if (field !== 'description') {
+      newEntries[index].isValidated = false
+    }
+    
     setPropertyEntries(newEntries)
     
-    // Only emit change for key/value changes, not description
-    if (field !== 'description') {
-      emitChange(newEntries)
-    }
+    // Don't emit change anymore - only validate button does
+    // This prevents the automatic disappearing behavior
   }
 
   const addEntry = () => {
-    const newEntries = [...propertyEntries, { key: '', value: '', description: '' }]
+    const newEntries = [...propertyEntries, { key: '', value: '', description: '', isValidated: false }]
     setPropertyEntries(newEntries)
   }
 
@@ -149,6 +155,61 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
       setPropertyEntries(newEntries)
       emitChange(newEntries)
     }
+  }
+
+  const validateEntry = (index: number) => {
+    const entry = propertyEntries[index]
+    const newEntries = [...propertyEntries]
+    
+    // Clear previous errors
+    delete newEntries[index].keyError
+    delete newEntries[index].valueError
+    
+    // Validate required fields
+    let hasError = false
+    if (!entry.key.trim()) {
+      newEntries[index].keyError = 'La clé est requise'
+      hasError = true
+    }
+    if (!entry.value.trim()) {
+      newEntries[index].valueError = 'La valeur est requise'
+      hasError = true
+    }
+    
+    if (hasError) {
+      setPropertyEntries(newEntries)
+      return
+    }
+    
+    // Mark as validated and emit change
+    newEntries[index].isValidated = true
+    setPropertyEntries(newEntries)
+    emitChange(newEntries)
+  }
+
+  const cancelEntry = (index: number) => {
+    const entry = propertyEntries[index]
+    
+    // If it's an empty entry, remove it (unless it's the last one)
+    if (!entry.key.trim() && !entry.value.trim() && !entry.description.trim()) {
+      if (propertyEntries.length > 1) {
+        removeEntry(index)
+      } else {
+        // Reset the entry
+        const newEntries = [...propertyEntries]
+        newEntries[index] = { key: '', value: '', description: '', isValidated: false }
+        setPropertyEntries(newEntries)
+      }
+      return
+    }
+    
+    // If it has content but was being edited, reset to empty state
+    const newEntries = [...propertyEntries]
+    newEntries[index] = { key: '', value: '', description: '', isValidated: false }
+    delete newEntries[index].keyError
+    delete newEntries[index].valueError
+    setPropertyEntries(newEntries)
+    emitChange(newEntries)
   }
 
   const emitChange = (entries: PropertyEntry[]) => {
@@ -321,20 +382,51 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
               </FormField>
             </div>
 
-            {/* Remove Button */}
+            {/* Action Buttons */}
             <div className={`col-span-1 ${index === 0 ? "pt-6" : "pt-1"}`}>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => removeEntry(index)}
-                disabled={disabled || propertyEntries.length === 1}
-                className="text-red-600 hover:bg-red-50 border-red-200 w-full"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </Button>
+              {entry.isValidated ? (
+                // Property is validated - show only cancel (delete) button
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeEntry(index)}
+                  disabled={disabled || propertyEntries.length === 1}
+                  className="text-red-600 hover:bg-red-50 border-red-200 w-full"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6m0 0l6-6m-6 6l-6-6" />
+                  </svg>
+                </Button>
+              ) : (
+                // Property is being edited - show validate and cancel buttons
+                <div className="flex space-x-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => validateEntry(index)}
+                    disabled={disabled}
+                    className="text-green-600 hover:bg-green-50 border-green-200 flex-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => cancelEntry(index)}
+                    disabled={disabled}
+                    className="text-red-600 hover:bg-red-50 border-red-200 flex-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6m0 0l6-6m-6 6l-6-6" />
+                    </svg>
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         ))}
