@@ -49,18 +49,32 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
 
   // Convert value object to entries when value changes
   useEffect(() => {
-    const entries: PropertyEntry[] = Object.entries(value || {}).map(([key, val]) => ({
-      key,
-      value: typeof val === 'string' ? val : JSON.stringify(val),
-      description: '',
-    }))
+    const newEntries: PropertyEntry[] = Object.entries(value || {}).map(([key, val]) => {
+      // Try to preserve existing entry data (especially description and partially filled entries)
+      const existingEntry = propertyEntries.find(entry => entry.key === key)
+      return {
+        key,
+        value: typeof val === 'string' ? val : JSON.stringify(val),
+        description: existingEntry?.description || '',
+      }
+    })
+    
+    // Preserve existing entries that are partially filled but not in the value prop
+    propertyEntries.forEach(existingEntry => {
+      if (existingEntry.key.trim() || existingEntry.value.trim() || existingEntry.description.trim()) {
+        const alreadyExists = newEntries.some(entry => entry.key === existingEntry.key)
+        if (!alreadyExists) {
+          newEntries.push(existingEntry)
+        }
+      }
+    })
     
     // Add empty entry if none exist
-    if (entries.length === 0) {
-      entries.push({ key: '', value: '', description: '' })
+    if (newEntries.length === 0) {
+      newEntries.push({ key: '', value: '', description: '' })
     }
     
-    setPropertyEntries(entries)
+    setPropertyEntries(newEntries)
   }, [value])
 
   const loadPropertiesAndValues = async () => {
@@ -129,6 +143,8 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     const result: Record<string, any> = {}
     
     entries.forEach(entry => {
+      // Only include entries that have both key and value filled
+      // But don't filter out entries from the UI - let them stay for editing
       if (entry.key.trim() && entry.value.trim()) {
         try {
           // Try to parse as JSON first
