@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Modal } from '@/components/organisms/Modal'
 import { FormField } from '@/components/molecules/FormField'
 import { Input } from '@/components/atoms/Input'
@@ -11,6 +11,7 @@ interface CreatePropertyModalProps {
   onClose: () => void
   onSubmit: (data: CreatePropertyRequest) => Promise<void>
   loading?: boolean
+  initialName?: string
 }
 
 const CreatePropertyModal: React.FC<CreatePropertyModalProps> = ({
@@ -18,13 +19,35 @@ const CreatePropertyModal: React.FC<CreatePropertyModalProps> = ({
   onClose,
   onSubmit,
   loading = false,
+  initialName = '',
 }) => {
   const [formData, setFormData] = useState<CreatePropertyRequest>({
-    name: '',
+    name: initialName,
     type: 'string',
     description: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const nameInputRef = useRef<HTMLInputElement>(null)
+
+  // Update form data when initialName changes
+  useEffect(() => {
+    if (initialName) {
+      setFormData(prev => ({
+        ...prev,
+        name: initialName,
+      }))
+    }
+  }, [initialName])
+
+  // Focus name input when modal opens
+  useEffect(() => {
+    if (isOpen && nameInputRef.current) {
+      // Use setTimeout to ensure the modal is fully rendered
+      setTimeout(() => {
+        nameInputRef.current?.focus()
+      }, 100)
+    }
+  }, [isOpen])
 
   const handleClose = () => {
     if (!loading) {
@@ -49,9 +72,7 @@ const CreatePropertyModal: React.FC<CreatePropertyModalProps> = ({
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+  const handleSubmit = async () => {
     if (!validateForm()) {
       return
     }
@@ -84,7 +105,7 @@ const CreatePropertyModal: React.FC<CreatePropertyModalProps> = ({
       title="Créer une propriété"
       size="md"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-4">
         {/* Property Name */}
         <FormField
           label="Nom de la propriété"
@@ -92,10 +113,17 @@ const CreatePropertyModal: React.FC<CreatePropertyModalProps> = ({
           error={errors.name}
         >
           <Input
+            ref={nameInputRef}
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="page_name, user_id, transaction_value..."
             disabled={loading}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleSubmit()
+              }
+            }}
           />
         </FormField>
 
@@ -146,14 +174,15 @@ const CreatePropertyModal: React.FC<CreatePropertyModalProps> = ({
             Annuler
           </Button>
           <Button
-            type="submit"
+            type="button"
             variant="primary"
             loading={loading}
+            onClick={handleSubmit}
           >
             Créer la propriété
           </Button>
         </div>
-      </form>
+      </div>
     </Modal>
   )
 }

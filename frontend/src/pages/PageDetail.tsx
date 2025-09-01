@@ -323,7 +323,7 @@ const PageDetail: React.FC = () => {
         onSubmit={handleCreateEventSubmit}
         loading={createEventLoading}
         pageId={page?.id}
-        productId={page?.product_id}
+        productId={productSlug}
       />
 
       {/* Edit Event Modal */}
@@ -334,7 +334,7 @@ const PageDetail: React.FC = () => {
         onSubmit={handleEditEventSubmit}
         onDelete={handleDeleteEvent}
         loading={editEventLoading}
-        productId={page?.product_id}
+        productId={productSlug}
       />
 
       {/* Edit Page Modal */}

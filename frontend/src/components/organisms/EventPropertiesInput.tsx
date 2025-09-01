@@ -3,8 +3,9 @@ import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
 import { FormField } from '@/components/molecules/FormField'
 import { CreatePropertyModal } from '@/components/organisms/CreatePropertyModal'
-import { propertiesApi, suggestedValuesApi, propertyValuesApi } from '@/services/api'
-import type { Property, SuggestedValue, PropertyValue, CreatePropertyRequest } from '@/types'
+import { CreateSuggestedValueModal } from '@/components/organisms/CreateSuggestedValueModal'
+import { propertiesApi, suggestedValuesApi } from '@/services/api'
+import type { Property, SuggestedValue, CreatePropertyRequest, CreateSuggestedValueRequest } from '@/types'
 
 interface EventPropertiesInputProps {
   productId: string
@@ -42,11 +43,46 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
   const [showCreatePropertyModal, setShowCreatePropertyModal] = useState(false)
   const [createPropertyLoading, setCreatePropertyLoading] = useState(false)
   const [newPropertyKey, setNewPropertyKey] = useState('')
+  const [showCreateSuggestedValueModal, setShowCreateSuggestedValueModal] = useState(false)
+  const [createSuggestedValueLoading, setCreateSuggestedValueLoading] = useState(false)
+  const [newSuggestedValue, setNewSuggestedValue] = useState('')
+  const [targetEntryIndex, setTargetEntryIndex] = useState(-1)
+  const [targetKeyEntryIndex, setTargetKeyEntryIndex] = useState(-1)
+  const [showSuggestionsDropdown, setShowSuggestionsDropdown] = useState<number | null>(null)
+  const [showKeyDropdown, setShowKeyDropdown] = useState<number | null>(null)
 
   // Load properties and suggested values for the product
   useEffect(() => {
     loadPropertiesAndValues()
   }, [productId])
+
+  // Handle click outside and escape key to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element
+      if (!target.closest('.relative')) {
+        setShowSuggestionsDropdown(null)
+        setShowKeyDropdown(null)
+      }
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowSuggestionsDropdown(null)
+        setShowKeyDropdown(null)
+      }
+    }
+
+    if (showSuggestionsDropdown !== null || showKeyDropdown !== null) {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('keydown', handleKeyDown)
+      
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+        document.removeEventListener('keydown', handleKeyDown)
+      }
+    }
+  }, [showSuggestionsDropdown, showKeyDropdown])
 
   // Convert value object to entries when value changes
   useEffect(() => {
@@ -127,8 +163,20 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     // Clear errors when user types
     if (field === 'key') {
       delete newEntries[index].keyError
+      // Show key dropdown when typing in key field and 3+ characters
+      if (newValue.length >= 3) {
+        setShowKeyDropdown(index)
+      } else {
+        setShowKeyDropdown(null)
+      }
     } else if (field === 'value') {
       delete newEntries[index].valueError
+      // Show suggestions dropdown when typing in value field and 3+ characters
+      if (newValue.length >= 3) {
+        setShowSuggestionsDropdown(index)
+      } else {
+        setShowSuggestionsDropdown(null)
+      }
     } else if (field === 'description') {
       delete newEntries[index].descriptionError
     }
@@ -140,8 +188,9 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     
     setPropertyEntries(newEntries)
     
-    // Don't emit change anymore - only validate button does
-    // This prevents the automatic disappearing behavior
+    // Emit changes automatically for entries that have both key and value
+    // This allows saving without needing to click "validate"
+    emitChange(newEntries)
   }
 
   const addEntry = () => {
@@ -216,8 +265,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     const result: Record<string, any> = {}
     
     entries.forEach(entry => {
-      // Only include entries that have both key and value filled
-      // But don't filter out entries from the UI - let them stay for editing
+      // Include all entries that have both key and value filled, regardless of validation status
       if (entry.key.trim() && entry.value.trim()) {
         try {
           // Try to parse as JSON first
@@ -229,6 +277,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
       }
     })
     
+    console.log('🔧 Emitting properties change:', result)
     onChange(result)
   }
 
@@ -240,12 +289,14 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
         name.toLowerCase().includes(currentKey.toLowerCase()) && 
         !existing.includes(name.toLowerCase())
       )
-      .slice(0, 5)
+      .slice(0, 8)
   }
 
-  const getValueSuggestions = (key: string): string[] => {
+  const getValueSuggestions = (key: string, currentValue: string = ''): string[] => {
     // Find property by key
     const property = properties.find(p => p.name === key)
+    
+    let allSuggestions: string[] = []
     
     if (!property) {
       // If property doesn't exist, prioritize contextual values, then all values
@@ -255,47 +306,61 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
       const staticValues = suggestedValues
         .filter(sv => !sv.is_contextual)
         .map(sv => sv.value)
-      return [...contextualValues, ...staticValues].slice(0, 8)
+      allSuggestions = [...contextualValues, ...staticValues]
+    } else {
+      // Get associated suggested values for this property
+      const associatedValues = propertyValueAssociations[property.id] || []
+      
+      if (associatedValues.length > 0) {
+        // Show associated values first, then contextual values as fallback
+        const contextualValues = suggestedValues
+          .filter(sv => sv.is_contextual && !associatedValues.includes(sv.value))
+          .map(sv => sv.value)
+        allSuggestions = [...associatedValues, ...contextualValues]
+      } else {
+        // No associations yet - show contextual values first, then all values
+        const contextualValues = suggestedValues
+          .filter(sv => sv.is_contextual)
+          .map(sv => sv.value)
+        const staticValues = suggestedValues
+          .filter(sv => !sv.is_contextual)
+          .map(sv => sv.value)
+        allSuggestions = [...contextualValues, ...staticValues]
+      }
     }
     
-    // Get associated suggested values for this property
-    const associatedValues = propertyValueAssociations[property.id] || []
-    
-    if (associatedValues.length > 0) {
-      // Show associated values first, then contextual values as fallback
-      const contextualValues = suggestedValues
-        .filter(sv => sv.is_contextual && !associatedValues.includes(sv.value))
-        .map(sv => sv.value)
-      return [...associatedValues, ...contextualValues].slice(0, 8)
+    // Filter suggestions based on current input (case insensitive)
+    if (currentValue && currentValue.length >= 3) {
+      const filtered = allSuggestions.filter(suggestion => 
+        suggestion.toLowerCase().includes(currentValue.toLowerCase())
+      )
+      return filtered.slice(0, 8)
     }
     
-    // No associations yet - show contextual values first, then all values
-    const contextualValues = suggestedValues
-      .filter(sv => sv.is_contextual)
-      .map(sv => sv.value)
-    const staticValues = suggestedValues
-      .filter(sv => !sv.is_contextual)
-      .map(sv => sv.value)
-    return [...contextualValues, ...staticValues].slice(0, 8)
+    return allSuggestions.slice(0, 8)
   }
 
   const handleCreateProperty = async (data: CreatePropertyRequest) => {
+    console.log('🔧 handleCreateProperty called with:', data, 'targetKeyEntryIndex:', targetKeyEntryIndex)
     setCreatePropertyLoading(true)
     try {
       // Create property via API
+      console.log('🔧 Calling propertiesApi.create with productId:', productId)
       const response = await propertiesApi.create(productId, data)
       const newProperty = response.data
+      console.log('🔧 Property created successfully:', newProperty)
       
       // Update local state
       setProperties(prev => [...prev, newProperty])
       
       // Update the entry that triggered the creation
-      const entryIndex = propertyEntries.findIndex(e => e.key === newPropertyKey)
-      if (entryIndex !== -1) {
-        updateEntry(entryIndex, 'key', data.name)
+      if (targetKeyEntryIndex !== -1) {
+        console.log('🔧 Updating entry at index:', targetKeyEntryIndex, 'with key:', data.name)
+        updateEntry(targetKeyEntryIndex, 'key', data.name)
       }
       
       setNewPropertyKey('')
+      setTargetKeyEntryIndex(-1)
       console.log('Property created on the fly:', newProperty)
     } catch (error) {
       console.error('Error creating property:', error)
@@ -305,9 +370,37 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     }
   }
 
-  const handleCreatePropertyFromKey = (key: string) => {
+  const handleCreatePropertyFromKey = (key: string, entryIndex: number) => {
+    console.log('🔧 Creating property from key:', key, 'for entry index:', entryIndex)
     setNewPropertyKey(key)
+    setTargetKeyEntryIndex(entryIndex)
     setShowCreatePropertyModal(true)
+  }
+
+  const handleCreateSuggestedValue = async (data: CreateSuggestedValueRequest) => {
+    setCreateSuggestedValueLoading(true)
+    try {
+      // Create suggested value via API
+      const response = await suggestedValuesApi.create(productId, data)
+      const newSuggestedValue = response.data
+      
+      // Update local state
+      setSuggestedValues(prev => [...prev, newSuggestedValue])
+      
+      // Update the entry that triggered the creation with the new value
+      if (targetEntryIndex !== -1) {
+        updateEntry(targetEntryIndex, 'value', data.value)
+      }
+      
+      setNewSuggestedValue('')
+      setTargetEntryIndex(-1)
+      console.log('Suggested value created on the fly:', newSuggestedValue)
+    } catch (error) {
+      console.error('Error creating suggested value:', error)
+      throw error
+    } finally {
+      setCreateSuggestedValueLoading(false)
+    }
   }
 
   return (
@@ -317,6 +410,10 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
         <label className="block text-sm font-medium text-neutral-700">
           Propriétés de l'événement
         </label>
+      </div>
+      {/* Info */}
+      <div className="text-sm text-neutral-500">
+        <p>💡 <strong>Astuce :</strong> Tapez pour voir les suggestions automatiques basées sur vos propriétés existantes.</p>
       </div>
 
       {/* Property Entries */}
@@ -335,13 +432,52 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
                     onChange={(e) => updateEntry(index, 'key', e.target.value)}
                     placeholder="page_name, user_id..."
                     disabled={disabled}
-                    list={`key-suggestions-${index}`}
                   />
-                  <datalist id={`key-suggestions-${index}`}>
-                    {getKeyAutocomplete(entry.key).map((suggestion) => (
-                      <option key={suggestion} value={suggestion} />
-                    ))}
-                  </datalist>
+                  {/* Custom key dropdown for properties */}
+                  {entry.key && entry.key.length >= 3 && showKeyDropdown === index && (
+                    <div className="absolute top-full left-0 w-[250px] bg-white border border-neutral-300 rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+                      {getKeyAutocomplete(entry.key).length > 0 ? (
+                        <>
+                          {getKeyAutocomplete(entry.key).map((suggestion) => (
+                            <button
+                              key={suggestion}
+                              type="button"
+                              className="w-full text-left px-3 py-2 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none text-sm"
+                              onClick={() => {
+                                updateEntry(index, 'key', suggestion)
+                                setShowKeyDropdown(null) // Close dropdown
+                              }}
+                            >
+                              {suggestion}
+                            </button>
+                          ))}
+                          {!getKeyAutocomplete(entry.key).some(s => s.toLowerCase() === entry.key.toLowerCase()) && (
+                            <button
+                              type="button"
+                              className="w-full text-left px-3 py-2 hover:bg-green-50 focus:bg-green-50 focus:outline-none text-sm border-t border-neutral-200 text-green-700 font-medium"
+                              onClick={() => {
+                                handleCreatePropertyFromKey(entry.key, index)
+                                setShowKeyDropdown(null)
+                              }}
+                            >
+                              🔍 Créer "{entry.key}" comme nouvelle propriété
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 hover:bg-green-50 focus:bg-green-50 focus:outline-none text-sm text-green-700 font-medium"
+                          onClick={() => {
+                            handleCreatePropertyFromKey(entry.key, index)
+                            setShowKeyDropdown(null)
+                          }}
+                        >
+                          🔍 Créer "{entry.key}" comme nouvelle propriété
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </FormField>
             </div>
@@ -352,18 +488,63 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
                 label={index === 0 ? "Valeur" : ""}
                 error={entry.valueError}
               >
-                <Input
-                  value={entry.value}
-                  onChange={(e) => updateEntry(index, 'value', e.target.value)}
-                  placeholder="homepage, $page-name, 123..."
-                  disabled={disabled}
-                  list={`value-suggestions-${index}`}
-                />
-                <datalist id={`value-suggestions-${index}`}>
-                  {getValueSuggestions(entry.key).map((suggestion) => (
-                    <option key={suggestion} value={suggestion} />
-                  ))}
-                </datalist>
+                <div className="relative">
+                  <Input
+                    value={entry.value}
+                    onChange={(e) => updateEntry(index, 'value', e.target.value)}
+                    placeholder="homepage, $page-name, 123..."
+                    disabled={disabled}
+                  />
+                  {/* Custom suggestion dropdown for better UX */}
+                  {entry.value && entry.value.length >= 3 && showSuggestionsDropdown === index && (
+                    <div className="absolute top-full left-0 w-[250px] bg-white border border-neutral-300 rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+                      {getValueSuggestions(entry.key, entry.value).length > 0 ? (
+                        <>
+                          {getValueSuggestions(entry.key, entry.value).map((suggestion) => (
+                            <button
+                              key={suggestion}
+                              type="button"
+                              className="w-full text-left px-3 py-2 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none text-sm"
+                              onClick={() => {
+                                updateEntry(index, 'value', suggestion)
+                                setShowSuggestionsDropdown(null) // Close dropdown
+                              }}
+                            >
+                              {suggestion}
+                            </button>
+                          ))}
+                          {!getValueSuggestions(entry.key, entry.value).some(s => s.toLowerCase() === entry.value.toLowerCase()) && (
+                            <button
+                              type="button"
+                              className="w-full text-left px-3 py-2 hover:bg-green-50 focus:bg-green-50 focus:outline-none text-sm border-t border-neutral-200 text-green-700 font-medium"
+                              onClick={() => {
+                                setNewSuggestedValue(entry.value)
+                                setTargetEntryIndex(index)
+                                setShowCreateSuggestedValueModal(true)
+                                setShowSuggestionsDropdown(null) // Close dropdown
+                              }}
+                            >
+                              🔍 Créer "{entry.value}" comme nouvelle valeur
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 hover:bg-green-50 focus:bg-green-50 focus:outline-none text-sm text-green-700 font-medium"
+                          onClick={() => {
+                            setNewSuggestedValue(entry.value)
+                            setTargetEntryIndex(index)
+                            setShowCreateSuggestedValueModal(true)
+                            setShowSuggestionsDropdown(null) // Close dropdown
+                          }}
+                        >
+                          🔍 Créer "{entry.value}" comme nouvelle valeur
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </FormField>
             </div>
 
@@ -449,20 +630,30 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
         </div>
       )}
 
-      {/* Info */}
-      <div className="text-sm text-neutral-500">
-        <p>💡 <strong>Astuce :</strong> Tapez pour voir les suggestions automatiques basées sur vos propriétés existantes.</p>
-      </div>
-
       {/* Create Property Modal */}
       <CreatePropertyModal
         isOpen={showCreatePropertyModal}
         onClose={() => {
           setShowCreatePropertyModal(false)
           setNewPropertyKey('')
+          setTargetKeyEntryIndex(-1)
         }}
         onSubmit={handleCreateProperty}
         loading={createPropertyLoading}
+        initialName={newPropertyKey}
+      />
+
+      {/* Create Suggested Value Modal */}
+      <CreateSuggestedValueModal
+        isOpen={showCreateSuggestedValueModal}
+        onClose={() => {
+          setShowCreateSuggestedValueModal(false)
+          setNewSuggestedValue('')
+          setTargetEntryIndex(-1)
+        }}
+        onSubmit={handleCreateSuggestedValue}
+        loading={createSuggestedValueLoading}
+        initialValue={newSuggestedValue}
       />
     </div>
   )

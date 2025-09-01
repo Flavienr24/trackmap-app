@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Modal } from '@/components/organisms/Modal'
 import { FormField } from '@/components/molecules/FormField'
 import { Input } from '@/components/atoms/Input'
@@ -10,6 +10,7 @@ interface CreateSuggestedValueModalProps {
   onClose: () => void
   onSubmit: (data: CreateSuggestedValueRequest) => Promise<void>
   loading?: boolean
+  initialValue?: string
 }
 
 const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
@@ -17,12 +18,23 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
   onClose,
   onSubmit,
   loading = false,
+  initialValue = '',
 }) => {
   const [formData, setFormData] = useState<CreateSuggestedValueRequest>({
-    value: '',
-    is_contextual: false,
+    value: initialValue,
+    is_contextual: initialValue.startsWith('$'),
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Update form data when initialValue changes
+  useEffect(() => {
+    if (initialValue) {
+      setFormData({
+        value: initialValue,
+        is_contextual: initialValue.startsWith('$'),
+      })
+    }
+  }, [initialValue])
 
   const handleClose = () => {
     if (!loading) {
