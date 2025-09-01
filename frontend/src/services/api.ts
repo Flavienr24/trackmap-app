@@ -111,8 +111,21 @@ async function apiRequest<T>(
     const response = await fetch(url, config)
     
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`API Error: ${response.status} - ${error}`)
+      // Try to parse JSON error response first, fallback to text
+      let errorData
+      try {
+        errorData = await response.json()
+      } catch {
+        errorData = { message: await response.text() }
+      }
+      
+      // Create enhanced error with response data
+      const error = new Error(`API Error: ${response.status} - ${errorData.message || 'Unknown error'}`)
+      ;(error as any).response = {
+        status: response.status,
+        data: errorData
+      }
+      throw error
     }
     
     const jsonData = await response.json()
@@ -304,6 +317,11 @@ export const suggestedValuesApi = {
       body: JSON.stringify(data),
     }),
 
+  // Merge suggested values - keep target, remove source
+  merge: (sourceId: string, targetId: string): Promise<ApiResponse<any>> =>
+    apiRequest(`/suggested-values/${sourceId}/merge/${targetId}`, {
+      method: 'POST',
+    }),
   // Delete suggested value
   delete: (id: string): Promise<ApiResponse<void>> =>
     apiRequest(`/suggested-values/${id}`, {

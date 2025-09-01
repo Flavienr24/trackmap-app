@@ -287,6 +287,7 @@ const SuggestedValuesList: React.FC = () => {
         suggestedValue={editSuggestedValue}
         onClose={() => setEditSuggestedValue(null)}
         onSubmit={handleEditSubmit}
+        onRefresh={loadSuggestedValues}
         loading={editLoading}
       />
     </div>

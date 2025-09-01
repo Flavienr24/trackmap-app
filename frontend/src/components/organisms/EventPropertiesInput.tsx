@@ -3,8 +3,8 @@ import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
 import { FormField } from '@/components/molecules/FormField'
 import { CreatePropertyModal } from '@/components/organisms/CreatePropertyModal'
-import { propertiesApi, suggestedValuesApi } from '@/services/api'
-import type { Property, SuggestedValue, CreatePropertyRequest } from '@/types'
+import { propertiesApi, suggestedValuesApi, propertyValuesApi } from '@/services/api'
+import type { Property, SuggestedValue, PropertyValue, CreatePropertyRequest } from '@/types'
 
 interface EventPropertiesInputProps {
   productId: string
@@ -34,6 +34,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
 }) => {
   const [properties, setProperties] = useState<Property[]>([])
   const [suggestedValues, setSuggestedValues] = useState<SuggestedValue[]>([])
+  const [propertyValueAssociations, setPropertyValueAssociations] = useState<Record<string, string[]>>({})
   const [propertyEntries, setPropertyEntries] = useState<PropertyEntry[]>([])
   const [showCreatePropertyModal, setShowCreatePropertyModal] = useState(false)
   const [createPropertyLoading, setCreatePropertyLoading] = useState(false)
@@ -61,17 +62,29 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
 
   const loadPropertiesAndValues = async () => {
     try {
-      // Load properties for this product
+      // Load properties for this product (includes propertyValues associations)
       const propertiesResponse = await propertiesApi.getByProduct(productId)
-      setProperties(propertiesResponse.data || [])
+      const loadedProperties = propertiesResponse.data || []
+      setProperties(loadedProperties)
       
       // Load suggested values for this product
       const suggestedValuesResponse = await suggestedValuesApi.getByProduct(productId)
       setSuggestedValues(suggestedValuesResponse.data || [])
+      
+      // Build property-value associations map
+      const associations: Record<string, string[]> = {}
+      loadedProperties.forEach((property: any) => {
+        if (property.propertyValues && Array.isArray(property.propertyValues)) {
+          associations[property.id] = property.propertyValues.map((pv: any) => pv.suggestedValue?.value).filter(Boolean)
+        }
+      })
+      setPropertyValueAssociations(associations)
+      
     } catch (error) {
       console.error('Error loading properties and suggested values:', error)
       setProperties([])
       setSuggestedValues([])
+      setPropertyValueAssociations({})
     }
   }
 
@@ -135,24 +148,37 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
   const getValueSuggestions = (key: string): string[] => {
     // Find property by key
     const property = properties.find(p => p.name === key)
+    
     if (!property) {
-      // If property doesn't exist, show general contextual values
-      return suggestedValues
+      // If property doesn't exist, prioritize contextual values, then all values
+      const contextualValues = suggestedValues
         .filter(sv => sv.is_contextual)
         .map(sv => sv.value)
-        .slice(0, 5)
+      const staticValues = suggestedValues
+        .filter(sv => !sv.is_contextual)
+        .map(sv => sv.value)
+      return [...contextualValues, ...staticValues].slice(0, 8)
     }
     
     // Get associated suggested values for this property
-    // TODO: Implement proper property-value associations when API is ready
-    const associatedSuggestedValues: SuggestedValue[] = []
+    const associatedValues = propertyValueAssociations[property.id] || []
     
-    if (associatedSuggestedValues.length > 0) {
-      return associatedSuggestedValues.map(sv => sv.value)
+    if (associatedValues.length > 0) {
+      // Show associated values first, then contextual values as fallback
+      const contextualValues = suggestedValues
+        .filter(sv => sv.is_contextual && !associatedValues.includes(sv.value))
+        .map(sv => sv.value)
+      return [...associatedValues, ...contextualValues].slice(0, 8)
     }
     
-    // Fallback: show all suggested values
-    return suggestedValues.map(sv => sv.value).slice(0, 5)
+    // No associations yet - show contextual values first, then all values
+    const contextualValues = suggestedValues
+      .filter(sv => sv.is_contextual)
+      .map(sv => sv.value)
+    const staticValues = suggestedValues
+      .filter(sv => !sv.is_contextual)
+      .map(sv => sv.value)
+    return [...contextualValues, ...staticValues].slice(0, 8)
   }
 
   const handleCreateProperty = async (data: CreatePropertyRequest) => {

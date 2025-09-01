@@ -98,6 +98,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
   // Suggest common event names
   const suggestedEvents = [
     'page_view',
+    'select_content',
     'button_click',
     'form_submit',
     'purchase',

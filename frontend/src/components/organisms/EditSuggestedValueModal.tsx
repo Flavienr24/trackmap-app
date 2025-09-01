@@ -3,13 +3,16 @@ import { Modal } from '@/components/organisms/Modal'
 import { FormField } from '@/components/molecules/FormField'
 import { Input } from '@/components/atoms/Input'
 import { Button } from '@/components/atoms/Button'
-import type { SuggestedValue, UpdateSuggestedValueRequest } from '@/types'
+import { MergeConfirmationModal } from '@/components/organisms/MergeConfirmationModal'
+import { suggestedValuesApi } from '@/services/api'
+import type { SuggestedValue, UpdateSuggestedValueRequest, SuggestedValueConflictData } from '@/types'
 
 interface EditSuggestedValueModalProps {
   isOpen: boolean
   suggestedValue: SuggestedValue | null
   onClose: () => void
   onSubmit: (id: string, data: UpdateSuggestedValueRequest) => Promise<void>
+  onRefresh?: () => Promise<void>
   loading?: boolean
 }
 
@@ -18,6 +21,7 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
   suggestedValue,
   onClose,
   onSubmit,
+  onRefresh,
   loading = false,
 }) => {
   const [formData, setFormData] = useState<UpdateSuggestedValueRequest>({
@@ -25,6 +29,9 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
     is_contextual: false,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [conflictData, setConflictData] = useState<SuggestedValueConflictData | null>(null)
+  const [showMergeModal, setShowMergeModal] = useState(false)
+  const [mergeLoading, setMergeLoading] = useState(false)
 
   // Update form data when suggested value changes
   useEffect(() => {
@@ -38,8 +45,10 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
   }, [suggestedValue])
 
   const handleClose = () => {
-    if (!loading) {
+    if (!loading && !mergeLoading) {
       setErrors({})
+      setConflictData(null)
+      setShowMergeModal(false)
       onClose()
     }
   }
@@ -72,10 +81,49 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
         is_contextual: formData.value?.startsWith('$') || false,
       })
       handleClose()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating suggested value:', error)
-      setErrors({ submit: 'Erreur lors de la modification de la valeur suggérée' })
+      
+      // Check if this is a conflict error with merge data
+      if (error.response?.status === 409 && error.response?.data?.error === 'suggested_value_exists') {
+        setConflictData(error.response.data.conflictData)
+        setShowMergeModal(true)
+        setErrors({}) // Clear any previous errors
+      } else {
+        setErrors({ submit: 'Erreur lors de la modification de la valeur suggérée' })
+      }
     }
+  }
+
+  const handleMergeConfirm = async () => {
+    if (!suggestedValue || !conflictData) return
+
+    setMergeLoading(true)
+    try {
+      // Merge: remove current (source), keep existing (target)
+      await suggestedValuesApi.merge(suggestedValue.id, conflictData.existingValue.id)
+      
+      // Close modals and refresh the list
+      setShowMergeModal(false)
+      setConflictData(null)
+      handleClose()
+      
+      // Trigger parent refresh
+      if (onRefresh) {
+        await onRefresh()
+      }
+      
+    } catch (error) {
+      console.error('Error merging suggested values:', error)
+      setErrors({ submit: 'Erreur lors de la fusion des valeurs suggérées' })
+    } finally {
+      setMergeLoading(false)
+    }
+  }
+
+  const handleMergeCancel = () => {
+    setShowMergeModal(false)
+    setConflictData(null)
   }
 
   const handleValueChange = (value: string) => {
@@ -89,6 +137,7 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
   if (!suggestedValue) return null
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
@@ -155,6 +204,16 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
         </div>
       </form>
     </Modal>
+
+    {/* Merge Confirmation Modal */}
+    <MergeConfirmationModal
+      isOpen={showMergeModal}
+      conflictData={conflictData}
+      onConfirm={handleMergeConfirm}
+      onCancel={handleMergeCancel}
+      loading={mergeLoading}
+    />
+    </>
   )
 }
 

@@ -187,6 +187,18 @@ export interface CreateSuggestedValueRequest {
 
 export interface UpdateSuggestedValueRequest extends Partial<CreateSuggestedValueRequest> {}
 
+export interface SuggestedValueConflictData {
+  existingValue: {
+    id: string
+    value: string
+    is_contextual: boolean
+  }
+  mergeProposal: {
+    keepValue: string
+    removeValue: string
+  }
+}
+
 export interface CreatePropertyValueRequest {
   property_id: string
   suggested_value_id: string
