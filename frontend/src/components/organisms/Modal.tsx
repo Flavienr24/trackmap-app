@@ -41,7 +41,7 @@ const Modal: React.FC<ModalProps> = ({
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-modal"
       onClick={handleBackdropClick}
     >
-      <div className={`bg-white rounded-lg ${sizeClasses[size]} w-full ${fixedHeight ? 'max-h-[80vh] flex flex-col' : ''}`}>
+      <div className={`bg-white rounded-lg ${sizeClasses[size]} w-full ${fixedHeight ? 'h-[80vh] flex flex-col' : ''}`}>
         <div className="px-6 py-4 border-b border-neutral-200 flex-shrink-0">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-neutral-900">{title}</h2>

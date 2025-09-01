@@ -392,11 +392,9 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
                   size="sm"
                   onClick={() => removeEntry(index)}
                   disabled={disabled || propertyEntries.length === 1}
-                  className="text-red-600 hover:bg-red-50 border-red-200 w-full"
+                  className="text-red-600 hover:bg-red-50 border-red-200 w-full min-w-0"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <span className="text-lg font-bold">×</span>
                 </Button>
               ) : (
                 // Property is being edited - show validate and cancel buttons
@@ -407,11 +405,9 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
                     size="sm"
                     onClick={() => validateEntry(index)}
                     disabled={disabled}
-                    className="text-green-600 hover:bg-green-50 border-green-200 flex-1"
+                    className="text-green-600 hover:bg-green-50 border-green-200 flex-1 min-w-0"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+                    <span className="text-lg font-bold">✓</span>
                   </Button>
                   <Button
                     type="button"
@@ -419,11 +415,9 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
                     size="sm"
                     onClick={() => cancelEntry(index)}
                     disabled={disabled}
-                    className="text-red-600 hover:bg-red-50 border-red-200 flex-1"
+                    className="text-red-600 hover:bg-red-50 border-red-200 flex-1 min-w-0"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <span className="text-lg font-bold">×</span>
                   </Button>
                 </div>
               )}
