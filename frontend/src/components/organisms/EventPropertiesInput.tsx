@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
 import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
 import { FormField } from '@/components/molecules/FormField'
@@ -14,6 +14,10 @@ interface EventPropertiesInputProps {
   error?: string
 }
 
+export interface EventPropertiesInputRef {
+  validateAllEntries: () => boolean
+}
+
 interface PropertyEntry {
   key: string
   value: string
@@ -26,13 +30,13 @@ interface PropertyEntry {
  * Event Properties Input Component
  * Smart input for event properties with autocomplete from Properties library
  */
-const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
+const EventPropertiesInput = forwardRef<EventPropertiesInputRef, EventPropertiesInputProps>(({
   productId,
   value,
   onChange,
   disabled = false,
   error,
-}) => {
+}, ref) => {
   const [properties, setProperties] = useState<Property[]>([])
   const [suggestedValues, setSuggestedValues] = useState<SuggestedValue[]>([])
   const [propertyValueAssociations, setPropertyValueAssociations] = useState<Record<string, string[]>>({})
@@ -209,35 +213,6 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     emitChange(newEntries)
   }
 
-  const validateEntry = (index: number) => {
-    const entry = propertyEntries[index]
-    const newEntries = [...propertyEntries]
-    
-    // Clear previous errors
-    delete newEntries[index].keyError
-    delete newEntries[index].valueError
-    
-    // Validate required fields
-    let hasError = false
-    if (!entry.key.trim()) {
-      newEntries[index].keyError = 'La clé est requise'
-      hasError = true
-    }
-    if (!entry.value.trim()) {
-      newEntries[index].valueError = 'La valeur est requise'
-      hasError = true
-    }
-    
-    if (hasError) {
-      setPropertyEntries(newEntries)
-      return
-    }
-    
-    // Mark as validated and emit change
-    newEntries[index].isValidated = true
-    setPropertyEntries(newEntries)
-    emitChange(newEntries)
-  }
 
   const cancelEntry = (index: number) => {
     const entry = propertyEntries[index]
@@ -263,6 +238,67 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     setPropertyEntries(newEntries)
     emitChange(newEntries)
   }
+
+  const validateEntry = (index: number): boolean => {
+    const entry = propertyEntries[index]
+    const newEntries = [...propertyEntries]
+    
+    // Clear previous errors for this entry
+    delete newEntries[index].keyError
+    delete newEntries[index].valueError
+    
+    // Only validate if at least one field is filled (partial entry)
+    const hasKey = entry.key.trim()
+    const hasValue = entry.value.trim()
+    let hasErrors = false
+    
+    if (hasKey || hasValue) {
+      if (!hasKey) {
+        newEntries[index].keyError = 'La clé est requise'
+        hasErrors = true
+      }
+      if (!hasValue) {
+        newEntries[index].valueError = 'La valeur est requise'
+        hasErrors = true
+      }
+    }
+    
+    setPropertyEntries(newEntries)
+    return !hasErrors
+  }
+
+  const validateAllEntries = (): boolean => {
+    const newEntries = [...propertyEntries]
+    let hasErrors = false
+    
+    newEntries.forEach((entry, index) => {
+      // Clear previous errors
+      delete newEntries[index].keyError
+      delete newEntries[index].valueError
+      
+      // Only validate entries that have at least one field filled (partial entries)
+      const hasKey = entry.key.trim()
+      const hasValue = entry.value.trim()
+      
+      if (hasKey || hasValue) {
+        if (!hasKey) {
+          newEntries[index].keyError = 'La clé est requise'
+          hasErrors = true
+        }
+        if (!hasValue) {
+          newEntries[index].valueError = 'La valeur est requise'
+          hasErrors = true
+        }
+      }
+    })
+    
+    if (hasErrors) {
+      setPropertyEntries(newEntries)
+    }
+    
+    return !hasErrors
+  }
+
 
   const emitChange = (entries: PropertyEntry[]) => {
     const result: Record<string, any> = {}
@@ -401,6 +437,10 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     }
   }
 
+  // Expose validateAllEntries method to parent component
+  useImperativeHandle(ref, () => ({
+    validateAllEntries
+  }), [validateAllEntries])
 
   return (
     <div className="space-y-4">
@@ -429,6 +469,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
                   <Input
                     value={entry.key}
                     onChange={(e) => updateEntry(index, 'key', e.target.value)}
+                    onBlur={() => validateEntry(index)}
                     placeholder="page_name, user_id..."
                     disabled={disabled}
                   />
@@ -491,6 +532,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
                   <Input
                     value={entry.value}
                     onChange={(e) => updateEntry(index, 'value', e.target.value)}
+                    onBlur={() => validateEntry(index)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === 'Tab') {
                         setShowSuggestionsDropdown(null)
@@ -558,43 +600,17 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
 
             {/* Action Buttons */}
             <div className={`col-span-1 ${index === 0 ? "pt-6" : "pt-1"}`}>
-              {entry.isValidated ? (
-                // Property is validated - show only cancel (delete) button
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeEntry(index)}
-                  disabled={disabled}
-                  className="text-red-600 hover:bg-red-50 border-red-200 w-full min-w-0"
-                >
-                  <span className="text-lg font-bold">×</span>
-                </Button>
-              ) : (
-                // Property is being edited - show validate and cancel buttons
-                <div className="flex space-x-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => validateEntry(index)}
-                    disabled={disabled}
-                    className="text-green-600 hover:bg-green-50 border-green-200 flex-1 min-w-0"
-                  >
-                    <span className="text-lg font-bold">✓</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => cancelEntry(index)}
-                    disabled={disabled}
-                    className="text-red-600 hover:bg-red-50 border-red-200 flex-1 min-w-0"
-                  >
-                    <span className="text-lg font-bold">×</span>
-                  </Button>
-                </div>
-              )}
+              {/* Show only delete/cancel button for all entries */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => entry.isValidated ? removeEntry(index) : cancelEntry(index)}
+                disabled={disabled}
+                className="text-red-600 hover:bg-red-50 border-red-200 w-full min-w-0"
+              >
+                <span className="text-lg font-bold">×</span>
+              </Button>
             </div>
           </div>
         ))}
@@ -639,6 +655,8 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
 
     </div>
   )
-}
+})
+
+EventPropertiesInput.displayName = 'EventPropertiesInput'
 
 export { EventPropertiesInput }

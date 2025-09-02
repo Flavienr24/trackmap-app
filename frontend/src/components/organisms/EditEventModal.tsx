@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Modal } from './Modal'
 import { Button } from '@/components/atoms/Button'
 import { Badge } from '@/components/atoms/Badge'
 import { FormField } from '@/components/molecules/FormField'
-import { EventPropertiesInput } from '@/components/organisms/EventPropertiesInput'
+import { EventPropertiesInput, type EventPropertiesInputRef } from '@/components/organisms/EventPropertiesInput'
 import { parseProperties } from '@/utils/properties'
 import type { Event, UpdateEventRequest, EventStatus } from '@/types'
 
@@ -33,6 +33,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     test_date: ''
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const propertiesInputRef = useRef<EventPropertiesInputRef>(null)
 
   const eventStatuses: { value: EventStatus; label: string }[] = [
     { value: 'to_implement', label: 'À implémenter' },
@@ -99,6 +100,11 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     e.preventDefault()
     
     if (!event || !validateForm()) return
+    
+    // Validate properties before submitting
+    if (!propertiesInputRef.current?.validateAllEntries()) {
+      return // Stop submission if properties validation fails
+    }
     
     try {
       await onSubmit(event.id, {
@@ -245,6 +251,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
         </FormField>
 
         <EventPropertiesInput
+          ref={propertiesInputRef}
           productId={productId || ''}
           value={formData.properties || {}}
           onChange={handlePropertiesChange}
