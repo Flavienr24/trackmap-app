@@ -17,11 +17,9 @@ interface EventPropertiesInputProps {
 interface PropertyEntry {
   key: string
   value: string
-  description: string
   isValidated: boolean // true = propriété créée/validée, false = en cours d'édition
   keyError?: string
   valueError?: string
-  descriptionError?: string
 }
 
 /**
@@ -94,14 +92,13 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     
     // First, preserve existing entries in their original order
     propertyEntries.forEach(existingEntry => {
-      if (existingEntry.key.trim() || existingEntry.value.trim() || existingEntry.description.trim()) {
+      if (existingEntry.key.trim() || existingEntry.value.trim()) {
         if (valueKeys.has(existingEntry.key) && existingEntry.key.trim()) {
-          // Update with new value from prop but keep description and order
+          // Update with new value from prop but keep order
           const val = value[existingEntry.key]
           newEntries.push({
             key: existingEntry.key,
             value: typeof val === 'string' ? val : JSON.stringify(val),
-            description: existingEntry.description,
             isValidated: true, // Si c'est dans value, c'est validé
           })
           valueKeys.delete(existingEntry.key) // Mark as processed
@@ -118,14 +115,13 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
       newEntries.push({
         key,
         value: typeof val === 'string' ? val : JSON.stringify(val),
-        description: '',
         isValidated: true, // Si c'est dans value, c'est validé
       })
     })
     
     // Add empty entry if none exist
     if (newEntries.length === 0) {
-      newEntries.push({ key: '', value: '', description: '', isValidated: false })
+      newEntries.push({ key: '', value: '', isValidated: false })
     }
     
     setPropertyEntries(newEntries)
@@ -159,7 +155,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     }
   }
 
-  const updateEntry = (index: number, field: 'key' | 'value' | 'description', newValue: string) => {
+  const updateEntry = (index: number, field: 'key' | 'value', newValue: string) => {
     const newEntries = [...propertyEntries]
     newEntries[index] = { ...newEntries[index], [field]: newValue }
     
@@ -180,18 +176,13 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
       } else {
         setShowSuggestionsDropdown(null)
       }
-    } else if (field === 'description') {
-      delete newEntries[index].descriptionError
     }
     
-    // Mark as validated when both key and value are filled (values can be entered freely)
-    if (field !== 'description') {
-      // Auto-validate if both key and value are filled
-      if (newEntries[index].key.trim() && newEntries[index].value.trim()) {
-        newEntries[index].isValidated = true
-      } else {
-        newEntries[index].isValidated = false
-      }
+    // Auto-validate if both key and value are filled (values can be entered freely)
+    if (newEntries[index].key.trim() && newEntries[index].value.trim()) {
+      newEntries[index].isValidated = true
+    } else {
+      newEntries[index].isValidated = false
     }
     
     setPropertyEntries(newEntries)
@@ -202,7 +193,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
   }
 
   const addEntry = () => {
-    const newEntries = [...propertyEntries, { key: '', value: '', description: '', isValidated: false }]
+    const newEntries = [...propertyEntries, { key: '', value: '', isValidated: false }]
     setPropertyEntries(newEntries)
   }
 
@@ -211,7 +202,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     
     // If all entries are removed, add one empty entry
     if (newEntries.length === 0) {
-      newEntries.push({ key: '', value: '', description: '', isValidated: false })
+      newEntries.push({ key: '', value: '', isValidated: false })
     }
     
     setPropertyEntries(newEntries)
@@ -252,13 +243,13 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     const entry = propertyEntries[index]
     
     // If it's an empty entry, remove it (unless it's the last one)
-    if (!entry.key.trim() && !entry.value.trim() && !entry.description.trim()) {
+    if (!entry.key.trim() && !entry.value.trim()) {
       if (propertyEntries.length > 1) {
         removeEntry(index)
       } else {
         // Reset the entry
         const newEntries = [...propertyEntries]
-        newEntries[index] = { key: '', value: '', description: '', isValidated: false }
+        newEntries[index] = { key: '', value: '', isValidated: false }
         setPropertyEntries(newEntries)
       }
       return
@@ -266,7 +257,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
     
     // If it has content but was being edited, reset to empty state
     const newEntries = [...propertyEntries]
-    newEntries[index] = { key: '', value: '', description: '', isValidated: false }
+    newEntries[index] = { key: '', value: '', isValidated: false }
     delete newEntries[index].keyError
     delete newEntries[index].valueError
     setPropertyEntries(newEntries)
@@ -491,7 +482,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
             </div>
 
             {/* Value Input */}
-            <div className="col-span-3">
+            <div className="col-span-8">
               <FormField
                 label={index === 0 ? "Valeur" : ""}
                 error={entry.valueError}
@@ -564,20 +555,6 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
               </FormField>
             </div>
 
-            {/* Description Input */}
-            <div className="col-span-5">
-              <FormField
-                label={index === 0 ? "Description" : ""}
-                error={entry.descriptionError}
-              >
-                <Input
-                  value={entry.description}
-                  onChange={(e) => updateEntry(index, 'description', e.target.value)}
-                  placeholder="Description de la propriété..."
-                  disabled={disabled}
-                />
-              </FormField>
-            </div>
 
             {/* Action Buttons */}
             <div className={`col-span-1 ${index === 0 ? "pt-6" : "pt-1"}`}>
