@@ -81,5 +81,8 @@ frontend/.vite/
 logs/
 *.log
 
-# Internal Documentation (Sensitive Information)
+# Internal Documentation
 INTERNAL_DOCS.md
+
+# Code Instructions
+CLAUDE.md
