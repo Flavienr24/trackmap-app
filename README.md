@@ -38,15 +38,3 @@ Le projet utilise une architecture moderne avec React et Node.js. Les services d
 3. Commit les changements (`git commit -am 'Ajout nouvelle fonctionnalité'`)
 4. Push vers la branche (`git push origin feature/nouvelle-fonctionnalite`)
 5. Ouvrir une Pull Request
-
-## 📄 License
-
-ISC License - voir le fichier LICENSE pour plus de détails.
-
-## 👨‍💻 Auteur
-
-Flavien - [GitHub](https://github.com/flavienr24)
-
----
-
-**Note:** Ce README contient uniquement les informations publiques. La documentation technique détaillée est disponible en interne.
