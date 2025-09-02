@@ -35,6 +35,8 @@ import type {
   CommentsFilter,
   EventHistoryFilter,
   ProductStats,
+  PropertyImpactData,
+  SuggestedValueImpactData,
 } from '@/types'
 
 // Base API configuration
@@ -284,6 +286,10 @@ export const propertiesApi = {
       body: JSON.stringify(data),
     }),
 
+  // Get property deletion impact
+  getImpact: (id: string): Promise<ApiResponse<PropertyImpactData>> =>
+    apiRequest(`/properties/${id}/impact`),
+
   // Delete property
   delete: (id: string): Promise<ApiResponse<void>> =>
     apiRequest(`/properties/${id}`, {
@@ -322,6 +328,11 @@ export const suggestedValuesApi = {
     apiRequest(`/suggested-values/${sourceId}/merge/${targetId}`, {
       method: 'POST',
     }),
+
+  // Get suggested value deletion impact
+  getImpact: (id: string): Promise<ApiResponse<SuggestedValueImpactData>> =>
+    apiRequest(`/suggested-values/${id}/impact`),
+
   // Delete suggested value
   delete: (id: string): Promise<ApiResponse<void>> =>
     apiRequest(`/suggested-values/${id}`, {

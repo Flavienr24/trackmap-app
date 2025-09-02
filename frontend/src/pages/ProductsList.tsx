@@ -108,10 +108,10 @@ const ProductsList: React.FC = () => {
       key: 'name',
       title: 'Nom du produit',
       render: (value, record) => (
-        <div>
-          <div className="font-medium text-neutral-900">{value}</div>
+        <div className='w-[300]'>
+          <div className="font-medium text-neutral-900 text-wrap">{value}</div>
           {record.description && (
-            <div className="text-sm text-neutral-500">{record.description}</div>
+            <div className="text-sm text-neutral-500 text-wrap">{record.description}</div>
           )}
         </div>
       ),

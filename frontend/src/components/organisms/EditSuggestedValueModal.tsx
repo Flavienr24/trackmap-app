@@ -5,7 +5,7 @@ import { Input } from '@/components/atoms/Input'
 import { Button } from '@/components/atoms/Button'
 import { MergeConfirmationModal } from '@/components/organisms/MergeConfirmationModal'
 import { suggestedValuesApi } from '@/services/api'
-import type { SuggestedValue, UpdateSuggestedValueRequest, SuggestedValueConflictData } from '@/types'
+import type { SuggestedValue, UpdateSuggestedValueRequest, SuggestedValueConflictData, SuggestedValueImpactData } from '@/types'
 
 interface EditSuggestedValueModalProps {
   isOpen: boolean
@@ -34,6 +34,9 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
   const [conflictData, setConflictData] = useState<SuggestedValueConflictData | null>(null)
   const [showMergeModal, setShowMergeModal] = useState(false)
   const [mergeLoading, setMergeLoading] = useState(false)
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
+  const [impactData, setImpactData] = useState<SuggestedValueImpactData | null>(null)
+  const [impactLoading, setImpactLoading] = useState(false)
 
   // Update form data when suggested value changes
   useEffect(() => {
@@ -131,14 +134,55 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
   const handleDelete = async () => {
     if (!suggestedValue || !onDelete) return
     
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la valeur "${suggestedValue.value}" ?`)) {
-      try {
-        await onDelete(suggestedValue)
-        handleClose()
-      } catch (error) {
-        console.error('Error deleting suggested value:', error)
+    setImpactLoading(true)
+    try {
+      // Try to get impact analysis
+      const response = await suggestedValuesApi.getImpact(suggestedValue.id)
+      const impact = response.data
+      
+      if (impact.affectedEventsCount > 0) {
+        // Impact detected - show detailed confirmation
+        setImpactData(impact)
+        onClose()
+        setShowDeleteConfirmation(true)
+      } else {
+        // No impact - simple confirmation is enough
+        if (window.confirm(`Supprimer la valeur "${suggestedValue.value}" ?`)) {
+          await onDelete(suggestedValue)
+          onClose()
+        }
       }
+    } catch (error) {
+      console.error('Error getting impact analysis, using simple confirmation:', error)
+      // API error - fallback to simple confirmation
+      if (window.confirm(`Supprimer la valeur "${suggestedValue.value}" ?`)) {
+        try {
+          await onDelete(suggestedValue)
+          onClose()
+        } catch (deleteError) {
+          console.error('Error deleting suggested value:', deleteError)
+        }
+      }
+    } finally {
+      setImpactLoading(false)
     }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!suggestedValue || !onDelete) return
+    
+    try {
+      await onDelete(suggestedValue)
+      setShowDeleteConfirmation(false)
+      handleClose()
+    } catch (error) {
+      console.error('Error deleting suggested value:', error)
+    }
+  }
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirmation(false)
+    setImpactData(null)
   }
 
   const handleValueChange = (value: string) => {
@@ -153,12 +197,93 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
 
   return (
     <>
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title="Modifier la valeur suggérée"
-      size="md"
-    >
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmation && impactData && (
+        <Modal
+          isOpen={showDeleteConfirmation}
+          onClose={handleCancelDelete}
+          title="Confirmer la suppression"
+          size="lg"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.694-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-medium text-neutral-900">
+                  Suppression de la valeur "{suggestedValue.value}"
+                </h3>
+                <div className="mt-2 text-sm text-neutral-600">
+                  Cette action est irréversible et aura les conséquences suivantes :
+                </div>
+              </div>
+            </div>
+
+            {/* Impact Summary */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-medium text-yellow-800">Impact sur les events</span>
+              </div>
+              <p className="text-sm text-yellow-700">
+                <strong>{impactData.affectedEventsCount}</strong> event{impactData.affectedEventsCount !== 1 ? 's' : ''} utilise{impactData.affectedEventsCount !== 1 ? 'nt' : ''} cette valeur et ser{impactData.affectedEventsCount !== 1 ? 'ont' : 'a'} automatiquement mis à jour.
+              </p>
+            </div>
+
+            {/* Affected Events List */}
+            {impactData.affectedEventsCount > 0 && (
+              <div className="max-h-48 overflow-y-auto border border-neutral-200 rounded-lg">
+                <div className="px-3 py-2 bg-neutral-50 border-b border-neutral-200 text-sm font-medium text-neutral-700">
+                  Events affectés
+                </div>
+                <div className="divide-y divide-neutral-200">
+                  {impactData.affectedEvents.map((event) => (
+                    <div key={event.id} className="px-3 py-2 text-sm">
+                      <div className="font-medium text-neutral-900">{event.name}</div>
+                      <div className="text-neutral-500">{event.page}</div>
+                      <div className="text-xs text-neutral-400 mt-1">
+                        Propriétés affectées: {event.matchingProperties.map(p => `${p.key}: ${JSON.stringify(p.value)}`).join(', ')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={handleCancelDelete}
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleConfirmDelete}
+                loading={loading}
+              >
+                Confirmer la suppression
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Main Edit Modal */}
+      <Modal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title="Modifier la valeur suggérée"
+        size="md"
+      >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Value */}
         <FormField
@@ -208,7 +333,7 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
               onClick={handleDelete}
               disabled={loading}
             >
-              Supprimer la valeur
+              Supprimer
             </Button>
           )}
           <div className="flex space-x-3 ml-auto">
@@ -225,7 +350,7 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
               variant="primary"
               loading={loading}
             >
-              Modifier la valeur
+              Modifier
             </Button>
           </div>
         </div>

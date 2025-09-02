@@ -3,7 +3,6 @@ import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
 import { FormField } from '@/components/molecules/FormField'
 import { CreatePropertyModal } from '@/components/organisms/CreatePropertyModal'
-import { CreateSuggestedValueModal } from '@/components/organisms/CreateSuggestedValueModal'
 import { propertiesApi, suggestedValuesApi } from '@/services/api'
 import type { Property, SuggestedValue, CreatePropertyRequest, CreateSuggestedValueRequest } from '@/types'
 
@@ -43,10 +42,6 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
   const [showCreatePropertyModal, setShowCreatePropertyModal] = useState(false)
   const [createPropertyLoading, setCreatePropertyLoading] = useState(false)
   const [newPropertyKey, setNewPropertyKey] = useState('')
-  const [showCreateSuggestedValueModal, setShowCreateSuggestedValueModal] = useState(false)
-  const [createSuggestedValueLoading, setCreateSuggestedValueLoading] = useState(false)
-  const [newSuggestedValue, setNewSuggestedValue] = useState('')
-  const [targetEntryIndex, setTargetEntryIndex] = useState(-1)
   const [targetKeyEntryIndex, setTargetKeyEntryIndex] = useState(-1)
   const [showSuggestionsDropdown, setShowSuggestionsDropdown] = useState<number | null>(null)
   const [showKeyDropdown, setShowKeyDropdown] = useState<number | null>(null)
@@ -83,6 +78,14 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
       }
     }
   }, [showSuggestionsDropdown, showKeyDropdown])
+
+  // Close dropdowns when modals open
+  useEffect(() => {
+    if (showCreatePropertyModal) {
+      setShowSuggestionsDropdown(null)
+      setShowKeyDropdown(null)
+    }
+  }, [showCreatePropertyModal])
 
   // Convert value object to entries when value changes
   useEffect(() => {
@@ -171,7 +174,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
       }
     } else if (field === 'value') {
       delete newEntries[index].valueError
-      // Show suggestions dropdown when typing in value field and 3+ characters
+      // Show suggestions dropdown only when typing in value field with 3+ characters
       if (newValue.length >= 3) {
         setShowSuggestionsDropdown(index)
       } else {
@@ -181,9 +184,14 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
       delete newEntries[index].descriptionError
     }
     
-    // Mark as not validated when modified (except for description-only changes)
+    // Mark as validated when both key and value are filled (values can be entered freely)
     if (field !== 'description') {
-      newEntries[index].isValidated = false
+      // Auto-validate if both key and value are filled
+      if (newEntries[index].key.trim() && newEntries[index].value.trim()) {
+        newEntries[index].isValidated = true
+      } else {
+        newEntries[index].isValidated = false
+      }
     }
     
     setPropertyEntries(newEntries)
@@ -199,11 +207,15 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
   }
 
   const removeEntry = (index: number) => {
-    if (propertyEntries.length > 1) {
-      const newEntries = propertyEntries.filter((_, i) => i !== index)
-      setPropertyEntries(newEntries)
-      emitChange(newEntries)
+    const newEntries = propertyEntries.filter((_, i) => i !== index)
+    
+    // If all entries are removed, add one empty entry
+    if (newEntries.length === 0) {
+      newEntries.push({ key: '', value: '', description: '', isValidated: false })
     }
+    
+    setPropertyEntries(newEntries)
+    emitChange(newEntries)
   }
 
   const validateEntry = (index: number) => {
@@ -277,7 +289,6 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
       }
     })
     
-    console.log('🔧 Emitting properties change:', result)
     onChange(result)
   }
 
@@ -329,39 +340,35 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
       }
     }
     
-    // Filter suggestions based on current input (case insensitive)
-    if (currentValue && currentValue.length >= 3) {
+    // Filter suggestions based on current input (case insensitive) - minimum 3 characters
+    if (currentValue && currentValue.trim().length >= 3) {
       const filtered = allSuggestions.filter(suggestion => 
-        suggestion.toLowerCase().includes(currentValue.toLowerCase())
+        suggestion.toLowerCase().includes(currentValue.toLowerCase().trim())
       )
-      return filtered.slice(0, 8)
+      return filtered.slice(0, 10)
     }
     
-    return allSuggestions.slice(0, 8)
+    // Return all suggestions if input is less than 3 characters
+    return allSuggestions.slice(0, 10)
   }
 
   const handleCreateProperty = async (data: CreatePropertyRequest) => {
-    console.log('🔧 handleCreateProperty called with:', data, 'targetKeyEntryIndex:', targetKeyEntryIndex)
     setCreatePropertyLoading(true)
     try {
       // Create property via API
-      console.log('🔧 Calling propertiesApi.create with productId:', productId)
       const response = await propertiesApi.create(productId, data)
       const newProperty = response.data
-      console.log('🔧 Property created successfully:', newProperty)
       
       // Update local state
       setProperties(prev => [...prev, newProperty])
       
       // Update the entry that triggered the creation
       if (targetKeyEntryIndex !== -1) {
-        console.log('🔧 Updating entry at index:', targetKeyEntryIndex, 'with key:', data.name)
         updateEntry(targetKeyEntryIndex, 'key', data.name)
       }
       
       setNewPropertyKey('')
       setTargetKeyEntryIndex(-1)
-      console.log('Property created on the fly:', newProperty)
     } catch (error) {
       console.error('Error creating property:', error)
       throw error
@@ -371,37 +378,38 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
   }
 
   const handleCreatePropertyFromKey = (key: string, entryIndex: number) => {
-    console.log('🔧 Creating property from key:', key, 'for entry index:', entryIndex)
     setNewPropertyKey(key)
     setTargetKeyEntryIndex(entryIndex)
     setShowCreatePropertyModal(true)
   }
 
-  const handleCreateSuggestedValue = async (data: CreateSuggestedValueRequest) => {
-    setCreateSuggestedValueLoading(true)
+
+  const handleCreateSuggestedValueFromDropdown = async (value: string, entryIndex: number) => {
     try {
-      // Create suggested value via API
+      // Create suggested value directly without modal
+      const data: CreateSuggestedValueRequest = {
+        value: value.trim(),
+        is_contextual: value.startsWith('$')
+      }
+      
       const response = await suggestedValuesApi.create(productId, data)
       const newSuggestedValue = response.data
       
       // Update local state
       setSuggestedValues(prev => [...prev, newSuggestedValue])
       
-      // Update the entry that triggered the creation with the new value
-      if (targetEntryIndex !== -1) {
-        updateEntry(targetEntryIndex, 'value', data.value)
-      }
+      // The value is already in the field, no need to update the entry
+      // Just close the dropdown
+      setShowSuggestionsDropdown(null)
       
-      setNewSuggestedValue('')
-      setTargetEntryIndex(-1)
-      console.log('Suggested value created on the fly:', newSuggestedValue)
+      console.log('Suggested value created directly:', newSuggestedValue)
     } catch (error) {
       console.error('Error creating suggested value:', error)
-      throw error
-    } finally {
-      setCreateSuggestedValueLoading(false)
+      // If creation fails, the user can still use the value as-is
+      setShowSuggestionsDropdown(null)
     }
   }
+
 
   return (
     <div className="space-y-4">
@@ -413,7 +421,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
       </div>
       {/* Info */}
       <div className="text-sm text-neutral-500">
-        <p>💡 <strong>Astuce :</strong> Tapez pour voir les suggestions automatiques basées sur vos propriétés existantes.</p>
+        <p>💡 <strong>Astuce :</strong> Les clés sont validées via les propriétés existantes. Les valeurs peuvent être saisies librement avec suggestions automatiques.</p>
       </div>
 
       {/* Property Entries */}
@@ -492,11 +500,16 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
                   <Input
                     value={entry.value}
                     onChange={(e) => updateEntry(index, 'value', e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === 'Tab') {
+                        setShowSuggestionsDropdown(null)
+                      }
+                    }}
                     placeholder="homepage, $page-name, 123..."
                     disabled={disabled}
                   />
                   {/* Custom suggestion dropdown for better UX */}
-                  {entry.value && entry.value.length >= 3 && showSuggestionsDropdown === index && (
+                  {showSuggestionsDropdown === index && entry.value && entry.value.length >= 3 && (
                     <div className="absolute top-full left-0 w-[250px] bg-white border border-neutral-300 rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
                       {getValueSuggestions(entry.key, entry.value).length > 0 ? (
                         <>
@@ -513,34 +526,37 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
                               {suggestion}
                             </button>
                           ))}
-                          {!getValueSuggestions(entry.key, entry.value).some(s => s.toLowerCase() === entry.value.toLowerCase()) && (
+                          {entry.value && entry.value.trim() && !getValueSuggestions(entry.key, entry.value).some(s => s.toLowerCase() === entry.value.toLowerCase().trim()) && (
                             <button
                               type="button"
                               className="w-full text-left px-3 py-2 hover:bg-green-50 focus:bg-green-50 focus:outline-none text-sm border-t border-neutral-200 text-green-700 font-medium"
                               onClick={() => {
-                                setNewSuggestedValue(entry.value)
-                                setTargetEntryIndex(index)
-                                setShowCreateSuggestedValueModal(true)
-                                setShowSuggestionsDropdown(null) // Close dropdown
+                                handleCreateSuggestedValueFromDropdown(entry.value, index)
+                                setShowSuggestionsDropdown(null)
                               }}
                             >
-                              🔍 Créer "{entry.value}" comme nouvelle valeur
+                              ✚ Créer "{entry.value}"
                             </button>
                           )}
+                          <div className="border-t border-neutral-200 px-3 py-2 text-xs text-neutral-500 italic">
+                            💡 Vous pouvez aussi saisir directement votre valeur
+                          </div>
                         </>
-                      ) : (
+                      ) : entry.value && entry.value.trim() ? (
                         <button
                           type="button"
                           className="w-full text-left px-3 py-2 hover:bg-green-50 focus:bg-green-50 focus:outline-none text-sm text-green-700 font-medium"
                           onClick={() => {
-                            setNewSuggestedValue(entry.value)
-                            setTargetEntryIndex(index)
-                            setShowCreateSuggestedValueModal(true)
-                            setShowSuggestionsDropdown(null) // Close dropdown
+                            handleCreateSuggestedValueFromDropdown(entry.value, index)
+                            setShowSuggestionsDropdown(null)
                           }}
                         >
-                          🔍 Créer "{entry.value}" comme nouvelle valeur
+                          ✚ Créer "{entry.value}"
                         </button>
+                      ) : (
+                        <div className="px-3 py-2 text-xs text-neutral-500 italic">
+                          💡 Commencez à taper pour voir les suggestions ou créer une nouvelle valeur
+                        </div>
                       )}
                     </div>
                   )}
@@ -572,7 +588,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => removeEntry(index)}
-                  disabled={disabled || propertyEntries.length === 1}
+                  disabled={disabled}
                   className="text-red-600 hover:bg-red-50 border-red-200 w-full min-w-0"
                 >
                   <span className="text-lg font-bold">×</span>
@@ -643,18 +659,7 @@ const EventPropertiesInput: React.FC<EventPropertiesInputProps> = ({
         initialName={newPropertyKey}
       />
 
-      {/* Create Suggested Value Modal */}
-      <CreateSuggestedValueModal
-        isOpen={showCreateSuggestedValueModal}
-        onClose={() => {
-          setShowCreateSuggestedValueModal(false)
-          setNewSuggestedValue('')
-          setTargetEntryIndex(-1)
-        }}
-        onSubmit={handleCreateSuggestedValue}
-        loading={createSuggestedValueLoading}
-        initialValue={newSuggestedValue}
-      />
+
     </div>
   )
 }

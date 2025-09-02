@@ -217,6 +217,34 @@ export interface CreateCommentRequest {
 export interface UpdateCommentRequest extends Partial<CreateCommentRequest> {}
 
 /**
+ * Impact Analysis Types
+ */
+export interface PropertyImpactData {
+  affectedEventsCount: number
+  affectedEvents: Array<{
+    id: string
+    name: string
+    page: string
+    pageSlug: string
+    propertyValue: any
+  }>
+}
+
+export interface SuggestedValueImpactData {
+  affectedEventsCount: number
+  affectedEvents: Array<{
+    id: string
+    name: string
+    page: string
+    pageSlug: string
+    matchingProperties: Array<{
+      key: string
+      value: any
+    }>
+  }>
+}
+
+/**
  * Filter and Search Types
  */
 export interface ProductsFilter {

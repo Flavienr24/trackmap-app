@@ -106,15 +106,58 @@ const PropertiesList: React.FC = () => {
     }
   }
 
-  const handleDeleteProperty = async (property: Property) => {
-    console.log('handleDeleteProperty called for:', property.name)
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la propriété "${property.name}" ?`)) {
-      try {
-        await propertiesApi.delete(property.id)
-        console.log('Property deleted:', property)
-        await loadProperties() // Reload the list
-      } catch (error) {
-        console.error('Error deleting property:', error)
+  // Function for deletion from modal (no confirmation needed - modal handles it)
+  const handleDeletePropertyFromModal = async (property: Property) => {
+    console.log('handleDeletePropertyFromModal called for:', property.name)
+    try {
+      await propertiesApi.delete(property.id)
+      console.log('Property deleted:', property)
+      await loadProperties() // Reload the list
+    } catch (error) {
+      console.error('Error deleting property:', error)
+      throw error // Let the modal handle the error
+    }
+  }
+
+  // Function for deletion directly from list (with confirmation and impact analysis)
+  const handleDeletePropertyFromList = async (property: Property) => {
+    console.log('handleDeletePropertyFromList called for:', property.name)
+    
+    try {
+      // Try to get impact analysis first
+      const response = await propertiesApi.getImpact(property.id)
+      const impact = response.data
+      
+      if (impact.affectedEventsCount > 0) {
+        // Show detailed confirmation with impact info
+        const message = `Supprimer la propriété "${property.name}" ?\n\nCette action affectera ${impact.affectedEventsCount} event${impact.affectedEventsCount !== 1 ? 's' : ''} :\n${impact.affectedEvents.map(e => `• ${e.name} (${e.page})`).join('\n')}\n\nLes propriétés seront automatiquement supprimées de ces events.`
+        
+        if (window.confirm(message)) {
+          await propertiesApi.delete(property.id)
+          console.log('Property deleted with impact:', property)
+          await loadProperties() // Reload the list
+        }
+      } else {
+        // No impact - simple confirmation
+        if (window.confirm(`Supprimer la propriété "${property.name}" ?`)) {
+          await propertiesApi.delete(property.id)
+          console.log('Property deleted:', property)
+          await loadProperties() // Reload the list
+        }
+      }
+    } catch (error) {
+      console.error('Error during property deletion process:', error)
+      
+      // Fallback to simple confirmation if impact analysis fails
+      if (window.confirm(`Supprimer la propriété "${property.name}" ?\n\n(Analyse d'impact indisponible)`)) {
+        try {
+          await propertiesApi.delete(property.id)
+          console.log('Property deleted (fallback):', property)
+          await loadProperties() // Reload the list
+        } catch (deleteError) {
+          console.error('Error deleting property:', deleteError)
+          alert('Erreur lors de la suppression de la propriété')
+        }
       }
     }
   }
@@ -180,6 +223,11 @@ const PropertiesList: React.FC = () => {
       label: 'Modifier',
       onClick: handleEditProperty,
       variant: 'secondary',
+    },
+    {
+      label: 'Supprimer',
+      onClick: handleDeletePropertyFromList,
+      variant: 'danger',
     },
   ]
 
@@ -277,7 +325,7 @@ const PropertiesList: React.FC = () => {
         property={editProperty}
         onClose={() => setEditProperty(null)}
         onSubmit={handleEditSubmit}
-        onDelete={handleDeleteProperty}
+        onDelete={handleDeletePropertyFromModal}
         loading={editLoading}
       />
     </div>

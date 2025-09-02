@@ -88,12 +88,13 @@ const ProductDetail: React.FC = () => {
     try {
       await Promise.all([
         loadProduct(productSlug),
+        loadPages(productSlug),
         loadProperties(productSlug)
       ])
     } finally {
       setLoading(false)
     }
-  }, [loadProduct, loadProperties])
+  }, [loadProduct, loadPages, loadProperties])
 
   useEffect(() => {
     if (slug) {
@@ -107,6 +108,7 @@ const ProductDetail: React.FC = () => {
       if (!document.hidden && slug) {
         // Reload product data to get fresh event counts and pages with events
         loadProduct(slug)
+        loadPages(slug)
       }
     }
 
@@ -118,7 +120,7 @@ const ProductDetail: React.FC = () => {
       window.removeEventListener('focus', handleFocusOrVisibility)
       document.removeEventListener('visibilitychange', handleFocusOrVisibility)
     }
-  }, [slug, loadProduct])
+  }, [slug, loadProduct, loadPages])
 
   const handleCreatePage = () => {
     setShowCreatePageModal(true)
@@ -274,7 +276,7 @@ const ProductDetail: React.FC = () => {
       {/* Product Header */}
       <div className="bg-white rounded-lg border border-neutral-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          <div>
+          <div className='w-100'>
             <h1 className="text-3xl font-bold text-neutral-900">{product.name}</h1>
             {product.description && (
               <p className="text-neutral-600 mt-2">{product.description}</p>

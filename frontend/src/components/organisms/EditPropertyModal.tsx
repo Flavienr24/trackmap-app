@@ -4,7 +4,8 @@ import { FormField } from '@/components/molecules/FormField'
 import { Input } from '@/components/atoms/Input'
 import { Select } from '@/components/atoms/Select'
 import { Button } from '@/components/atoms/Button'
-import type { Property, UpdatePropertyRequest, PropertyType } from '@/types'
+import { propertiesApi } from '@/services/api'
+import type { Property, UpdatePropertyRequest, PropertyType, PropertyImpactData } from '@/types'
 
 interface EditPropertyModalProps {
   isOpen: boolean
@@ -29,6 +30,9 @@ const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
     description: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
+  const [impactData, setImpactData] = useState<PropertyImpactData | null>(null)
+  const [impactLoading, setImpactLoading] = useState(false)
 
   // Update form data when property changes
   useEffect(() => {
@@ -52,14 +56,58 @@ const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
   const handleDelete = async () => {
     if (!property || !onDelete) return
     
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la propriété "${property.name}" ?`)) {
-      try {
-        await onDelete(property)
-        handleClose()
-      } catch (error) {
-        console.error('Error deleting property:', error)
+    setImpactLoading(true)
+    try {
+      // Try to get impact analysis
+      const response = await propertiesApi.getImpact(property.id)
+      const impact = response.data
+      
+      if (impact.affectedEventsCount > 0) {
+        // Impact detected - show detailed confirmation
+        setImpactData(impact)
+        onClose()
+        setShowDeleteConfirmation(true)
+      } else {
+        // No impact - simple confirmation is enough
+        if (window.confirm(`Supprimer la propriété "${property.name}" ?`)) {
+          await onDelete(property)
+          onClose()
+        }
       }
+    } catch (error) {
+      console.error('Error getting impact analysis, using simple confirmation:', error)
+      // API error - fallback to simple confirmation
+      if (window.confirm(`Supprimer la propriété "${property.name}" ?`)) {
+        try {
+          await onDelete(property)
+          onClose()
+        } catch (deleteError) {
+          console.error('Error deleting property:', deleteError)
+        }
+      }
+    } finally {
+      setImpactLoading(false)
     }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!property || !onDelete) return
+    
+    try {
+      await onDelete(property)
+      setShowDeleteConfirmation(false)
+      setImpactData(null)
+      // Don't call handleClose() since the main modal is already closed
+    } catch (error) {
+      console.error('Error deleting property:', error)
+    }
+  }
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirmation(false)
+    setImpactData(null)
+    // Note: We could reopen the main modal here, but it's cleaner to just close everything
+    // If needed, the parent component can manage reopening the edit modal
   }
 
   const validateForm = (): boolean => {
@@ -107,7 +155,87 @@ const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
 
   if (!property) return null
 
+
   return (
+    <>
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmation && impactData && (
+        <Modal
+          isOpen={showDeleteConfirmation}
+          onClose={handleCancelDelete}
+          title="Confirmer la suppression"
+          size="lg"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.694-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-medium text-neutral-900">
+                  Suppression de la propriété "{property.name}"
+                </h3>
+                <div className="mt-2 text-sm text-neutral-600">
+                  Cette action est irréversible et aura les conséquences suivantes :
+                </div>
+              </div>
+            </div>
+
+            {/* Impact Summary */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-medium text-yellow-800">Impact sur les events</span>
+              </div>
+              <p className="text-sm text-yellow-700">
+                <strong>{impactData.affectedEventsCount}</strong> event{impactData.affectedEventsCount !== 1 ? 's' : ''} utilise{impactData.affectedEventsCount !== 1 ? 'nt' : ''} cette propriété et ser{impactData.affectedEventsCount !== 1 ? 'ont' : 'a'} automatiquement mis à jour.
+              </p>
+            </div>
+
+            {/* Affected Events List */}
+            {impactData.affectedEventsCount > 0 && (
+              <div className="max-h-48 overflow-y-auto border border-neutral-200 rounded-lg">
+                <div className="px-3 py-2 bg-neutral-50 border-b border-neutral-200 text-sm font-medium text-neutral-700">
+                  Events affectés
+                </div>
+                <div className="divide-y divide-neutral-200">
+                  {impactData.affectedEvents.map((event) => (
+                    <div key={event.id} className="px-3 py-2 text-sm">
+                      <div className="font-medium text-neutral-900">{event.name}</div>
+                      <div className="text-neutral-500">{event.page} • Valeur actuelle: {JSON.stringify(event.propertyValue)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={handleCancelDelete}
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleConfirmDelete}
+                loading={loading}
+              >
+                Confirmer la suppression
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Main Edit Modal */}
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
@@ -172,9 +300,10 @@ const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
               type="button"
               variant="danger"
               onClick={handleDelete}
-              disabled={loading}
+              disabled={loading || impactLoading}
+              loading={impactLoading}
             >
-              Supprimer la propriété
+              Supprimer
             </Button>
           )}
           <div className="flex space-x-3 ml-auto">
@@ -191,12 +320,13 @@ const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
               variant="primary"
               loading={loading}
             >
-              Modifier la propriété
+              Modifier
             </Button>
           </div>
         </div>
       </form>
     </Modal>
+    </>
   )
 }
 

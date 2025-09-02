@@ -103,14 +103,12 @@ const SuggestedValuesList: React.FC = () => {
 
   const handleDeleteSuggestedValue = async (suggestedValue: SuggestedValue) => {
     console.log('handleDeleteSuggestedValue called for:', suggestedValue.value)
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la valeur "${suggestedValue.value}" ?`)) {
-      try {
-        await suggestedValuesApi.delete(suggestedValue.id)
-        console.log('Suggested value deleted:', suggestedValue)
-        await loadSuggestedValues() // Reload the list
-      } catch (error) {
-        console.error('Error deleting suggested value:', error)
-      }
+    try {
+      await suggestedValuesApi.delete(suggestedValue.id)
+      console.log('Suggested value deleted:', suggestedValue)
+      await loadSuggestedValues() // Reload the list
+    } catch (error) {
+      console.error('Error deleting suggested value:', error)
     }
   }
 
