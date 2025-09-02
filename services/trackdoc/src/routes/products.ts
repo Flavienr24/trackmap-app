@@ -15,7 +15,8 @@ import {
 } from '../controllers/pagesController';
 import {
   getPropertiesByProduct,
-  createProperty
+  createProperty,
+  syncPropertiesFromEvents
 } from '../controllers/propertiesController';
 import {
   getSuggestedValuesByProduct,
@@ -56,6 +57,9 @@ router.get('/:id/properties', getPropertiesByProduct);
 
 // POST /api/products/:id/properties - Create a new property for a product
 router.post('/:id/properties', createProperty);
+
+// POST /api/products/:id/properties/sync - Sync properties from events
+router.post('/:id/properties/sync', syncPropertiesFromEvents);
 
 // Suggested Value routes nested under products
 // GET /api/products/:id/suggested-values - Get all suggested values for a product

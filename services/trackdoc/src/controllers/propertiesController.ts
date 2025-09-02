@@ -288,6 +288,97 @@ export const updateProperty = async (req: Request, res: Response, next: NextFunc
 };
 
 /**
+ * Get impact analysis for deleting a property
+ * GET /api/properties/:id/impact
+ */
+export const getPropertyImpact = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    
+    logger.debug('Analyzing property deletion impact', { propertyId: id, requestId: req.ip });
+
+    const property = await prisma.property.findUnique({
+      where: { id },
+      include: {
+        product: true
+      }
+    });
+
+    if (!property) {
+      const error: AppError = new Error('Property not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // Find all events that use this property in their properties JSON
+    const allEvents = await prisma.event.findMany({
+      where: {
+        page: {
+          productId: property.productId
+        }
+      },
+      include: {
+        page: {
+          select: {
+            name: true,
+            slug: true
+          }
+        }
+      }
+    });
+
+    // Filter events that contain this property key
+    const events = allEvents.filter(event => {
+      if (!event.properties) return false;
+      
+      let properties: Record<string, any>;
+      
+      // Handle both string (SQLite JSON storage) and object (parsed JSON) formats
+      if (typeof event.properties === 'string') {
+        try {
+          properties = JSON.parse(event.properties);
+        } catch (error) {
+          logger.warn('Failed to parse event properties JSON', { eventId: event.id, properties: event.properties });
+          return false;
+        }
+      } else if (typeof event.properties === 'object') {
+        properties = event.properties as Record<string, any>;
+      } else {
+        return false;
+      }
+      
+      return Object.prototype.hasOwnProperty.call(properties, property.name);
+    });
+
+    const impact = {
+      affectedEventsCount: events.length,
+      affectedEvents: events.map(event => ({
+        id: event.id,
+        name: event.name,
+        page: event.page.name,
+        pageSlug: event.page.slug,
+        propertyValue: event.properties[property.name] // Show current value
+      }))
+    };
+
+    logger.info('Property impact analysis completed', { 
+      propertyId: id,
+      propertyName: property.name,
+      affectedEventsCount: events.length,
+      requestId: req.ip 
+    });
+
+    res.json({
+      success: true,
+      data: impact
+    });
+  } catch (error) {
+    logger.error('Error analyzing property impact', { error, propertyId: req.params.id, requestId: req.ip });
+    next(error);
+  }
+};
+
+/**
  * Delete a property and all associations
  * DELETE /api/properties/:id
  */
@@ -307,6 +398,65 @@ export const deleteProperty = async (req: Request, res: Response, next: NextFunc
       return next(error);
     }
 
+    // Find and clean up events that use this property
+    const allEvents = await prisma.event.findMany({
+      where: {
+        page: {
+          productId: existingProperty.productId
+        }
+      }
+    });
+
+    // Filter events that contain this property key
+    const affectedEvents = allEvents.filter(event => {
+      if (!event.properties) return false;
+      
+      let properties: Record<string, any>;
+      
+      // Handle both string (SQLite JSON storage) and object (parsed JSON) formats
+      if (typeof event.properties === 'string') {
+        try {
+          properties = JSON.parse(event.properties);
+        } catch (error) {
+          logger.warn('Failed to parse event properties JSON', { eventId: event.id, properties: event.properties });
+          return false;
+        }
+      } else if (typeof event.properties === 'object') {
+        properties = event.properties as Record<string, any>;
+      } else {
+        return false;
+      }
+      
+      return Object.prototype.hasOwnProperty.call(properties, existingProperty.name);
+    });
+
+    // Clean up properties field in affected events
+    for (const event of affectedEvents) {
+      let properties: Record<string, any>;
+      
+      // Parse properties if they're stored as string
+      if (typeof event.properties === 'string') {
+        try {
+          properties = JSON.parse(event.properties);
+        } catch (error) {
+          logger.warn('Failed to parse event properties JSON during cleanup', { eventId: event.id, properties: event.properties });
+          continue; // Skip this event if we can't parse its properties
+        }
+      } else {
+        properties = { ...event.properties };
+      }
+      
+      // Remove the deleted property
+      delete properties[existingProperty.name];
+      
+      await prisma.event.update({
+        where: { id: event.id },
+        data: { properties: JSON.stringify(properties) }
+      });
+      
+      logger.debug('Cleaned up property from event', { eventId: event.id, propertyName: existingProperty.name });
+    }
+
     // Delete property (cascade will handle related propertyValues)
     await prisma.property.delete({
       where: { id }
@@ -315,6 +465,7 @@ export const deleteProperty = async (req: Request, res: Response, next: NextFunc
     logger.info('Property deleted successfully', { 
       propertyId: id,
       propertyName: existingProperty.name,
+      affectedEventsCount: affectedEvents.length,
       requestId: req.ip 
     });
 
@@ -465,6 +616,121 @@ export const associateSuggestedValue = async (req: Request, res: Response, next:
     });
   } catch (error) {
     logger.error('Error creating association', { error, propertyId: req.params.id, requestId: req.ip });
+    next(error);
+  }
+};
+
+/**
+ * Sync properties from events - creates missing properties from event data
+ * POST /api/products/:id/properties/sync
+ */
+export const syncPropertiesFromEvents = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id: productSlug } = req.params;
+    
+    logger.debug('Syncing properties from events', { productSlug, requestId: req.ip });
+
+    // Get product
+    const product = await prisma.product.findFirst({
+      where: {
+        OR: [
+          { id: productSlug },
+          { slug: productSlug }
+        ]
+      }
+    });
+
+    if (!product) {
+      const error: AppError = new Error('Product not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // Get all events for this product
+    const events = await prisma.event.findMany({
+      where: {
+        page: {
+          productId: product.id
+        }
+      },
+      select: {
+        id: true,
+        name: true,
+        properties: true
+      }
+    });
+
+    let createdCount = 0;
+    const createdProperties: string[] = [];
+
+    // Process each event's properties
+    for (const event of events) {
+      if (!event.properties || typeof event.properties !== 'object') continue;
+      
+      const properties = event.properties as Record<string, any>;
+      
+      for (const [propertyName, propertyValue] of Object.entries(properties)) {
+        // Check if property already exists
+        const existingProperty = await prisma.property.findFirst({
+          where: { 
+            productId: product.id,
+            name: propertyName 
+          }
+        });
+
+        if (!existingProperty) {
+          // Infer type from value
+          let propertyType = 'STRING';
+          if (typeof propertyValue === 'number') {
+            propertyType = 'NUMBER';
+          } else if (typeof propertyValue === 'boolean') {
+            propertyType = 'BOOLEAN';
+          } else if (Array.isArray(propertyValue)) {
+            propertyType = 'ARRAY';
+          } else if (typeof propertyValue === 'object' && propertyValue !== null) {
+            propertyType = 'OBJECT';
+          }
+
+          // Create property
+          await prisma.property.create({
+            data: {
+              productId: product.id,
+              name: propertyName,
+              type: propertyType,
+              description: `Auto-créée via synchronisation depuis les événements`
+            }
+          });
+
+          createdCount++;
+          createdProperties.push(propertyName);
+          
+          logger.info('Synced property from events', { 
+            productId: product.id,
+            propertyName,
+            propertyType,
+            inferredFromValue: propertyValue
+          });
+        }
+      }
+    }
+
+    logger.info('Properties sync completed', { 
+      productSlug,
+      createdCount,
+      createdProperties,
+      requestId: req.ip 
+    });
+
+    res.json({
+      success: true,
+      data: {
+        createdCount,
+        createdProperties,
+        message: `${createdCount} propriétés créées depuis les événements`
+      }
+    });
+  } catch (error) {
+    logger.error('Error syncing properties from events', { error, productSlug: req.params.id, requestId: req.ip });
     next(error);
   }
 };

@@ -5,6 +5,7 @@ import {
   getPropertyById,
   updateProperty,
   deleteProperty,
+  getPropertyImpact,
   getSuggestedValuesByProperty,
   associateSuggestedValue
 } from '../controllers/propertiesController';
@@ -16,6 +17,9 @@ router.get('/:id', getPropertyById);
 
 // PUT /api/properties/:id - Update an existing property
 router.put('/:id', updateProperty);
+
+// GET /api/properties/:id/impact - Get impact analysis for deleting a property
+router.get('/:id/impact', getPropertyImpact);
 
 // DELETE /api/properties/:id - Delete a property and all associations
 router.delete('/:id', deleteProperty);

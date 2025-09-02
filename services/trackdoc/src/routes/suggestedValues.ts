@@ -5,6 +5,7 @@ import {
   getSuggestedValueById,
   updateSuggestedValue,
   deleteSuggestedValue,
+  getSuggestedValueImpact,
   mergeSuggestedValues
 } from '../controllers/suggestedValuesController';
 
@@ -15,6 +16,9 @@ router.get('/:id', getSuggestedValueById);
 
 // PUT /api/suggested-values/:id - Update an existing suggested value
 router.put('/:id', updateSuggestedValue);
+
+// GET /api/suggested-values/:id/impact - Get impact analysis for deleting a suggested value
+router.get('/:id/impact', getSuggestedValueImpact);
 
 // POST /api/suggested-values/:sourceId/merge/:targetId - Merge two suggested values
 router.post('/:sourceId/merge/:targetId', mergeSuggestedValues);

@@ -384,6 +384,126 @@ export const mergeSuggestedValues = async (req: Request, res: Response, next: Ne
 };
 
 /**
+ * Get impact analysis for deleting a suggested value
+ * GET /api/suggested-values/:id/impact
+ */
+export const getSuggestedValueImpact = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    
+    logger.debug('Analyzing suggested value deletion impact', { suggestedValueId: id, requestId: req.ip });
+
+    const suggestedValue = await prisma.suggestedValue.findUnique({
+      where: { id },
+      include: {
+        product: true
+      }
+    });
+
+    if (!suggestedValue) {
+      const error: AppError = new Error('Suggested value not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // Find all events that use this suggested value in their properties JSON
+    // We need to search for the value in any of the property values
+    const events = await prisma.event.findMany({
+      where: {
+        page: {
+          productId: suggestedValue.productId
+        }
+      },
+      include: {
+        page: {
+          select: {
+            name: true,
+            slug: true
+          }
+        }
+      }
+    });
+
+    // Filter events that contain this suggested value
+    const affectedEvents = events.filter(event => {
+      if (!event.properties) return false;
+      
+      let properties: Record<string, any>;
+      
+      // Handle both string (SQLite JSON storage) and object (parsed JSON) formats
+      if (typeof event.properties === 'string') {
+        try {
+          properties = JSON.parse(event.properties);
+        } catch (error) {
+          logger.warn('Failed to parse event properties JSON', { eventId: event.id, properties: event.properties });
+          return false;
+        }
+      } else if (typeof event.properties === 'object') {
+        properties = event.properties as Record<string, any>;
+      } else {
+        return false;
+      }
+      
+      return Object.values(properties).some(value => 
+        value === suggestedValue.value || 
+        (typeof value === 'string' && value.includes(suggestedValue.value))
+      );
+    });
+
+    const affectedEventsWithDetails = affectedEvents.map(event => {
+      let properties: Record<string, any>;
+      
+      // Parse properties if they're stored as string
+      if (typeof event.properties === 'string') {
+        try {
+          properties = JSON.parse(event.properties);
+        } catch (error) {
+          logger.warn('Failed to parse event properties JSON in details mapping', { eventId: event.id, properties: event.properties });
+          properties = {}; // Fallback to empty object
+        }
+      } else {
+        properties = event.properties as Record<string, any>;
+      }
+      
+      const matchingProperties = Object.entries(properties)
+        .filter(([_, value]) => 
+          value === suggestedValue.value || 
+          (typeof value === 'string' && value.includes(suggestedValue.value))
+        )
+        .map(([key, value]) => ({ key, value }));
+
+      return {
+        id: event.id,
+        name: event.name,
+        page: event.page.name,
+        pageSlug: event.page.slug,
+        matchingProperties
+      };
+    });
+
+    const impact = {
+      affectedEventsCount: affectedEventsWithDetails.length,
+      affectedEvents: affectedEventsWithDetails
+    };
+
+    logger.info('Suggested value impact analysis completed', { 
+      suggestedValueId: id,
+      suggestedValue: suggestedValue.value,
+      affectedEventsCount: affectedEventsWithDetails.length,
+      requestId: req.ip 
+    });
+
+    res.json({
+      success: true,
+      data: impact
+    });
+  } catch (error) {
+    logger.error('Error analyzing suggested value impact', { error, suggestedValueId: req.params.id, requestId: req.ip });
+    next(error);
+  }
+};
+
+/**
  * Delete a suggested value and all associations
  * DELETE /api/suggested-values/:id
  */
@@ -403,6 +523,60 @@ export const deleteSuggestedValue = async (req: Request, res: Response, next: Ne
       return next(error);
     }
 
+    // Find and clean up events that use this suggested value
+    const events = await prisma.event.findMany({
+      where: {
+        page: {
+          productId: existingSuggestedValue.productId
+        }
+      }
+    });
+
+    // Filter events that contain this suggested value and clean them up
+    let affectedEventsCount = 0;
+    for (const event of events) {
+      if (!event.properties) continue;
+      
+      let properties: Record<string, any>;
+      
+      // Handle both string (SQLite JSON storage) and object (parsed JSON) formats
+      if (typeof event.properties === 'string') {
+        try {
+          properties = JSON.parse(event.properties);
+        } catch (error) {
+          logger.warn('Failed to parse event properties JSON during suggested value cleanup', { eventId: event.id, properties: event.properties });
+          continue; // Skip this event if we can't parse its properties
+        }
+      } else if (typeof event.properties === 'object') {
+        properties = event.properties as Record<string, any>;
+      } else {
+        continue; // Skip if properties is neither string nor object
+      }
+      
+      let wasModified = false;
+      const updatedProperties = { ...properties };
+      
+      // Remove or replace properties that match this suggested value
+      for (const [key, value] of Object.entries(properties)) {
+        if (value === existingSuggestedValue.value) {
+          delete updatedProperties[key];
+          wasModified = true;
+        } else if (typeof value === 'string' && value.includes(existingSuggestedValue.value)) {
+          // For contextual values or complex strings, remove them too for safety
+          delete updatedProperties[key];
+          wasModified = true;
+        }
+      }
+      
+      if (wasModified) {
+        await prisma.event.update({
+          where: { id: event.id },
+          data: { properties: JSON.stringify(updatedProperties) }
+        });
+        affectedEventsCount++;
+      }
+    }
+
     // Delete suggested value (cascade will handle related propertyValues)
     await prisma.suggestedValue.delete({
       where: { id }
@@ -411,6 +585,7 @@ export const deleteSuggestedValue = async (req: Request, res: Response, next: Ne
     logger.info('Suggested value deleted successfully', { 
       suggestedValueId: id,
       value: existingSuggestedValue.value,
+      affectedEventsCount,
       requestId: req.ip 
     });
 
