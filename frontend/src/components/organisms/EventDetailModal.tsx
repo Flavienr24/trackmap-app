@@ -58,17 +58,6 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
       size="xl"
     >
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center space-x-4 pb-4 border-b border-neutral-200">
-          <Badge status={event.status}>
-            {event.status}
-          </Badge>
-          {event.test_date && (
-            <div className="text-sm text-neutral-600">
-              Testé le {new Date(event.test_date).toLocaleDateString('fr-FR')}
-            </div>
-          )}
-        </div>
 
         {/* Tabs */}
         <div className="border-b border-neutral-200">
