@@ -139,24 +139,27 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                 <h3 className="text-sm font-medium text-neutral-600 mb-2">Propriétés</h3>
                 {(() => {
                   const parsedProperties = parseProperties(event.properties)
+                  // Always show event name as first property, then other properties
+                  const allEntries = [
+                    ['event', event.name],
+                    ...Object.entries(parsedProperties).filter(([key]) => key !== 'event')
+                  ]
                   
-                  return Object.keys(parsedProperties).length > 0 ? (
+                  return (
                     <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
                       <div className="space-y-2">
-                        {Object.entries(parsedProperties).map(([key, value]) => (
-                        <div key={key} className="flex items-start">
-                          <div className="font-medium text-neutral-700 w-1/3 font-mono text-sm">
-                            {key}:
+                        {allEntries.map(([key, value]) => (
+                          <div key={key} className="flex items-start">
+                            <div className="font-medium text-neutral-700 w-1/3 font-mono text-sm">
+                              {key}:
+                            </div>
+                            <div className="text-neutral-900 flex-1 font-mono text-sm">
+                              {typeof value === 'string' ? value : JSON.stringify(value)}
+                            </div>
                           </div>
-                          <div className="text-neutral-900 flex-1 font-mono text-sm">
-                            {typeof value === 'string' ? value : JSON.stringify(value)}
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  ) : (
-                    <p className="text-neutral-500 italic">Aucune propriété définie</p>
                   )
                 })()}
               </div>
