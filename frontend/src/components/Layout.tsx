@@ -29,9 +29,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             
             {/* Navigation will be added later */}
             <nav className="flex space-x-4">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                v1.0.0
-              </span>
             </nav>
           </div>
         </div>
@@ -45,8 +42,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white mt-auto">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="text-center text-sm text-slate-500">
-            TrackMap - Outil de documentation et audit GA4
+          <div className="flex justify-between items-center text-sm text-slate-500">
+            <span>TrackMap - Outil de documentation et audit GA4</span>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              v1.1.0
+            </span>
           </div>
         </div>
       </footer>
