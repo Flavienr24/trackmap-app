@@ -27,6 +27,7 @@ export interface DataTableProps<T = any> {
   loading?: boolean
   emptyMessage?: string
   onRowClick?: (record: T) => void
+  onStatusChange?: (record: T, newStatus: any) => void
   className?: string
 }
 
@@ -41,6 +42,7 @@ function DataTable<T extends Record<string, any>>({
   loading = false,
   emptyMessage = 'Aucune donnée disponible',
   onRowClick,
+  onStatusChange,
   className,
 }: DataTableProps<T>) {
   
@@ -53,7 +55,15 @@ function DataTable<T extends Record<string, any>>({
     
     // Handle status badges automatically
     if (column.key === 'status' || column.key.includes('status')) {
-      return <Badge status={value as StatusType}>{value}</Badge>
+      return (
+        <Badge 
+          status={value as StatusType} 
+          showDropdownArrow={true}
+          onStatusChange={onStatusChange ? (newStatus) => onStatusChange(record, newStatus) : undefined}
+        >
+          {value}
+        </Badge>
+      )
     }
     
     // Handle dates
@@ -91,8 +101,8 @@ function DataTable<T extends Record<string, any>>({
   }
 
   return (
-    <div className={cn('overflow-hidden rounded-lg border border-neutral-200', className)}>
-      <div className="overflow-x-auto">
+    <div className={cn('overflow-visible rounded-lg border border-neutral-200', className)}>
+      <div>
         <table className="min-w-full divide-y divide-neutral-200">
           <thead className="bg-neutral-50">
             <tr>
@@ -125,19 +135,26 @@ function DataTable<T extends Record<string, any>>({
           </thead>
           
           <tbody className="bg-white divide-y divide-neutral-200">
-            {data.map((record, index) => (
+            {data.map((record, index) => {
+              const hasStatusColumn = columns.some(col => col.key === 'status' || col.key.includes('status'))
+              
+              return (
               <tr
                 key={record.id || index}
                 className={cn(
                   'hover:bg-neutral-50 transition-colors duration-150',
-                  onRowClick && 'cursor-pointer'
+                  onRowClick && 'cursor-pointer',
+                  hasStatusColumn && 'overflow-visible'
                 )}
                 onClick={() => onRowClick?.(record)}
               >
                 {columns.map((column) => (
                   <td
                     key={column.key}
-                    className="px-6 py-4 whitespace-nowrap text-sm text-neutral-900"
+                    className={cn(
+                      "px-6 py-4 whitespace-nowrap text-sm text-neutral-900",
+                      (column.key === 'status' || column.key.includes('status')) && "overflow-visible relative"
+                    )}
                   >
                     {renderCellValue(column, record)}
                   </td>
@@ -179,7 +196,8 @@ function DataTable<T extends Record<string, any>>({
                   </td>
                 )}
               </tr>
-            ))}
+              )
+            })}
           </tbody>
         </table>
       </div>
