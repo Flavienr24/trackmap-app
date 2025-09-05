@@ -9,7 +9,7 @@ import { EditEventModal } from '@/components/organisms/EditEventModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { EventDetailModal } from '@/components/organisms/EventDetailModal'
 import { pagesApi, eventsApi } from '@/services/api'
-import { getPropertyCount } from '@/utils/properties'
+import { getPropertyCount, getStatusLabel } from '@/utils/properties'
 import type { Page, Event, EventStatus, CreateEventRequest, UpdateEventRequest, UpdatePageRequest } from '@/types'
 
 /**
@@ -195,20 +195,6 @@ const PageDetail: React.FC = () => {
     )
   }
 
-  // Status color mapping - return the status directly as Badge supports EventStatus
-  const getStatusColor = (status: EventStatus) => {
-    return status
-  }
-
-  const getStatusLabel = (status: EventStatus) => {
-    switch (status) {
-      case 'to_implement': return 'À implémenter'
-      case 'to_test': return 'À tester'
-      case 'validated': return 'Validé'
-      case 'error': return 'Erreur'
-      default: return status
-    }
-  }
 
   // Table columns configuration
   const columns: Column<Event>[] = [
@@ -233,7 +219,7 @@ const PageDetail: React.FC = () => {
       title: 'Statut',
       width: '120px',
       render: (value) => (
-        <Badge variant={getStatusColor(value as EventStatus)}>
+        <Badge status={value as EventStatus}>
           {getStatusLabel(value as EventStatus)}
         </Badge>
       ),

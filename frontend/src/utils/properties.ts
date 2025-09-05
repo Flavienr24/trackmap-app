@@ -30,3 +30,20 @@ export const getPropertyCount = (properties: any): number => {
 export const formatPropertiesForDisplay = (properties: any): Record<string, any> => {
   return parseProperties(properties)
 }
+
+/**
+ * Get translated label for event status
+ * Handles both uppercase and lowercase status values
+ */
+export const getStatusLabel = (status: string): string => {
+  // Normalize to lowercase for comparison
+  const normalizedStatus = status.toString().toLowerCase()
+  
+  switch (normalizedStatus) {
+    case 'to_implement': return 'À implémenter'
+    case 'to_test': return 'À tester'
+    case 'validated': return 'Validé'
+    case 'error': return 'Erreur'
+    default: return status
+  }
+}

@@ -4,8 +4,8 @@ import { Button } from '@/components/atoms/Button'
 import { Badge } from '@/components/atoms/Badge'
 import { CommentsSection } from '@/components/organisms/CommentsSection'
 import { EventHistorySection } from '@/components/organisms/EventHistorySection'
-import { parseProperties } from '@/utils/properties'
-import type { Event } from '@/types'
+import { parseProperties, getStatusLabel } from '@/utils/properties'
+import type { Event, EventStatus } from '@/types'
 
 // Copy icon component
 const CopyIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
@@ -34,6 +34,7 @@ interface EventDetailModalProps {
 }
 
 type TabType = 'details' | 'comments' | 'history'
+
 
 /**
  * Event Detail Modal
@@ -150,7 +151,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                 <div>
                   <h3 className="text-sm font-medium text-neutral-600 mb-2">Statut</h3>
                   <Badge status={event.status}>
-                    {event.status}
+                    {getStatusLabel(event.status)}
                   </Badge>
                 </div>
               </div>

@@ -81,19 +81,27 @@ export const badgeVariants = cva(
       variant: {
         to_implement: [
           'bg-yellow-50 text-yellow-800 border-yellow-300',
-          'before:content-[""] before:w-2 before:h-2 before:rounded-full before:bg-yellow-400 before:mr-1.5',
         ],
         to_test: [
           'bg-blue-50 text-blue-800 border-blue-300',
-          'before:content-[""] before:w-2 before:h-2 before:rounded-full before:bg-blue-400 before:mr-1.5',
         ],
         validated: [
           'bg-green-50 text-green-800 border-green-300',
-          'before:content-[""] before:w-2 before:h-2 before:rounded-full before:bg-green-400 before:mr-1.5',
         ],
         error: [
           'bg-red-50 text-red-800 border-red-300',
-          'before:content-[""] before:w-2 before:h-2 before:rounded-full before:bg-red-400 before:mr-1.5',
+        ],
+        TO_IMPLEMENT: [
+          'bg-yellow-50 text-yellow-800 border-yellow-300',
+        ],
+        TO_TEST: [
+          'bg-blue-50 text-blue-800 border-blue-300',
+        ],
+        VALIDATED: [
+          'bg-green-50 text-green-800 border-green-300',
+        ],
+        ERROR: [
+          'bg-red-50 text-red-800 border-red-300',
         ],
         default: [
           'bg-neutral-50 text-neutral-600 border-neutral-300',
@@ -104,8 +112,8 @@ export const badgeVariants = cva(
       },
       size: {
         xs: 'px-2 py-0.5 text-xs',
-        sm: 'px-2.5 py-1 text-xs', 
-        md: 'px-3 py-1.5 text-sm',
+        sm: 'px-2.5 py-0.5 text-xs', 
+        md: 'px-2.5 py-1 text-xs',
         lg: 'px-4 py-2 text-base',
       },
     },
