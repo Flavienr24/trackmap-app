@@ -17,6 +17,7 @@ export interface Action<T = any> {
   variant?: 'primary' | 'secondary' | 'danger'
   icon?: React.ReactNode
   show?: (record: T) => boolean
+  iconOnly?: boolean
 }
 
 export interface DataTableProps<T = any> {
@@ -148,18 +149,31 @@ function DataTable<T extends Record<string, any>>({
                       {actions
                         .filter(action => !action.show || action.show(record))
                         .map((action, actionIndex) => (
-                        <Button
-                          key={actionIndex}
-                          size="sm"
-                          variant={action.variant || 'secondary'}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            action.onClick(record)
-                          }}
-                        >
-                          {action.icon && <span className="mr-1">{action.icon}</span>}
-                          {typeof action.label === 'function' ? action.label(record) : action.label}
-                        </Button>
+                        action.iconOnly ? (
+                          <button
+                            key={actionIndex}
+                            className="p-2 text-neutral-600 hover:text-neutral-900 cursor-pointer transition-colors duration-150"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              action.onClick(record)
+                            }}
+                          >
+                            {action.icon}
+                          </button>
+                        ) : (
+                          <Button
+                            key={actionIndex}
+                            size="sm"
+                            variant={action.variant || 'secondary'}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              action.onClick(record)
+                            }}
+                          >
+                            {action.icon && <span className="mr-1">{action.icon}</span>}
+                            {typeof action.label === 'function' ? action.label(record) : action.label}
+                          </Button>
+                        )
                       ))}
                     </div>
                   </td>
