@@ -29,7 +29,7 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
         suggestedValues: true
       },
       orderBy: {
-        updatedAt: 'desc' // Most recently updated first
+        createdAt: 'desc' // Most recently created first
       }
     });
 

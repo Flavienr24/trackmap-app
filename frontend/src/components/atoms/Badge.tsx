@@ -128,7 +128,7 @@ const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
                 key={statusOption}
                 onClick={(e) => handleStatusSelect(e, statusOption)}
                 className={cn(
-                  'w-full text-left px-3 py-2 text-sm hover:bg-neutral-50 transition-colors flex items-center',
+                  'w-full text-left px-3 py-2 text-sm hover:bg-neutral-50 flex items-center',
                   status === statusOption && 'bg-neutral-100 font-medium'
                 )}
               >

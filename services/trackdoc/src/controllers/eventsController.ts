@@ -250,7 +250,7 @@ export const getEventsByPage = async (req: Request, res: Response, next: NextFun
         }
       },
       orderBy: {
-        updatedAt: 'desc'
+        createdAt: 'desc'
       }
     });
 

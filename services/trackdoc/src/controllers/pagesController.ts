@@ -51,7 +51,7 @@ export const getPagesByProduct = async (req: Request, res: Response, next: NextF
         events: true
       },
       orderBy: {
-        updatedAt: 'desc'
+        createdAt: 'desc'
       }
     });
 
