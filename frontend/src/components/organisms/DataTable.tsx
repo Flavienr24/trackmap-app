@@ -1,7 +1,9 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from '../atoms/Button'
 import { Badge } from '../atoms/Badge'
+import { SortSelector, type SortOption } from '../molecules/SortSelector'
 import { cn, type StatusType } from '@/design-system'
+import { sortData, getDefaultSortOption, saveSortPreference, loadSortPreference } from '@/utils/sorting'
 
 export interface Column<T = any> {
   key: string
@@ -28,6 +30,9 @@ export interface DataTableProps<T = any> {
   emptyMessage?: string
   onRowClick?: (record: T) => void
   onStatusChange?: (record: T, newStatus: any) => void
+  enableSort?: boolean
+  sortContext?: string
+  sortOptions?: Array<{ value: SortOption; label: string }>
   className?: string
 }
 
@@ -43,9 +48,32 @@ function DataTable<T extends Record<string, any>>({
   emptyMessage = 'Aucune donnée disponible',
   onRowClick,
   onStatusChange,
+  enableSort = false,
+  sortContext = 'default',
+  sortOptions,
   className,
 }: DataTableProps<T>) {
   
+  // Sort state management
+  const [currentSort, setCurrentSort] = useState<SortOption>(() => {
+    if (!enableSort) return 'created_desc'
+    return loadSortPreference(sortContext) || getDefaultSortOption(sortContext)
+  })
+
+  // Save sort preference when it changes
+  useEffect(() => {
+    if (enableSort) {
+      saveSortPreference(sortContext, currentSort)
+    }
+  }, [currentSort, enableSort, sortContext])
+
+  // Apply sorting to data
+  const sortedData = enableSort ? sortData(data, currentSort) : data
+
+  const handleSortChange = (newSort: SortOption) => {
+    setCurrentSort(newSort)
+  }
+
   const renderCellValue = (column: Column<T>, record: T) => {
     const value = record[column.key]
     
@@ -101,8 +129,19 @@ function DataTable<T extends Record<string, any>>({
   }
 
   return (
-    <div className={cn('overflow-visible rounded-lg border border-neutral-200', className)}>
-      <div>
+    <div className={className}>
+      {enableSort && (
+        <div className="mb-4 flex justify-end">
+          <SortSelector
+            value={currentSort}
+            onChange={handleSortChange}
+            options={sortOptions}
+          />
+        </div>
+      )}
+      
+      <div className={cn('overflow-visible rounded-lg border border-neutral-200')}>
+        <div>
         <table className="min-w-full divide-y divide-neutral-200">
           <thead className="bg-neutral-50">
             <tr>
@@ -135,16 +174,13 @@ function DataTable<T extends Record<string, any>>({
           </thead>
           
           <tbody className="bg-white divide-y divide-neutral-200">
-            {data.map((record, index) => {
-              const hasStatusColumn = columns.some(col => col.key === 'status' || col.key.includes('status'))
-              
-              return (
+            {sortedData.map((record, index) => (
               <tr
                 key={record.id || index}
                 className={cn(
                   'hover:bg-neutral-50 transition-colors duration-150',
                   onRowClick && 'cursor-pointer',
-                  hasStatusColumn && 'overflow-visible'
+                  columns.some(col => col.key === 'status' || col.key.includes('status')) && 'overflow-visible'
                 )}
                 onClick={() => onRowClick?.(record)}
               >
@@ -196,10 +232,10 @@ function DataTable<T extends Record<string, any>>({
                   </td>
                 )}
               </tr>
-              )
-            })}
+            ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   )

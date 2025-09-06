@@ -315,6 +315,8 @@ const PageDetail: React.FC = () => {
         emptyMessage="Aucun event trouvé. Créez votre premier event pour cette page."
         onRowClick={handleViewEvent}
         onStatusChange={handleStatusChange}
+        enableSort={true}
+        sortContext="events"
       />
 
       {/* Stats Footer */}
