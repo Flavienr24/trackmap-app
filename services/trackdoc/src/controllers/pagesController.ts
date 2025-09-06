@@ -25,7 +25,7 @@ export const getPagesByProduct = async (req: Request, res: Response, next: NextF
     });
 
     // Try to find product by slug first, then by ID if it looks like a cuid
-    let productWhereClause: { id?: string; slug?: string };
+    let productWhereClause: { id: string } | { slug: string };
     
     if (productId.startsWith('c') && productId.length > 20) {
       productWhereClause = { id: productId };
@@ -104,7 +104,7 @@ export const createPage = async (req: Request, res: Response, next: NextFunction
     }
 
     // Try to find product by slug first, then by ID if it looks like a cuid
-    let productWhereClause: { id?: string; slug?: string };
+    let productWhereClause: { id: string } | { slug: string };
     
     if (productId.startsWith('c') && productId.length > 20) {
       productWhereClause = { id: productId };
@@ -301,15 +301,13 @@ export const updatePage = async (req: Request, res: Response, next: NextFunction
     });
 
     // Try to find by ID if it looks like a cuid
-    let whereClause: { id?: string } = {};
-    
-    if (id.startsWith('c') && id.length > 20) {
-      whereClause = { id };
-    } else {
+    if (!id.startsWith('c') || id.length <= 20) {
       const error: AppError = new Error('Page not found. Use /api/products/{productSlug}/pages/{pageSlug} for slug-based updates.');
       error.statusCode = 404;
       return next(error);
     }
+    
+    const whereClause = { id };
 
     // Check if page exists
     const existingPage = await prisma.page.findUnique({
@@ -385,15 +383,13 @@ export const deletePage = async (req: Request, res: Response, next: NextFunction
     logger.debug('Deleting page', { pageId: id, requestId: req.ip });
 
     // Try to find by ID if it looks like a cuid
-    let whereClause: { id?: string } = {};
-    
-    if (id.startsWith('c') && id.length > 20) {
-      whereClause = { id };
-    } else {
+    if (!id.startsWith('c') || id.length <= 20) {
       const error: AppError = new Error('Page not found. Use /api/products/{productSlug}/pages/{pageSlug} for slug-based deletion.');
       error.statusCode = 404;
       return next(error);
     }
+    
+    const whereClause = { id };
 
     const existingPage = await prisma.page.findUnique({
       where: whereClause

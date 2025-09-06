@@ -73,7 +73,7 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
     logger.debug('Fetching product by ID or slug', { productId: id, requestId: req.ip });
 
     // Try to find by slug first, then by ID if it looks like a cuid
-    let whereClause: { id?: string; slug?: string };
+    let whereClause: { id: string } | { slug: string };
     
     // If the param looks like a cuid (starts with 'c' and is long), search by ID
     if (id.startsWith('c') && id.length > 20) {
@@ -137,7 +137,7 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
  */
 export const createProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, url } = req.body;
 
     // Validate required name field
     if (!name) {
@@ -149,6 +149,7 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
     logger.debug('Creating new product', { 
       name, 
       description,
+      url,
       requestId: req.ip 
     });
 
@@ -166,6 +167,7 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       data: {
         name,
         slug,
+        url,
         description
       },
       include: {
@@ -196,7 +198,7 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
 export const updateProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { name, description } = req.body;
+    const { name, description, url } = req.body;
 
     logger.debug('Updating product', { 
       productId: id, 
@@ -205,7 +207,7 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
     });
 
     // Try to find by slug first, then by ID if it looks like a cuid
-    let whereClause: { id?: string; slug?: string };
+    let whereClause: { id: string } | { slug: string };
     
     if (id.startsWith('c') && id.length > 20) {
       whereClause = { id };
@@ -244,6 +246,11 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
     if (description !== undefined) {
       updateData.description = description;
     }
+    
+    // Add URL if provided
+    if (url !== undefined) {
+      updateData.url = url;
+    }
 
     const product = await prisma.product.update({
       where: { id: existingProduct.id },
@@ -279,7 +286,7 @@ export const deleteProduct = async (req: Request, res: Response, next: NextFunct
     logger.debug('Deleting product', { productId: id, requestId: req.ip });
 
     // Try to find by slug first, then by ID if it looks like a cuid
-    let whereClause: { id?: string; slug?: string };
+    let whereClause: { id: string } | { slug: string };
     
     if (id.startsWith('c') && id.length > 20) {
       whereClause = { id };

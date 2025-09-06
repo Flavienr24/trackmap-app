@@ -22,8 +22,8 @@ beforeEach(async () => {
   await prisma.comment.deleteMany();
   await prisma.event.deleteMany();
   await prisma.page.deleteMany();
-  await prisma.variableValue.deleteMany();
-  await prisma.variable.deleteMany();
+  await prisma.propertyValue.deleteMany();
+  await prisma.property.deleteMany();
   await prisma.suggestedValue.deleteMany();
   await prisma.product.deleteMany();
 });
@@ -35,8 +35,8 @@ afterAll(async () => {
   await prisma.comment.deleteMany();
   await prisma.event.deleteMany();
   await prisma.page.deleteMany();
-  await prisma.variableValue.deleteMany();
-  await prisma.variable.deleteMany();
+  await prisma.propertyValue.deleteMany();
+  await prisma.property.deleteMany();
   await prisma.suggestedValue.deleteMany();
   await prisma.product.deleteMany();
   

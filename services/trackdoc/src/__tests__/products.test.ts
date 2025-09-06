@@ -60,9 +60,34 @@ describe('Products API', () => {
       expect(dbProduct?.name).toBe(productData.name);
     });
 
+    it('should create a new product with name and URL', async () => {
+      const productData = {
+        name: 'Test Product 2',
+        url: 'https://example.com'
+      };
+
+      const response = await request(app)
+        .post('/api/products')
+        .send(productData)
+        .expect(201);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.name).toBe(productData.name);
+      expect(response.body.data.url).toBe(productData.url);
+      expect(response.body.data.description).toBeNull();
+
+      // Verify in database
+      const dbProduct = await prisma.product.findUnique({
+        where: { id: response.body.data.id }
+      });
+      expect(dbProduct).toBeTruthy();
+      expect(dbProduct?.name).toBe(productData.name);
+      expect(dbProduct?.url).toBe(productData.url);
+    });
+
     it('should create a new product with only name', async () => {
       const productData = {
-        name: 'Test Product 2'
+        name: 'Test Product 3'
       };
 
       const response = await request(app)
@@ -73,6 +98,7 @@ describe('Products API', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.name).toBe(productData.name);
       expect(response.body.data.description).toBeNull();
+      expect(response.body.data.url).toBeNull();
 
       // Verify in database
       const dbProduct = await prisma.product.findUnique({
@@ -103,6 +129,7 @@ describe('Products API', () => {
       await prisma.product.create({
         data: {
           name: 'Test Product for GET',
+          slug: 'test-product-for-get',
           description: 'Test description'
         }
       });
@@ -128,6 +155,7 @@ describe('Products API', () => {
       const product = await prisma.product.create({
         data: {
           name: 'Test Product for GET by ID',
+          slug: 'test-product-for-get-by-id',
           description: 'Test description'
         }
       });
@@ -162,16 +190,18 @@ describe('Products API', () => {
       const product = await prisma.product.create({
         data: {
           name: 'Test Product for PUT',
+          slug: 'test-product-for-put',
           description: 'Test description'
         }
       });
       productId = product.id;
     });
 
-    it('should update a product', async () => {
+    it('should update a product with name, description and URL', async () => {
       const updateData = {
         name: 'Updated Test Product',
-        description: 'Updated description'
+        description: 'Updated description',
+        url: 'https://updated-example.com'
       };
 
       const response = await request(app)
@@ -182,12 +212,36 @@ describe('Products API', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.name).toBe(updateData.name);
       expect(response.body.data.description).toBe(updateData.description);
+      expect(response.body.data.url).toBe(updateData.url);
 
       // Verify in database
       const dbProduct = await prisma.product.findUnique({
         where: { id: productId }
       });
       expect(dbProduct?.name).toBe(updateData.name);
+      expect(dbProduct?.url).toBe(updateData.url);
+    });
+
+    it('should update only the URL field', async () => {
+      const updateData = {
+        url: 'https://new-url.com'
+      };
+
+      const response = await request(app)
+        .put(`/api/products/${productId}`)
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.name).toBe('Test Product for PUT'); // Original name unchanged
+      expect(response.body.data.url).toBe(updateData.url);
+
+      // Verify in database
+      const dbProduct = await prisma.product.findUnique({
+        where: { id: productId }
+      });
+      expect(dbProduct?.name).toBe('Test Product for PUT');
+      expect(dbProduct?.url).toBe(updateData.url);
     });
 
     it('should return 404 for non-existent product', async () => {
@@ -211,6 +265,7 @@ describe('Products API', () => {
       const product = await prisma.product.create({
         data: {
           name: 'Test Product for DELETE',
+          slug: 'test-product-for-delete',
           description: 'Test description'
         }
       });

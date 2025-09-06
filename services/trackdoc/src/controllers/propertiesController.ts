@@ -357,7 +357,7 @@ export const getPropertyImpact = async (req: Request, res: Response, next: NextF
         name: event.name,
         page: event.page.name,
         pageSlug: event.page.slug,
-        propertyValue: event.properties[property.name] // Show current value
+        propertyValue: (event.properties as any)[property.name] // Show current value
       }))
     };
 
@@ -443,7 +443,7 @@ export const deleteProperty = async (req: Request, res: Response, next: NextFunc
           continue; // Skip this event if we can't parse its properties
         }
       } else {
-        properties = { ...event.properties };
+        properties = { ...(event.properties as any) };
       }
       
       // Remove the deleted property
