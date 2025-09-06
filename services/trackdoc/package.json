@@ -11,8 +11,10 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
+    "db:push": "echo '❌ DANGEROUS: Use npm run db:migrate instead' && exit 1",
+    "db:migrate": "./scripts/safe-migrate.sh",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:backup": "./scripts/backup-db.sh",
     "db:studio": "prisma studio"
   },
   "dependencies": {
