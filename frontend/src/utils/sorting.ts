@@ -1,5 +1,4 @@
 import type { SortOption } from '@/components/molecules/SortSelector'
-import type { EventStatus } from '@/types'
 
 /**
  * Sort data based on the selected sort option

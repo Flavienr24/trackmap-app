@@ -24,14 +24,8 @@ export const getPagesByProduct = async (req: Request, res: Response, next: NextF
       requestId: req.ip 
     });
 
-    // Try to find product by slug first, then by ID if it looks like a cuid
-    let productWhereClause: { id: string } | { slug: string };
-    
-    if (productId.startsWith('c') && productId.length > 20) {
-      productWhereClause = { id: productId };
-    } else {
-      productWhereClause = { slug: productId };
-    }
+    // Find product by ID only
+    const productWhereClause = { id: productId };
 
     // Verify product exists first
     const product = await prisma.product.findUnique({
@@ -63,7 +57,7 @@ export const getPagesByProduct = async (req: Request, res: Response, next: NextF
 
     logger.info('Pages fetched successfully', { 
       productId: product.id,
-      productSlug: product.slug,
+      productId: product.id,
       count: filteredPages.length,
       totalPages: pages.length,
       requestId: req.ip 
@@ -103,14 +97,8 @@ export const createPage = async (req: Request, res: Response, next: NextFunction
       return next(error);
     }
 
-    // Try to find product by slug first, then by ID if it looks like a cuid
-    let productWhereClause: { id: string } | { slug: string };
-    
-    if (productId.startsWith('c') && productId.length > 20) {
-      productWhereClause = { id: productId };
-    } else {
-      productWhereClause = { slug: productId };
-    }
+    // Find product by ID only
+    const productWhereClause = { id: productId };
 
     // Verify product exists
     const product = await prisma.product.findUnique({
@@ -240,7 +228,7 @@ export const getPageBySlug = async (req: Request, res: Response, next: NextFunct
 
     // First find the product by slug
     const product = await prisma.product.findUnique({
-      where: { slug: productSlug }
+      where: { id: productSlug }
     });
 
     if (!product) {

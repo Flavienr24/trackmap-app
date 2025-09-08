@@ -6,6 +6,7 @@ import { DataTable, type Column, type Action } from '@/components/organisms/Data
 import { CreateProductModal } from '@/components/organisms/CreateProductModal'
 import { EditProductModal } from '@/components/organisms/EditProductModal'
 import { productsApi } from '@/services/api'
+import { slugifyProductName } from '@/utils/slug'
 import type { Product, CreateProductRequest, UpdateProductRequest } from '@/types'
 
 /**
@@ -93,7 +94,8 @@ const ProductsList: React.FC = () => {
 
   const handleViewProduct = (product: Product) => {
     console.log('handleViewProduct called for:', product.name)
-    navigate(`/products/${product.slug}`)
+    const productSlug = slugifyProductName(product.name)
+    navigate(`/products/${productSlug}`)
   }
 
   // Filter products based on search query

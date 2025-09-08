@@ -6,20 +6,20 @@ import { DataTable, type Column, type Action } from '@/components/organisms/Data
 import { CreatePageModal } from '@/components/organisms/CreatePageModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { EditProductModal } from '@/components/organisms/EditProductModal'
-import { productsApi, pagesApi, propertiesApi } from '@/services/api'
-import type { Product, Page, Property, CreatePageRequest, UpdatePageRequest, UpdateProductRequest } from '@/types'
+import { productsApi, pagesApi } from '@/services/api'
+import { doesProductNameMatchSlug } from '@/utils/slug'
+import type { Product, Page, CreatePageRequest, UpdatePageRequest, UpdateProductRequest } from '@/types'
 
 /**
  * Product Detail Page
  * Shows product overview with pages, stats, and management options
  */
 const ProductDetail: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>()
+  const { productName } = useParams<{ productName: string }>()
   const navigate = useNavigate()
   
   const [product, setProduct] = useState<Product | null>(null)
   const [pages, setPages] = useState<Page[]>([])
-  const [properties, setProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreatePageModal, setShowCreatePageModal] = useState(false)
   const [createPageLoading, setCreatePageLoading] = useState(false)
@@ -28,35 +28,49 @@ const ProductDetail: React.FC = () => {
   const [showEditProductModal, setShowEditProductModal] = useState(false)
   const [editProductLoading, setEditProductLoading] = useState(false)
 
+  // Find product by matching slug against product name
+  const findProductBySlug = useCallback(async (productSlug: string) => {
+    try {
+      // Get all products and find the one that matches the slug
+      const allProductsResponse = await productsApi.getAll()
+      const targetProduct = allProductsResponse.data.find(product => 
+        doesProductNameMatchSlug(product.name, productSlug)
+      )
+      return targetProduct
+    } catch (error) {
+      console.error('Error finding product by slug:', error)
+      return null
+    }
+  }, [])
+
   const loadProduct = useCallback(async (productSlug: string) => {
     try {
-      const response = await productsApi.getById(productSlug)
-      setProduct(response.data)
+      const product = await findProductBySlug(productSlug)
+      if (!product) {
+        console.error('Product not found for slug:', productSlug)
+        navigate('/products', { replace: true })
+        return
+      }
+      setProduct(product)
       // Extract pages with events from product data
-      setPages(response.data.pages || [])
+      setPages(product.pages || [])
     } catch (error) {
       console.error('Error loading product:', error)
       navigate('/products', { replace: true })
     }
-  }, [navigate])
+  }, [navigate, findProductBySlug])
 
   const loadPages = useCallback(async (productSlug: string) => {
     try {
-      const response = await pagesApi.getByProduct(productSlug)
+      const product = await findProductBySlug(productSlug)
+      if (!product) return
+      const response = await pagesApi.getByProduct(product.id)
       setPages(response.data)
     } catch (error) {
       console.error('Error loading pages:', error)
     }
-  }, [])
+  }, [findProductBySlug])
 
-  const loadProperties = useCallback(async (productSlug: string) => {
-    try {
-      const response = await propertiesApi.getByProduct(productSlug)
-      setProperties(response.data)
-    } catch (error) {
-      console.error('Error loading properties:', error)
-    }
-  }, [])
 
 
   // Calculate unique properties used across all events
@@ -88,27 +102,26 @@ const ProductDetail: React.FC = () => {
     try {
       await Promise.all([
         loadProduct(productSlug),
-        loadPages(productSlug),
-        loadProperties(productSlug)
+        loadPages(productSlug)
       ])
     } finally {
       setLoading(false)
     }
-  }, [loadProduct, loadPages, loadProperties])
+  }, [loadProduct, loadPages])
 
   useEffect(() => {
-    if (slug) {
-      loadData(slug)
+    if (productName) {
+      loadData(productName)
     }
-  }, [slug, loadData])
+  }, [productName, loadData])
 
   // Reload data when component gains focus to ensure fresh event counts
   useEffect(() => {
     const handleFocusOrVisibility = () => {
-      if (!document.hidden && slug) {
+      if (!document.hidden && productName) {
         // Reload product data to get fresh event counts and pages with events
-        loadProduct(slug)
-        loadPages(slug)
+        loadProduct(productName)
+        loadPages(productName)
       }
     }
 
@@ -120,20 +133,20 @@ const ProductDetail: React.FC = () => {
       window.removeEventListener('focus', handleFocusOrVisibility)
       document.removeEventListener('visibilitychange', handleFocusOrVisibility)
     }
-  }, [slug, loadProduct, loadPages])
+  }, [productName, loadProduct, loadPages])
 
   const handleCreatePage = () => {
     setShowCreatePageModal(true)
   }
 
   const handleCreatePageSubmit = async (data: CreatePageRequest) => {
-    if (!slug) return
+    if (!productName || !product) return
     
     setCreatePageLoading(true)
     try {
-      const response = await pagesApi.create(slug, data)
+      const response = await pagesApi.create(product.id, data)
       console.log('Page created:', response.data)
-      await loadPages(slug) // Reload the list
+      await loadPages(productName) // Reload the list
     } catch (error) {
       console.error('Error creating page:', error)
       throw error
@@ -147,11 +160,12 @@ const ProductDetail: React.FC = () => {
   }
 
   const handleEditPageSubmit = async (pageId: string, data: UpdatePageRequest) => {
+    if (!productName) return
     setEditPageLoading(true)
     try {
       const response = await pagesApi.update(pageId, data)
       console.log('Page updated:', response.data)
-      await loadPages(slug!) // Reload the list
+      await loadPages(productName) // Reload the list
     } catch (error) {
       console.error('Error updating page:', error)
       throw error
@@ -161,11 +175,12 @@ const ProductDetail: React.FC = () => {
   }
 
   const handleDeletePage = async (page: Page) => {
+    if (!productName) return
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer la page "${page.name}" ?`)) {
       try {
         await pagesApi.delete(page.id)
         console.log('Page deleted:', page)
-        await loadPages(slug!) // Reload the list
+        await loadPages(productName) // Reload the list
       } catch (error) {
         console.error('Error deleting page:', error)
       }
@@ -173,7 +188,8 @@ const ProductDetail: React.FC = () => {
   }
 
   const handleViewPage = (page: Page) => {
-    navigate(`/products/${product?.slug}/pages/${page.slug}`)
+    if (!productName) return
+    navigate(`/products/${productName}/pages/${page.slug}`)
   }
 
   const handleEditProduct = () => {
@@ -185,8 +201,8 @@ const ProductDetail: React.FC = () => {
     try {
       const response = await productsApi.update(productId, data)
       console.log('Product updated:', response.data)
-      if (slug) {
-        await loadProduct(slug) // Reload the product data
+      if (productName) {
+        await loadProduct(productName) // Reload the product data
       }
     } catch (error) {
       console.error('Error updating product:', error)
@@ -241,7 +257,7 @@ const ProductDetail: React.FC = () => {
       key: 'events_count',
       title: 'Events',
       width: '100px',
-      render: (value, record) => (
+      render: (_, record) => (
         <span className="text-neutral-600">{record.events?.length || 0}</span>
       ),
     },
@@ -291,10 +307,10 @@ const ProductDetail: React.FC = () => {
             <Button variant="secondary" onClick={handleEditProduct}>
               Modifier le produit
             </Button>
-            <Button variant="secondary" onClick={() => navigate(`/products/${product.slug}/properties`)}>
+            <Button variant="secondary" onClick={() => navigate(`/products/${productName}/properties`)}>
               Gérer les propriétés
             </Button>
-            <Button variant="secondary" onClick={() => navigate(`/products/${product.slug}/suggested-values`)}>
+            <Button variant="secondary" onClick={() => navigate(`/products/${productName}/suggested-values`)}>
               Valeurs suggérées
             </Button>
             <Button onClick={handleCreatePage}>

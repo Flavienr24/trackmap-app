@@ -15,7 +15,7 @@ import type { Property, Product, CreatePropertyRequest, UpdatePropertyRequest } 
  * Properties define reusable data types and structures for events
  */
 const PropertiesList: React.FC = () => {
-  const { productSlug } = useParams<{ productSlug: string }>()
+  const { productId } = useParams<{ productId: string }>()
   const navigate = useNavigate()
   const [properties, setProperties] = useState<Property[]>([])
   const [product, setProduct] = useState<Product | null>(null)
@@ -26,31 +26,31 @@ const PropertiesList: React.FC = () => {
   const [editProperty, setEditProperty] = useState<Property | null>(null)
   const [editLoading, setEditLoading] = useState(false)
 
-  // Redirect if no productSlug
-  if (!productSlug) {
+  // Redirect if no productId
+  if (!productId) {
     return <Navigate to="/products" replace />
   }
 
   const loadProduct = useCallback(async () => {
     try {
-      const response = await productsApi.getById(productSlug!)
+      const response = await productsApi.getById(productId!)
       setProduct(response.data)
       return response.data
     } catch (error) {
       console.error('Error loading product:', error)
       navigate('/products', { replace: true })
     }
-  }, [productSlug, navigate])
+  }, [productId, navigate])
 
   const loadProperties = useCallback(async () => {
     try {
       // Load properties from library
-      const propertiesResponse = await propertiesApi.getByProduct(productSlug!)
+      const propertiesResponse = await propertiesApi.getByProduct(productId!)
       setProperties(propertiesResponse.data)
     } catch (error) {
       console.error('Error loading properties:', error)
     }
-  }, [productSlug])
+  }, [productId])
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -77,7 +77,7 @@ const PropertiesList: React.FC = () => {
   const handleCreateSubmit = async (data: CreatePropertyRequest) => {
     setCreateLoading(true)
     try {
-      const response = await propertiesApi.create(productSlug!, data)
+      const response = await propertiesApi.create(productId!, data)
       console.log('Property created:', response.data)
       await loadProperties() // Reload the list
     } catch (error) {
@@ -235,11 +235,11 @@ const PropertiesList: React.FC = () => {
     <div className="space-y-6">
       {/* Navigation */}
       <div className="flex items-center justify-between">
-        <BackLink to={`/products/${productSlug}`}>Retour</BackLink>
+        <BackLink to={`/products/${productId}`}>Retour</BackLink>
         <nav className="flex items-center space-x-2 text-sm text-neutral-600">
           <Link to="/products" className="hover:text-neutral-900">Produits</Link>
           <span>›</span>
-          <Link to={`/products/${productSlug}`} className="hover:text-neutral-900">{product?.name || 'Chargement...'}</Link>
+          <Link to={`/products/${productId}`} className="hover:text-neutral-900">{product?.name || 'Chargement...'}</Link>
           <span>›</span>
           <span className="text-neutral-900 font-medium">Propriétés</span>
         </nav>
@@ -258,7 +258,7 @@ const PropertiesList: React.FC = () => {
         <div className="flex items-center space-x-3">
           <Button 
             variant="outline" 
-            onClick={() => navigate(`/products/${productSlug}/suggested-values`)}
+            onClick={() => navigate(`/products/${productId}/suggested-values`)}
           >
             Valeurs suggérées
           </Button>

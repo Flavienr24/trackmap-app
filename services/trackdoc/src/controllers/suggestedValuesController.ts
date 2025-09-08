@@ -20,7 +20,7 @@ export const getSuggestedValuesByProduct = async (req: Request, res: Response, n
 
     // Verify product exists
     const product = await prisma.product.findUnique({
-      where: { slug: productSlug }
+      where: { id: productSlug }
     });
 
     if (!product) {
@@ -80,7 +80,7 @@ export const createSuggestedValue = async (req: Request, res: Response, next: Ne
 
     // Verify product exists
     const product = await prisma.product.findUnique({
-      where: { slug: productSlug }
+      where: { id: productSlug }
     });
 
     if (!product) {

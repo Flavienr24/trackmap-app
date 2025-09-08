@@ -17,7 +17,7 @@ import type { Page, Event, EventStatus, CreateEventRequest, UpdateEventRequest, 
  * Shows page info with all its tracking events and management
  */
 const PageDetail: React.FC = () => {
-  const { productSlug, pageSlug } = useParams<{ productSlug: string; pageSlug: string }>()
+  const { productId, pageSlug } = useParams<{ productId: string; pageSlug: string }>()
   const navigate = useNavigate()
   
   const [page, setPage] = useState<Page | null>(null)
@@ -33,13 +33,13 @@ const PageDetail: React.FC = () => {
 
   // Load page and events data
   useEffect(() => {
-    if (!productSlug || !pageSlug) return
+    if (!productId || !pageSlug) return
     
     const loadAllData = async () => {
       setLoading(true)
       try {
         // Load page first
-        const pageResponse = await pagesApi.getBySlug(productSlug, pageSlug)
+        const pageResponse = await pagesApi.getBySlug(productId, pageSlug)
         setPage(pageResponse.data)
         
         // Then load events for that page
@@ -56,7 +56,7 @@ const PageDetail: React.FC = () => {
     }
     
     loadAllData()
-  }, [productSlug, pageSlug, navigate])
+  }, [productId, pageSlug, navigate])
 
   const loadEvents = useCallback(async (pageId: string) => {
     try {
@@ -123,9 +123,9 @@ const PageDetail: React.FC = () => {
     try {
       const response = await pagesApi.update(pageId, data)
       console.log('Page updated:', response.data)
-      if (productSlug && pageSlug) {
+      if (productId && pageSlug) {
         // Reload the page data
-        const pageResponse = await pagesApi.getBySlug(productSlug, pageSlug)
+        const pageResponse = await pagesApi.getBySlug(productId, pageSlug)
         setPage(pageResponse.data)
       }
     } catch (error) {
@@ -166,7 +166,7 @@ const PageDetail: React.FC = () => {
     }
   }
 
-  if (!productSlug || !pageSlug) {
+  if (!productId || !pageSlug) {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="text-center">
@@ -270,11 +270,11 @@ const PageDetail: React.FC = () => {
     <div className="space-y-6">
       {/* Navigation */}
       <div className="flex items-center justify-between">
-        <BackLink to={`/products/${page.product?.slug || productSlug}`}>Retour au produit</BackLink>
+        <BackLink to={`/products/${page.product?.id || productId}`}>Retour au produit</BackLink>
         <nav className="flex items-center space-x-2 text-sm text-neutral-600">
           <Link to="/products" className="hover:text-neutral-900">Produits</Link>
           <span>›</span>
-          <Link to={`/products/${page.product?.slug || productSlug}`} className="hover:text-neutral-900">Produit</Link>
+          <Link to={`/products/${page.product?.id || productId}`} className="hover:text-neutral-900">Produit</Link>
           <span>›</span>
           <span className="text-neutral-900 font-medium">{page.name}</span>
         </nav>
@@ -333,7 +333,7 @@ const PageDetail: React.FC = () => {
         onSubmit={handleCreateEventSubmit}
         loading={createEventLoading}
         pageId={page?.id}
-        productId={productSlug}
+        productId={productId}
       />
 
       {/* Edit Event Modal */}
@@ -344,7 +344,7 @@ const PageDetail: React.FC = () => {
         onSubmit={handleEditEventSubmit}
         onDelete={handleDeleteEvent}
         loading={editEventLoading}
-        productId={productSlug}
+        productId={productId}
       />
 
       {/* Edit Page Modal */}

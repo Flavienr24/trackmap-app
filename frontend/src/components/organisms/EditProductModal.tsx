@@ -23,6 +23,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<UpdateProductRequest>({
     name: '',
+    url: '',
     description: ''
   })
   const [errors, setErrors] = useState<Partial<UpdateProductRequest>>({})
@@ -32,6 +33,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     if (product) {
       setFormData({
         name: product.name,
+        url: product.url,
         description: product.description || ''
       })
     }
@@ -51,6 +53,16 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     if (!formData.name?.trim()) {
       newErrors.name = 'Le nom est requis'
     }
+
+    // Validate URL is required and has correct format
+    if (!formData.url || !formData.url.trim()) {
+      newErrors.url = 'L\'URL est requise'
+    } else {
+      const urlRegex = /^https?:\/\/.+\..+/i
+      if (!urlRegex.test(formData.url.trim())) {
+        newErrors.url = 'L\'URL doit commencer par http:// ou https://'
+      }
+    }
     
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -64,6 +76,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     try {
       await onSubmit(product.id, {
         name: formData.name?.trim(),
+        url: formData.url?.trim(),
         description: formData.description?.trim() || undefined
       })
       
@@ -134,6 +147,21 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
             placeholder="Ex: E-commerce Mobile App"
+            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            disabled={loading}
+          />
+        </FormField>
+
+        <FormField
+          label="URL du produit"
+          required
+          error={errors.url}
+        >
+          <input
+            type="url"
+            value={formData.url}
+            onChange={(e) => handleInputChange('url', e.target.value)}
+            placeholder="https://exemple.com"
             className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             disabled={loading}
           />

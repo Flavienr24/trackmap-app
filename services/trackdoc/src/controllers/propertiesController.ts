@@ -23,7 +23,7 @@ export const getPropertiesByProduct = async (req: Request, res: Response, next: 
 
     // Verify product exists
     const product = await prisma.product.findUnique({
-      where: { slug: productSlug }
+      where: { id: productSlug }
     });
 
     if (!product) {
@@ -95,7 +95,7 @@ export const createProperty = async (req: Request, res: Response, next: NextFunc
 
     // Verify product exists
     const product = await prisma.product.findUnique({
-      where: { slug: productSlug }
+      where: { id: productSlug }
     });
 
     if (!product) {
@@ -635,7 +635,7 @@ export const syncPropertiesFromEvents = async (req: Request, res: Response, next
       where: {
         OR: [
           { id: productSlug },
-          { slug: productSlug }
+          { id: productSlug }
         ]
       }
     });
