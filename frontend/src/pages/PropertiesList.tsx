@@ -7,6 +7,7 @@ import { DataTable, type Column, type Action } from '@/components/organisms/Data
 import { CreatePropertyModal } from '@/components/organisms/CreatePropertyModal'
 import { EditPropertyModal } from '@/components/organisms/EditPropertyModal'
 import { propertiesApi, productsApi } from '@/services/api'
+import { doesProductNameMatchSlug } from '@/utils/slug'
 import type { Property, Product, CreatePropertyRequest, UpdatePropertyRequest } from '@/types'
 
 /**
@@ -15,7 +16,7 @@ import type { Property, Product, CreatePropertyRequest, UpdatePropertyRequest } 
  * Properties define reusable data types and structures for events
  */
 const PropertiesList: React.FC = () => {
-  const { productId } = useParams<{ productId: string }>()
+  const { productName } = useParams<{ productName: string }>()
   const navigate = useNavigate()
   const [properties, setProperties] = useState<Property[]>([])
   const [product, setProduct] = useState<Product | null>(null)
@@ -26,31 +27,51 @@ const PropertiesList: React.FC = () => {
   const [editProperty, setEditProperty] = useState<Property | null>(null)
   const [editLoading, setEditLoading] = useState(false)
 
-  // Redirect if no productId
-  if (!productId) {
+  // Redirect if no productName
+  if (!productName) {
     return <Navigate to="/products" replace />
   }
 
+  const findProductBySlug = useCallback(async (productSlug: string) => {
+    try {
+      // Get all products and find the one that matches the slug
+      const allProductsResponse = await productsApi.getAll()
+      const targetProduct = allProductsResponse.data.find(product => 
+        doesProductNameMatchSlug(product.name, productSlug)
+      )
+      return targetProduct
+    } catch (error) {
+      console.error('Error finding product by slug:', error)
+      return null
+    }
+  }, [])
+
   const loadProduct = useCallback(async () => {
     try {
-      const response = await productsApi.getById(productId!)
-      setProduct(response.data)
-      return response.data
+      const product = await findProductBySlug(productName!)
+      if (!product) {
+        console.error('Product not found for slug:', productName)
+        navigate('/products', { replace: true })
+        return null
+      }
+      setProduct(product)
+      return product
     } catch (error) {
       console.error('Error loading product:', error)
       navigate('/products', { replace: true })
+      return null
     }
-  }, [productId, navigate])
+  }, [productName, navigate, findProductBySlug])
 
-  const loadProperties = useCallback(async () => {
+  const loadProperties = useCallback(async (productId: string) => {
     try {
       // Load properties from library
-      const propertiesResponse = await propertiesApi.getByProduct(productId!)
+      const propertiesResponse = await propertiesApi.getByProduct(productId)
       setProperties(propertiesResponse.data)
     } catch (error) {
       console.error('Error loading properties:', error)
     }
-  }, [productId])
+  }, [])
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -58,7 +79,7 @@ const PropertiesList: React.FC = () => {
       // Load product first, then properties (which depends on product data)
       const productData = await loadProduct()
       if (productData) {
-        await loadProperties()
+        await loadProperties(productData.id)
       }
     } finally {
       setLoading(false)
@@ -75,11 +96,12 @@ const PropertiesList: React.FC = () => {
   }
 
   const handleCreateSubmit = async (data: CreatePropertyRequest) => {
+    if (!product) return
     setCreateLoading(true)
     try {
-      const response = await propertiesApi.create(productId!, data)
+      const response = await propertiesApi.create(product.id, data)
       console.log('Property created:', response.data)
-      await loadProperties() // Reload the list
+      await loadProperties(product.id) // Reload the list
     } catch (error) {
       console.error('Error creating property:', error)
       throw error
@@ -93,11 +115,12 @@ const PropertiesList: React.FC = () => {
   }
 
   const handleEditSubmit = async (id: string, data: UpdatePropertyRequest) => {
+    if (!product) return
     setEditLoading(true)
     try {
       const response = await propertiesApi.update(id, data)
       console.log('Property updated:', response.data)
-      await loadProperties() // Reload the list
+      await loadProperties(product.id) // Reload the list
     } catch (error) {
       console.error('Error updating property:', error)
       throw error
@@ -112,7 +135,7 @@ const PropertiesList: React.FC = () => {
     try {
       await propertiesApi.delete(property.id)
       console.log('Property deleted:', property)
-      await loadProperties() // Reload the list
+      if (product) await loadProperties(product.id) // Reload the list
     } catch (error) {
       console.error('Error deleting property:', error)
       throw error // Let the modal handle the error
@@ -135,14 +158,14 @@ const PropertiesList: React.FC = () => {
         if (window.confirm(message)) {
           await propertiesApi.delete(property.id)
           console.log('Property deleted with impact:', property)
-          await loadProperties() // Reload the list
+          if (product) await loadProperties(product.id) // Reload the list
         }
       } else {
         // No impact - simple confirmation
         if (window.confirm(`Supprimer la propriété "${property.name}" ?`)) {
           await propertiesApi.delete(property.id)
           console.log('Property deleted:', property)
-          await loadProperties() // Reload the list
+          if (product) await loadProperties(product.id) // Reload the list
         }
       }
     } catch (error) {
@@ -153,7 +176,7 @@ const PropertiesList: React.FC = () => {
         try {
           await propertiesApi.delete(property.id)
           console.log('Property deleted (fallback):', property)
-          await loadProperties() // Reload the list
+          if (product) await loadProperties(product.id) // Reload the list
         } catch (deleteError) {
           console.error('Error deleting property:', deleteError)
           alert('Erreur lors de la suppression de la propriété')
@@ -235,11 +258,11 @@ const PropertiesList: React.FC = () => {
     <div className="space-y-6">
       {/* Navigation */}
       <div className="flex items-center justify-between">
-        <BackLink to={`/products/${productId}`}>Retour</BackLink>
+        <BackLink to={`/products/${productName}`}>Retour</BackLink>
         <nav className="flex items-center space-x-2 text-sm text-neutral-600">
           <Link to="/products" className="hover:text-neutral-900">Produits</Link>
           <span>›</span>
-          <Link to={`/products/${productId}`} className="hover:text-neutral-900">{product?.name || 'Chargement...'}</Link>
+          <Link to={`/products/${productName}`} className="hover:text-neutral-900">{product?.name || 'Chargement...'}</Link>
           <span>›</span>
           <span className="text-neutral-900 font-medium">Propriétés</span>
         </nav>
@@ -258,7 +281,7 @@ const PropertiesList: React.FC = () => {
         <div className="flex items-center space-x-3">
           <Button 
             variant="outline" 
-            onClick={() => navigate(`/products/${productId}/suggested-values`)}
+            onClick={() => navigate(`/products/${productName}/suggested-values`)}
           >
             Valeurs suggérées
           </Button>
@@ -284,7 +307,7 @@ const PropertiesList: React.FC = () => {
         </div>
         <Button 
           variant="outline" 
-          onClick={loadProperties}
+          onClick={() => product && loadProperties(product.id)}
           title="Actualiser la liste"
           className="w-10 h-10 p-0 flex items-center justify-center ml-4"
         >

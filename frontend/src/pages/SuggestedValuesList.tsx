@@ -7,6 +7,7 @@ import { DataTable, type Column, type Action } from '@/components/organisms/Data
 import { CreateSuggestedValueModal } from '@/components/organisms/CreateSuggestedValueModal'
 import { EditSuggestedValueModal } from '@/components/organisms/EditSuggestedValueModal'
 import { suggestedValuesApi, productsApi } from '@/services/api'
+import { doesProductNameMatchSlug } from '@/utils/slug'
 import type { SuggestedValue, Product, CreateSuggestedValueRequest, UpdateSuggestedValueRequest } from '@/types'
 
 /**
@@ -15,7 +16,7 @@ import type { SuggestedValue, Product, CreateSuggestedValueRequest, UpdateSugges
  * Suggested values can be static ("homepage") or contextual ("$page-name")
  */
 const SuggestedValuesList: React.FC = () => {
-  const { productId } = useParams<{ productId: string }>()
+  const { productName } = useParams<{ productName: string }>()
   const [suggestedValues, setSuggestedValues] = useState<SuggestedValue[]>([])
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
@@ -25,36 +26,56 @@ const SuggestedValuesList: React.FC = () => {
   const [editSuggestedValue, setEditSuggestedValue] = useState<SuggestedValue | null>(null)
   const [editLoading, setEditLoading] = useState(false)
 
-  // Redirect if no productId
-  if (!productId) {
+  // Redirect if no productName
+  if (!productName) {
     return <Navigate to="/products" replace />
   }
 
+  const findProductBySlug = useCallback(async (productSlug: string) => {
+    try {
+      // Get all products and find the one that matches the slug
+      const allProductsResponse = await productsApi.getAll()
+      const targetProduct = allProductsResponse.data.find(product => 
+        doesProductNameMatchSlug(product.name, productSlug)
+      )
+      return targetProduct
+    } catch (error) {
+      console.error('Error finding product by slug:', error)
+      return null
+    }
+  }, [])
+
   const loadProduct = useCallback(async () => {
     try {
-      const response = await productsApi.getById(productId!)
-      setProduct(response.data)
+      const product = await findProductBySlug(productName!)
+      if (!product) {
+        console.error('Product not found for slug:', productName)
+        return null
+      }
+      setProduct(product)
+      return product
     } catch (error) {
       console.error('Error loading product:', error)
+      return null
     }
-  }, [productId])
+  }, [productName, findProductBySlug])
 
-  const loadSuggestedValues = useCallback(async () => {
+  const loadSuggestedValues = useCallback(async (productId: string) => {
     try {
-      const response = await suggestedValuesApi.getByProduct(productId!)
+      const response = await suggestedValuesApi.getByProduct(productId)
       setSuggestedValues(response.data)
     } catch (error) {
       console.error('Error loading suggested values:', error)
     }
-  }, [productId])
+  }, [])
 
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      await Promise.all([
-        loadProduct(),
-        loadSuggestedValues()
-      ])
+      const productData = await loadProduct()
+      if (productData) {
+        await loadSuggestedValues(productData.id)
+      }
     } finally {
       setLoading(false)
     }
@@ -70,11 +91,12 @@ const SuggestedValuesList: React.FC = () => {
   }
 
   const handleCreateSubmit = async (data: CreateSuggestedValueRequest) => {
+    if (!product) return
     setCreateLoading(true)
     try {
-      const response = await suggestedValuesApi.create(productId!, data)
+      const response = await suggestedValuesApi.create(product.id, data)
       console.log('Suggested value created:', response.data)
-      await loadSuggestedValues() // Reload the list
+      await loadSuggestedValues(product.id) // Reload the list
     } catch (error) {
       console.error('Error creating suggested value:', error)
       throw error
@@ -88,11 +110,12 @@ const SuggestedValuesList: React.FC = () => {
   }
 
   const handleEditSubmit = async (id: string, data: UpdateSuggestedValueRequest) => {
+    if (!product) return
     setEditLoading(true)
     try {
       const response = await suggestedValuesApi.update(id, data)
       console.log('Suggested value updated:', response.data)
-      await loadSuggestedValues() // Reload the list
+      await loadSuggestedValues(product.id) // Reload the list
     } catch (error) {
       console.error('Error updating suggested value:', error)
       throw error
@@ -106,7 +129,7 @@ const SuggestedValuesList: React.FC = () => {
     try {
       await suggestedValuesApi.delete(suggestedValue.id)
       console.log('Suggested value deleted:', suggestedValue)
-      await loadSuggestedValues() // Reload the list
+      if (product) await loadSuggestedValues(product.id) // Reload the list
     } catch (error) {
       console.error('Error deleting suggested value:', error)
     }
@@ -178,13 +201,13 @@ const SuggestedValuesList: React.FC = () => {
     <div className="space-y-6">
       {/* Navigation */}
       <div className="flex items-center justify-between">
-        <BackLink to={`/products/${productId}`}>Retour au produit</BackLink>
+        <BackLink to={`/products/${productName}`}>Retour au produit</BackLink>
         <nav className="flex items-center space-x-2 text-sm text-neutral-600">
           <Link to="/products" className="hover:text-neutral-900">Produits</Link>
           <span>›</span>
-          <Link to={`/products/${productId}`} className="hover:text-neutral-900">{product?.name || 'Chargement...'}</Link>
+          <Link to={`/products/${productName}`} className="hover:text-neutral-900">{product?.name || 'Chargement...'}</Link>
           <span>›</span>
-          <Link to={`/products/${productId}/properties`} className="hover:text-neutral-900">Propriétés</Link>
+          <Link to={`/products/${productName}/properties`} className="hover:text-neutral-900">Propriétés</Link>
           <span>›</span>
           <span className="text-neutral-900 font-medium">Valeurs suggérées</span>
         </nav>
@@ -239,7 +262,7 @@ const SuggestedValuesList: React.FC = () => {
         </div>
         <Button 
           variant="outline" 
-          onClick={loadSuggestedValues}
+          onClick={() => product && loadSuggestedValues(product.id)}
           title="Actualiser la liste"
           className="w-10 h-10 p-0 flex items-center justify-center ml-4"
         >
@@ -281,7 +304,7 @@ const SuggestedValuesList: React.FC = () => {
         onClose={() => setEditSuggestedValue(null)}
         onSubmit={handleEditSubmit}
         onDelete={handleDeleteSuggestedValue}
-        onRefresh={loadSuggestedValues}
+        onRefresh={() => product && loadSuggestedValues(product.id)}
         loading={editLoading}
       />
     </div>
