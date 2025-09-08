@@ -35,7 +35,7 @@ export interface Page {
   product_id: string
   name: string
   slug: string
-  url: string
+  url?: string
   created_at: string
   updated_at: string
   // Computed fields
@@ -161,7 +161,7 @@ export interface UpdateProductRequest {
 export interface CreatePageRequest {
   name: string
   slug?: string
-  url: string
+  url?: string
 }
 
 export interface UpdatePageRequest extends Partial<CreatePageRequest> {}

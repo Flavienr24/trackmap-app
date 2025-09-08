@@ -52,9 +52,8 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
       newErrors.name = 'Le nom de la page est requis'
     }
     
-    if (!formData.url?.trim()) {
-      newErrors.url = 'L\'URL est requise'
-    } else if (!isValidUrl(formData.url.trim())) {
+    // Validate URL format only if provided
+    if (formData.url && formData.url.trim() && !isValidUrl(formData.url.trim())) {
       newErrors.url = 'Format d\'URL invalide'
     }
     
@@ -80,7 +79,7 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
     try {
       await onSubmit(page.id, {
         name: formData.name?.trim(),
-        url: formData.url?.trim()
+        url: formData.url?.trim() || undefined
       })
       
       onClose()
@@ -157,9 +156,8 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
 
         <FormField
           label="URL de la page"
-          required
           error={errors.url}
-          hint="URL complète ou pattern avec * pour les pages dynamiques"
+          hint="URL complète ou pattern avec * pour les pages dynamiques (optionnel)"
         >
           <input
             type="text"
