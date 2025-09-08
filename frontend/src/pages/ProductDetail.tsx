@@ -246,11 +246,8 @@ const ProductDetail: React.FC = () => {
     {
       key: 'name',
       title: 'Nom de la page',
-      render: (value, record) => (
-        <div>
-          <div className="font-medium text-neutral-900">{value}</div>
-          <div className="text-sm text-neutral-500 font-mono">{record.url}</div>
-        </div>
+      render: (value) => (
+        <div className="font-medium text-neutral-900">{value}</div>
       ),
     },
     {

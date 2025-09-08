@@ -312,7 +312,6 @@ const PageDetail: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-neutral-900">{page.name}</h1>
-            <p className="text-neutral-600 mt-1">{page.url}</p>
             <div className="flex items-center space-x-4 mt-4">
               <div className="text-sm text-neutral-500">
                 <strong>{events.length}</strong> event{events.length !== 1 ? 's' : ''}
