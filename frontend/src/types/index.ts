@@ -15,7 +15,7 @@ export type PropertyType = 'string' | 'number' | 'boolean' | 'array' | 'object'
 export interface Product {
   id: string
   name: string
-  url: string
+  url?: string
   description?: string
   created_at: string
   updated_at: string
@@ -148,7 +148,7 @@ export interface PaginatedResponse<T> {
  */
 export interface CreateProductRequest {
   name: string
-  url: string
+  url?: string
   description?: string
 }
 

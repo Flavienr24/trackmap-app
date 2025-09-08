@@ -60,10 +60,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
       newErrors.name = 'Le nom est requis'
     }
 
-    // Validate URL is required and has correct format
-    if (!formData.url || !formData.url.trim()) {
-      newErrors.url = 'L\'URL est requise'
-    } else {
+    // Validate URL format if provided
+    if (formData.url && formData.url.trim()) {
       const urlRegex = /^https?:\/\/.+\..+/i
       if (!urlRegex.test(formData.url.trim())) {
         newErrors.url = 'L\'URL doit commencer par http:// ou https://'
@@ -175,7 +173,6 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
 
         <FormField
           label="URL du produit"
-          required
           error={errors.url}
         >
           <input
