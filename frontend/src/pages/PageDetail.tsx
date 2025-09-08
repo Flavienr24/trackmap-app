@@ -22,6 +22,7 @@ const PageDetail: React.FC = () => {
   const navigate = useNavigate()
   
   const [page, setPage] = useState<Page | null>(null)
+  const [product, setProduct] = useState<any>(null)
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateEventModal, setShowCreateEventModal] = useState(false)
@@ -61,6 +62,9 @@ const PageDetail: React.FC = () => {
           navigate('/products', { replace: true })
           return
         }
+        
+        // Store the product in state for breadcrumb
+        setProduct(product)
         
         // Then load page using product ID and page slug
         const pageResponse = await pagesApi.getBySlug(product.id, pageSlug)
@@ -297,11 +301,11 @@ const PageDetail: React.FC = () => {
     <div className="space-y-6">
       {/* Navigation */}
       <div className="flex items-center justify-between">
-        <BackLink to={`/products/${page.product?.id || page.product_id}`}>Retour au produit</BackLink>
+        <BackLink to={`/products/${productName}`}>Retour au produit</BackLink>
         <nav className="flex items-center space-x-2 text-sm text-neutral-600">
           <Link to="/products" className="hover:text-neutral-900">Produits</Link>
           <span>›</span>
-          <Link to={`/products/${page.product?.id || page.product_id}`} className="hover:text-neutral-900">Produit</Link>
+          <Link to={`/products/${productName}`} className="hover:text-neutral-900">{product?.name || 'Chargement...'}</Link>
           <span>›</span>
           <span className="text-neutral-900 font-medium">{page.name}</span>
         </nav>
