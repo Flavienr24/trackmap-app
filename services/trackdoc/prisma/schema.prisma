@@ -16,7 +16,7 @@ datasource db {
 // Simplified model without instances - each product is standalone
 model Product {
   id          String    @id @default(cuid()) // Unique identifier using cuid
-  name        String    // Product name (required)
+  name        String    @unique // Product name (required and unique)
   url         String    // Product URL (required)
   description String?   // Optional product description
   createdAt   DateTime  @default(now()) @map("created_at")

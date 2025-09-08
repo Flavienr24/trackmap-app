@@ -57,7 +57,6 @@ export const getPagesByProduct = async (req: Request, res: Response, next: NextF
 
     logger.info('Pages fetched successfully', { 
       productId: product.id,
-      productId: product.id,
       count: filteredPages.length,
       totalPages: pages.length,
       requestId: req.ip 
@@ -217,18 +216,18 @@ export const getPageById = async (req: Request, res: Response, next: NextFunctio
 };
 
 /**
- * Get a page by product slug and page slug
- * GET /api/products/:productSlug/pages/:pageSlug
+ * Get a page by product ID and page slug
+ * GET /api/products/:productId/pages/:pageSlug
  */
 export const getPageBySlug = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { productSlug, pageSlug } = req.params;
+    const { productSlug: productId, pageSlug } = req.params;
     
-    logger.debug('Fetching page by slug', { productSlug, pageSlug, requestId: req.ip });
+    logger.debug('Fetching page by product ID and page slug', { productId, pageSlug, requestId: req.ip });
 
-    // First find the product by slug
+    // First find the product by ID
     const product = await prisma.product.findUnique({
-      where: { id: productSlug }
+      where: { id: productId }
     });
 
     if (!product) {
@@ -259,7 +258,7 @@ export const getPageBySlug = async (req: Request, res: Response, next: NextFunct
       pageId: page.id,
       pageName: page.name,
       pageSlug: page.slug,
-      productSlug,
+      productId,
       requestId: req.ip 
     });
 

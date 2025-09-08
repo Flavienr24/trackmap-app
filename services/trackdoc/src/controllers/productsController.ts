@@ -137,6 +137,22 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       return next(error);
     }
 
+    // Check if product name already exists (case-insensitive)
+    // SQLite doesn't support mode: 'insensitive', so we get all products and compare manually
+    const allProducts = await prisma.product.findMany({
+      select: { id: true, name: true }
+    });
+    
+    const existingProduct = allProducts.find(product => 
+      product.name.toLowerCase() === name.toLowerCase()
+    );
+
+    if (existingProduct) {
+      const error: AppError = new Error('Un produit avec ce nom existe déjà');
+      error.statusCode = 409; // Conflict
+      return next(error);
+    }
+
     logger.debug('Creating new product', { 
       name, 
       description,
@@ -203,6 +219,22 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
     
     // Add name if provided
     if (name !== undefined) {
+      // Check if another product already has this name (case-insensitive)
+      // SQLite doesn't support mode: 'insensitive', so we get all products and compare manually
+      const allProducts = await prisma.product.findMany({
+        select: { id: true, name: true }
+      });
+      
+      const conflictingProduct = allProducts.find(product => 
+        product.name.toLowerCase() === name.toLowerCase() && product.id !== id
+      );
+      
+      if (conflictingProduct) {
+        const error: AppError = new Error('Un produit avec ce nom existe déjà');
+        error.statusCode = 409; // Conflict
+        return next(error);
+      }
+      
       updateData.name = name;
     }
     

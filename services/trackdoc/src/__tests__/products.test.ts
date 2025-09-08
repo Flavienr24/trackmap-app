@@ -129,7 +129,7 @@ describe('Products API', () => {
       await prisma.product.create({
         data: {
           name: 'Test Product for GET',
-          slug: 'test-product-for-get',
+          url: 'https://test.example.com',
           description: 'Test description'
         }
       });
@@ -155,7 +155,7 @@ describe('Products API', () => {
       const product = await prisma.product.create({
         data: {
           name: 'Test Product for GET by ID',
-          slug: 'test-product-for-get-by-id',
+          url: 'https://test-product-for-get-by-id.example.com',
           description: 'Test description'
         }
       });
@@ -190,7 +190,7 @@ describe('Products API', () => {
       const product = await prisma.product.create({
         data: {
           name: 'Test Product for PUT',
-          slug: 'test-product-for-put',
+          url: 'https://test-product-for-put.example.com',
           description: 'Test description'
         }
       });
@@ -265,7 +265,7 @@ describe('Products API', () => {
       const product = await prisma.product.create({
         data: {
           name: 'Test Product for DELETE',
-          slug: 'test-product-for-delete',
+          url: 'https://test-product-for-delete.example.com',
           description: 'Test description'
         }
       });
