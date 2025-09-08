@@ -8,8 +8,9 @@ import { CreateEventModal } from '@/components/organisms/CreateEventModal'
 import { EditEventModal } from '@/components/organisms/EditEventModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { EventDetailModal } from '@/components/organisms/EventDetailModal'
-import { pagesApi, eventsApi } from '@/services/api'
+import { pagesApi, eventsApi, productsApi } from '@/services/api'
 import { getPropertyCount, getStatusLabel } from '@/utils/properties'
+import { doesProductNameMatchSlug } from '@/utils/slug'
 import type { Page, Event, EventStatus, CreateEventRequest, UpdateEventRequest, UpdatePageRequest } from '@/types'
 
 /**
@@ -17,7 +18,7 @@ import type { Page, Event, EventStatus, CreateEventRequest, UpdateEventRequest, 
  * Shows page info with all its tracking events and management
  */
 const PageDetail: React.FC = () => {
-  const { productId, pageSlug } = useParams<{ productId: string; pageSlug: string }>()
+  const { productName, pageSlug } = useParams<{ productName: string; pageSlug: string }>()
   const navigate = useNavigate()
   
   const [page, setPage] = useState<Page | null>(null)
@@ -31,18 +32,41 @@ const PageDetail: React.FC = () => {
   const [editPageLoading, setEditPageLoading] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
 
+  // Find product by matching slug against product name
+  const findProductBySlug = useCallback(async (productSlug: string) => {
+    try {
+      // Get all products and find the one that matches the slug
+      const allProductsResponse = await productsApi.getAll()
+      const targetProduct = allProductsResponse.data.find(product => 
+        doesProductNameMatchSlug(product.name, productSlug)
+      )
+      return targetProduct
+    } catch (error) {
+      console.error('Error finding product by slug:', error)
+      return null
+    }
+  }, [])
+
   // Load page and events data
   useEffect(() => {
-    if (!productId || !pageSlug) return
+    if (!productName || !pageSlug) return
     
     const loadAllData = async () => {
       setLoading(true)
       try {
-        // Load page first
-        const pageResponse = await pagesApi.getBySlug(productId, pageSlug)
+        // First find the product by slug
+        const product = await findProductBySlug(productName)
+        if (!product) {
+          console.error('Product not found for slug:', productName)
+          navigate('/products', { replace: true })
+          return
+        }
+        
+        // Then load page using product ID and page slug
+        const pageResponse = await pagesApi.getBySlug(product.id, pageSlug)
         setPage(pageResponse.data)
         
-        // Then load events for that page
+        // Finally load events for that page
         if (pageResponse.data?.id) {
           const eventsResponse = await eventsApi.getByPage(pageResponse.data.id)
           setEvents(eventsResponse.data)
@@ -56,7 +80,7 @@ const PageDetail: React.FC = () => {
     }
     
     loadAllData()
-  }, [productId, pageSlug, navigate])
+  }, [productName, pageSlug, navigate, findProductBySlug])
 
   const loadEvents = useCallback(async (pageId: string) => {
     try {
@@ -123,10 +147,13 @@ const PageDetail: React.FC = () => {
     try {
       const response = await pagesApi.update(pageId, data)
       console.log('Page updated:', response.data)
-      if (productId && pageSlug) {
-        // Reload the page data
-        const pageResponse = await pagesApi.getBySlug(productId, pageSlug)
-        setPage(pageResponse.data)
+      if (productName && pageSlug) {
+        // Find the product first, then reload the page data
+        const product = await findProductBySlug(productName)
+        if (product) {
+          const pageResponse = await pagesApi.getBySlug(product.id, pageSlug)
+          setPage(pageResponse.data)
+        }
       }
     } catch (error) {
       console.error('Error updating page:', error)
@@ -166,7 +193,7 @@ const PageDetail: React.FC = () => {
     }
   }
 
-  if (!productId || !pageSlug) {
+  if (!productName || !pageSlug) {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="text-center">
@@ -270,11 +297,11 @@ const PageDetail: React.FC = () => {
     <div className="space-y-6">
       {/* Navigation */}
       <div className="flex items-center justify-between">
-        <BackLink to={`/products/${page.product?.id || productId}`}>Retour au produit</BackLink>
+        <BackLink to={`/products/${page.product?.id || page.product_id}`}>Retour au produit</BackLink>
         <nav className="flex items-center space-x-2 text-sm text-neutral-600">
           <Link to="/products" className="hover:text-neutral-900">Produits</Link>
           <span>›</span>
-          <Link to={`/products/${page.product?.id || productId}`} className="hover:text-neutral-900">Produit</Link>
+          <Link to={`/products/${page.product?.id || page.product_id}`} className="hover:text-neutral-900">Produit</Link>
           <span>›</span>
           <span className="text-neutral-900 font-medium">{page.name}</span>
         </nav>
@@ -333,7 +360,7 @@ const PageDetail: React.FC = () => {
         onSubmit={handleCreateEventSubmit}
         loading={createEventLoading}
         pageId={page?.id}
-        productId={productId}
+        productId={page?.product_id}
       />
 
       {/* Edit Event Modal */}
@@ -344,7 +371,7 @@ const PageDetail: React.FC = () => {
         onSubmit={handleEditEventSubmit}
         onDelete={handleDeleteEvent}
         loading={editEventLoading}
-        productId={productId}
+        productId={page?.product_id}
       />
 
       {/* Edit Page Modal */}

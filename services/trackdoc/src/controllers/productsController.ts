@@ -28,7 +28,7 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
         suggestedValues: true
       },
       orderBy: {
-        createdAt: 'desc' // Most recently created first
+        updatedAt: 'desc' // Most recently updated first
       }
     });
 

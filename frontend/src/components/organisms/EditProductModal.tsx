@@ -27,6 +27,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     description: ''
   })
   const [errors, setErrors] = useState<Partial<UpdateProductRequest>>({})
+  const [serverError, setServerError] = useState<string>('')
 
   // Initialize form when product changes
   useEffect(() => {
@@ -36,6 +37,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
         url: product.url,
         description: product.description || ''
       })
+      setServerError('') // Clear server error when product changes
     }
   }, [product])
 
@@ -44,6 +46,10 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }))
+    }
+    // Clear server error when user makes changes
+    if (serverError) {
+      setServerError('')
     }
   }
 
@@ -74,6 +80,9 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     if (!product || !validateForm()) return
     
     try {
+      // Clear any previous server error
+      setServerError('')
+      
       await onSubmit(product.id, {
         name: formData.name?.trim(),
         url: formData.url?.trim(),
@@ -81,13 +90,25 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
       })
       
       onClose()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating product:', error)
+      
+      // Extract error message from API response
+      let errorMessage = 'Une erreur est survenue lors de la modification du produit'
+      
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error?.message) {
+        errorMessage = error.message
+      }
+      
+      setServerError(errorMessage)
     }
   }
 
   const handleClose = () => {
     setErrors({})
+    setServerError('')
     onClose()
   }
 
@@ -140,7 +161,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
         <FormField
           label="Nom du produit"
           required
-          error={errors.name}
+          error={errors.name || serverError}
         >
           <input
             type="text"

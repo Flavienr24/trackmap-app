@@ -23,12 +23,17 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
     description: ''
   })
   const [errors, setErrors] = useState<Partial<CreateProductRequest>>({})
+  const [serverError, setServerError] = useState<string>('')
 
   const handleInputChange = (field: keyof CreateProductRequest, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }))
+    }
+    // Clear server error when user makes changes
+    if (serverError) {
+      setServerError('')
     }
   }
 
@@ -59,6 +64,9 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
     if (!validateForm()) return
     
     try {
+      // Clear any previous server error
+      setServerError('')
+      
       await onSubmit({
         name: formData.name.trim(),
         url: formData.url.trim(),
@@ -68,15 +76,28 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
       // Reset form
       setFormData({ name: '', url: '', description: '' })
       setErrors({})
+      setServerError('')
       onClose()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating product:', error)
+      
+      // Extract error message from API response
+      let errorMessage = 'Une erreur est survenue lors de la création du produit'
+      
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error?.message) {
+        errorMessage = error.message
+      }
+      
+      setServerError(errorMessage)
     }
   }
 
   const handleClose = () => {
     setFormData({ name: '', url: '', description: '' })
     setErrors({})
+    setServerError('')
     onClose()
   }
 
@@ -103,7 +124,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
         <FormField
           label="Nom du produit"
           required
-          error={errors.name}
+          error={errors.name || serverError}
         >
           <input
             type="text"
