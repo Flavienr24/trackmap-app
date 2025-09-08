@@ -155,15 +155,15 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
         </FormField>
 
         <FormField
-          label="URL de la page"
+          label="Slug de la page"
           error={errors.url}
-          hint="URL complète ou pattern avec * pour les pages dynamiques (optionnel)"
+          hint="Slug ou pattern pour identifier la page (optionnel)"
         >
           <input
             type="text"
             value={formData.url}
             onChange={(e) => handleInputChange('url', e.target.value)}
-            placeholder="Ex: https://site.fr/, /products/*, https://site.fr/checkout"
+            placeholder="Ex: /homepage, /products/*, /checkout"
             className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
             disabled={loading}
           />
