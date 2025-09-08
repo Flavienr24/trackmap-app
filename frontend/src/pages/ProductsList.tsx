@@ -4,10 +4,9 @@ import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreateProductModal } from '@/components/organisms/CreateProductModal'
-import { EditProductModal } from '@/components/organisms/EditProductModal'
 import { productsApi } from '@/services/api'
 import { slugifyProductName } from '@/utils/slug'
-import type { Product, CreateProductRequest, UpdateProductRequest } from '@/types'
+import type { Product, CreateProductRequest } from '@/types'
 
 /**
  * Products List Page
@@ -21,8 +20,6 @@ const ProductsList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
-  const [editProduct, setEditProduct] = useState<Product | null>(null)
-  const [editLoading, setEditLoading] = useState(false)
 
   const loadProducts = useCallback(async () => {
     setLoading(true)
@@ -61,23 +58,6 @@ const ProductsList: React.FC = () => {
     }
   }
 
-  const handleEditProduct = (product: Product) => {
-    setEditProduct(product)
-  }
-
-  const handleEditSubmit = async (id: string, data: UpdateProductRequest) => {
-    setEditLoading(true)
-    try {
-      const response = await productsApi.update(id, data)
-      console.log('Product updated:', response.data)
-      await loadProducts() // Reload the list
-    } catch (error) {
-      console.error('Error updating product:', error)
-      throw error
-    } finally {
-      setEditLoading(false)
-    }
-  }
 
   const handleDeleteProduct = async (product: Product) => {
     console.log('handleDeleteProduct called for:', product.name)
@@ -96,6 +76,18 @@ const ProductsList: React.FC = () => {
     console.log('handleViewProduct called for:', product.name)
     const productSlug = slugifyProductName(product.name)
     navigate(`/products/${productSlug}`)
+  }
+
+  const handleOpenExternalUrl = (product: Product) => {
+    if (product.url) {
+      // Normalize URL - add https:// if no protocol
+      let url = product.url
+      if (!url.match(/^https?:\/\//)) {
+        url = `https://${url}`
+      }
+      
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
   }
 
   // Filter products based on search query
@@ -154,9 +146,16 @@ const ProductsList: React.FC = () => {
   // Table actions
   const actions: Action<Product>[] = [
     {
-      label: 'Modifier',
-      onClick: handleEditProduct,
-      variant: 'secondary',
+      label: '',
+      icon: (
+        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+      ),
+      onClick: handleOpenExternalUrl,
+      iconOnly: true,
+      show: (product: Product) => !!product.url,
+      title: 'Open URL'
     }
   ]
 
@@ -229,15 +228,6 @@ const ProductsList: React.FC = () => {
         loading={createLoading}
       />
 
-      {/* Edit Product Modal */}
-      <EditProductModal
-        isOpen={!!editProduct}
-        product={editProduct}
-        onClose={() => setEditProduct(null)}
-        onSubmit={handleEditSubmit}
-        onDelete={handleDeleteProduct}
-        loading={editLoading}
-      />
     </div>
   )
 }

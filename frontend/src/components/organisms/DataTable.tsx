@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from '../atoms/Button'
 import { Badge } from '../atoms/Badge'
+import { Tooltip } from '../atoms/Tooltip'
 import { SortSelector, type SortOption } from '../molecules/SortSelector'
 import { cn, type StatusType } from '@/design-system'
 import { sortData, getDefaultSortOption, saveSortPreference, loadSortPreference } from '@/utils/sorting'
@@ -20,6 +21,7 @@ export interface Action<T = any> {
   icon?: React.ReactNode
   show?: (record: T) => boolean
   iconOnly?: boolean
+  title?: string | ((record: T) => string)
 }
 
 export interface DataTableProps<T = any> {
@@ -203,16 +205,33 @@ function DataTable<T extends Record<string, any>>({
                         .filter(action => !action.show || action.show(record))
                         .map((action, actionIndex) => (
                         action.iconOnly ? (
-                          <button
-                            key={actionIndex}
-                            className="p-2 text-neutral-600 hover:text-neutral-900 cursor-pointer transition-colors duration-150"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              action.onClick(record)
-                            }}
-                          >
-                            {action.icon}
-                          </button>
+                          action.title ? (
+                            <Tooltip
+                              key={actionIndex}
+                              content={typeof action.title === 'function' ? action.title(record) : action.title}
+                            >
+                              <button
+                                className="p-2 text-neutral-600 hover:text-neutral-900 cursor-pointer transition-colors duration-150"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  action.onClick(record)
+                                }}
+                              >
+                                {action.icon}
+                              </button>
+                            </Tooltip>
+                          ) : (
+                            <button
+                              key={actionIndex}
+                              className="p-2 text-neutral-600 hover:text-neutral-900 cursor-pointer transition-colors duration-150"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                action.onClick(record)
+                              }}
+                            >
+                              {action.icon}
+                            </button>
+                          )
                         ) : (
                           <Button
                             key={actionIndex}
