@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
-import { FormField } from '@/components/molecules/FormField'
 import { commentsApi } from '@/services/api'
 import type { Comment, CreateCommentRequest } from '@/types'
 
@@ -21,12 +20,12 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
 }) => {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
-  const [showAddForm, setShowAddForm] = useState(false)
   const [newComment, setNewComment] = useState<CreateCommentRequest>({
     content: '',
     author: '',
   })
   const [addingComment, setAddingComment] = useState(false)
+  const [showExtendedForm, setShowExtendedForm] = useState(false)
 
   useEffect(() => {
     loadComments()
@@ -64,7 +63,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
       
       // Reset form
       setNewComment({ content: '', author: '' })
-      setShowAddForm(false)
+      setShowExtendedForm(false)
       
       console.log('Comment created:', response.data)
     } catch (error) {
@@ -124,80 +123,56 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-medium text-neutral-900">
           Commentaires ({comments.length})
         </h3>
-        {!showAddForm && (
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setShowAddForm(true)}
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Ajouter un commentaire
-          </Button>
-        )}
       </div>
 
-      {/* Add Comment Form */}
-      {showAddForm && (
-        <form onSubmit={handleAddComment} className="bg-neutral-50 rounded-lg p-4 space-y-3">
-          <FormField label="Commentaire" required>
-            <textarea
-              value={newComment.content}
-              onChange={(e) => setNewComment(prev => ({ ...prev, content: e.target.value }))}
-              placeholder="Ajoutez votre commentaire..."
-              disabled={addingComment}
-              rows={3}
-              className="block w-full rounded-md border border-neutral-300 bg-white text-neutral-900 px-3 py-2 text-sm transition-colors duration-200 hover:border-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed resize-none"
-              required
-            />
-          </FormField>
-          
-          <FormField label="Auteur (optionnel)">
-            <Input
-              value={newComment.author || ''}
-              onChange={(e) => setNewComment(prev => ({ ...prev, author: e.target.value }))}
-              placeholder="Votre nom..."
-              disabled={addingComment}
-              size="sm"
-            />
-          </FormField>
-          
-          <div className="flex justify-end space-x-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setShowAddForm(false)
-                setNewComment({ content: '', author: '' })
-              }}
-              disabled={addingComment}
-            >
-              Annuler
-            </Button>
+      {/* Add Comment Form - Always Visible */}
+      <form onSubmit={handleAddComment} className="bg-neutral-50 rounded-lg p-4 mb-6">
+        <textarea
+          value={newComment.content}
+          onChange={(e) => setNewComment(prev => ({ ...prev, content: e.target.value }))}
+          onFocus={() => setShowExtendedForm(true)}
+          placeholder="Ajouter un commentaire"
+          disabled={addingComment}
+          rows={3}
+          className="block w-full rounded-md border border-neutral-300 bg-white text-neutral-900 px-3 py-2 text-sm transition-colors duration-200 hover:border-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed resize-none mb-3"
+          required
+        />
+        
+        {showExtendedForm && (
+          <div className="flex items-end justify-between space-x-3">
+            <div className="flex-1">
+              <Input
+                value={newComment.author || ''}
+                onChange={(e) => setNewComment(prev => ({ ...prev, author: e.target.value }))}
+                onFocus={() => setShowExtendedForm(true)}
+                placeholder="Votre nom (optionnel)"
+                disabled={addingComment}
+                size="sm"
+              />
+            </div>
+            
             <Button
               type="submit"
               variant="primary"
               size="sm"
               loading={addingComment}
+              disabled={!newComment.content.trim()}
             >
-              Ajouter
+              Publier
             </Button>
           </div>
-        </form>
-      )}
+        )}
+      </form>
 
       {/* Comments List */}
       {comments.length === 0 ? (
         <div className="text-center py-8 text-neutral-500">
           <div className="text-4xl mb-2">💬</div>
           <p>Aucun commentaire pour le moment.</p>
-          <p className="text-sm">Soyez le premier à commenter cet événement !</p>
         </div>
       ) : (
         <div className="space-y-4">
