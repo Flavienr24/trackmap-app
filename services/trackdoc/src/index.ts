@@ -13,6 +13,7 @@ import pagesRoutes from './routes/pages';
 import eventsRoutes from './routes/events';
 import propertiesRoutes from './routes/properties';
 import suggestedValuesRoutes from './routes/suggestedValues';
+import commentsRoutes from './routes/comments';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -75,6 +76,7 @@ app.use('/api/pages', pagesRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/properties', propertiesRoutes);
 app.use('/api/suggested-values', suggestedValuesRoutes);
+app.use('/api/comments', commentsRoutes);
 
 // Error handling middleware (must be last)
 app.use(notFoundHandler); // 404 handler

@@ -698,17 +698,11 @@ export const getEventComments = async (req: Request, res: Response, next: NextFu
 export const addEventComment = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id: eventId } = req.params;
-    const { text, author } = req.body;
+    const { content, author } = req.body;
 
     // Validate required fields
-    if (!text) {
-      const error: AppError = new Error('Comment text is required');
-      error.statusCode = 400;
-      return next(error);
-    }
-
-    if (!author) {
-      const error: AppError = new Error('Comment author is required');
+    if (!content || !content.trim()) {
+      const error: AppError = new Error('Comment content is required');
       error.statusCode = 400;
       return next(error);
     }
@@ -726,8 +720,8 @@ export const addEventComment = async (req: Request, res: Response, next: NextFun
 
     logger.debug('Adding comment to event', { 
       eventId,
-      author,
-      textLength: text.length,
+      author: author || 'Anonymous',
+      contentLength: content.length,
       requestId: req.ip 
     });
 
@@ -735,8 +729,8 @@ export const addEventComment = async (req: Request, res: Response, next: NextFun
     const comment = await prisma.comment.create({
       data: {
         eventId,
-        content: text,
-        author
+        content: content.trim(),
+        author: author?.trim() || undefined
       }
     });
 
