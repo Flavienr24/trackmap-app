@@ -49,6 +49,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('details')
   const [showCopiedTooltip, setShowCopiedTooltip] = useState(false)
+  const [commentsCount, setCommentsCount] = useState<number>(0)
 
   // Copy properties to clipboard function
   const copyPropertiesToClipboard = async () => {
@@ -101,7 +102,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
   const tabs: { id: TabType; label: string; count?: number }[] = [
     { id: 'details', label: 'Détails' },
-    { id: 'comments', label: 'Commentaires' },
+    { id: 'comments', label: 'Commentaires', count: commentsCount },
     { id: 'history', label: 'Historique' },
   ]
 
@@ -110,7 +111,8 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={`Event: ${event.name}`}
-      size="xl"
+      size="2xl"
+      fixedHeight={true}
     >
       <div className="space-y-6">
 
@@ -128,9 +130,9 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                 }`}
               >
                 {tab.label}
-                {tab.count && (
-                  <span className="ml-2 bg-neutral-100 text-neutral-600 py-0.5 px-2 rounded-full text-xs">
-                    {tab.count}
+                {tab.count !== undefined && (
+                  <span className="ml-1">
+                    ({tab.count})
                   </span>
                 )}
               </button>
@@ -139,7 +141,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
         </div>
 
         {/* Tab Content */}
-        <div className="min-h-[400px]">
+        <div className="h-full">
           {activeTab === 'details' && (
             <div className="space-y-6">
               {/* Basic Info */}
@@ -238,7 +240,12 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
           )}
 
           {activeTab === 'comments' && (
-            <CommentsSection eventId={event.id} />
+            <div className="h-full overflow-y-auto">
+              <CommentsSection 
+                eventId={event.id} 
+                onCommentsCountChange={setCommentsCount}
+              />
+            </div>
           )}
 
           {activeTab === 'history' && (
@@ -248,12 +255,12 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
         {/* Footer */}
         <div className="flex justify-between pt-4 border-t border-neutral-200">
-          {onEdit && (
+          {onEdit && activeTab !== 'comments' && (
             <Button variant="primary" onClick={() => onEdit(event)}>
               Modifier l'event
             </Button>
           )}
-          <div className={`flex space-x-3 ${!onEdit ? 'w-full justify-end' : 'ml-auto'}`}>
+          <div className={`flex space-x-3 ${!onEdit || activeTab === 'comments' ? 'w-full justify-end' : 'ml-auto'}`}>
             <Button variant="outline" onClick={onClose}>
               Fermer
             </Button>

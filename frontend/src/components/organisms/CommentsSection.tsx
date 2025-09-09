@@ -7,6 +7,7 @@ import type { Comment, CreateCommentRequest } from '@/types'
 interface CommentsSectionProps {
   eventId: string
   className?: string
+  onCommentsCountChange?: (count: number) => void
 }
 
 /**
@@ -17,6 +18,7 @@ interface CommentsSectionProps {
 const CommentsSection: React.FC<CommentsSectionProps> = ({
   eventId,
   className = '',
+  onCommentsCountChange,
 }) => {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
@@ -30,6 +32,11 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
   useEffect(() => {
     loadComments()
   }, [eventId])
+
+  // Notify parent when comments count changes
+  useEffect(() => {
+    onCommentsCountChange?.(comments.length)
+  }, [comments.length, onCommentsCountChange])
 
   const loadComments = async () => {
     setLoading(true)
@@ -177,20 +184,25 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
       ) : (
         <div className="space-y-4">
           {comments.map((comment) => (
-            <div key={comment.id} className="bg-white border border-neutral-200 rounded-lg p-4">
+            <div key={comment.id} className="bg-white rounded-lg p-4">
               <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <div className="flex items-start space-x-2 flex-1">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-sm font-medium text-blue-800">
                       {comment.author ? comment.author.charAt(0).toUpperCase() : '?'}
                     </span>
                   </div>
-                  <div>
-                    <div className="font-medium text-neutral-900">
-                      {comment.author || 'Utilisateur anonyme'}
+                  <div className="flex-1">
+                    <div className="mb-1">
+                      <div className="font-semibold text-sm text-neutral-900">
+                        {comment.author || 'Utilisateur anonyme'}
+                      </div>
+                      <div className="text-xs text-neutral-500">
+                        {formatDate(comment.created_at)}
+                      </div>
                     </div>
-                    <div className="text-sm text-neutral-500">
-                      {formatDate(comment.created_at)}
+                    <div className="text-sm text-neutral-700 whitespace-pre-wrap">
+                      {comment.content}
                     </div>
                   </div>
                 </div>
@@ -198,15 +210,12 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => handleDeleteComment(comment.id)}
-                  className="text-red-600 hover:bg-red-50 border-red-200"
+                  className="text-red-600 hover:bg-red-50 border-red-200 ml-2 flex-shrink-0"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </Button>
-              </div>
-              <div className="text-neutral-700 whitespace-pre-wrap">
-                {comment.content}
               </div>
             </div>
           ))}
