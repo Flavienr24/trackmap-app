@@ -39,12 +39,12 @@ export const PropertiesDisplay: React.FC<PropertiesDisplayProps> = ({
       <div className="space-y-1">
         {propertyEntries.map(([key, value]) => (
           <div key={key} className="flex flex-col sm:flex-row sm:items-start gap-1">
-            <div className="text-sm font-normal text-neutral-700 min-w-0 sm:w-1/4">
+            <div className="text-xs font-normal text-neutral-700 min-w-0 sm:w-1/6 font-mono">
               {key}
             </div>
-            <div className="text-sm text-neutral-900 min-w-0 sm:w-3/4">
+            <div className="text-sm text-neutral-900 min-w-0 sm:w-5/6">
               <code className={cn(
-                "bg-neutral-100 px-2 py-1 rounded text-xs break-all",
+                "bg-neutral-100 px-2 py-1 rounded text-xs break-all font-mono",
                 isContextualValue(value) 
                   ? "text-purple-700" 
                   : "text-neutral-900"
