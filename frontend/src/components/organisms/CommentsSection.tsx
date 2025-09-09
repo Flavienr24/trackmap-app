@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
 import { FormField } from '@/components/molecules/FormField'
-// import { mockData } from '@/services/api' // Removed - using real API
+import { commentsApi } from '@/services/api'
 import type { Comment, CreateCommentRequest } from '@/types'
 
 interface CommentsSectionProps {
@@ -35,20 +35,15 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
   const loadComments = async () => {
     setLoading(true)
     try {
-      // TODO: Replace with real API call
-      // const response = await commentsApi.getByEvent(eventId)
-      // setComments(response.data)
-      
-      // Mock data simulation
-      setTimeout(() => {
-        const eventComments = mockData.comments.filter(c => c.event_id === eventId)
-        setComments(eventComments.sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        ))
-        setLoading(false)
-      }, 200)
+      const response = await commentsApi.getByEvent(eventId)
+      setComments(response.data.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ))
     } catch (error) {
       console.error('Error loading comments:', error)
+      // If API fails, show empty state instead of loading forever
+      setComments([])
+    } finally {
       setLoading(false)
     }
   }
@@ -62,27 +57,16 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
 
     setAddingComment(true)
     try {
-      // TODO: Replace with real API call
-      // const response = await commentsApi.create(eventId, newComment)
+      const response = await commentsApi.create(eventId, newComment)
       
-      // Mock data simulation
-      const comment: Comment = {
-        id: String(Date.now()) + '-' + Math.random().toString(36).slice(2),
-        event_id: eventId,
-        content: newComment.content.trim(),
-        author: newComment.author?.trim() || undefined,
-        created_at: new Date().toISOString(),
-      }
-      
-      // Add to global mockData and update local state
-      mockData.comments.unshift(comment)
-      setComments(prev => [comment, ...prev])
+      // Add new comment to the beginning of the list
+      setComments(prev => [response.data, ...prev])
       
       // Reset form
       setNewComment({ content: '', author: '' })
       setShowAddForm(false)
       
-      console.log('Comment created:', comment)
+      console.log('Comment created:', response.data)
     } catch (error) {
       console.error('Error creating comment:', error)
     } finally {
@@ -93,14 +77,9 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
   const handleDeleteComment = async (commentId: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce commentaire ?')) {
       try {
-        // TODO: Replace with real API call
-        // await commentsApi.delete(commentId)
+        await commentsApi.delete(commentId)
         
-        // Remove from global mockData and update local state
-        const index = mockData.comments.findIndex(c => c.id === commentId)
-        if (index !== -1) {
-          mockData.comments.splice(index, 1)
-        }
+        // Remove from local state
         setComments(prev => prev.filter(c => c.id !== commentId))
         
         console.log('Comment deleted:', commentId)
