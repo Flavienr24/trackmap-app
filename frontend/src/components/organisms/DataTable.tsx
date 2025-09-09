@@ -36,6 +36,11 @@ export interface DataTableProps<T = any> {
   sortContext?: string
   sortOptions?: Array<{ value: SortOption; label: string }>
   className?: string
+  expandable?: {
+    expandedRowRender: (record: T) => React.ReactNode
+    rowExpandable?: (record: T) => boolean
+    showExpandIcon?: boolean
+  }
 }
 
 /**
@@ -54,6 +59,7 @@ function DataTable<T extends Record<string, any>>({
   sortContext = 'default',
   sortOptions,
   className,
+  expandable,
 }: DataTableProps<T>) {
   
   // Sort state management
@@ -61,6 +67,9 @@ function DataTable<T extends Record<string, any>>({
     if (!enableSort) return 'created_desc'
     return loadSortPreference(sortContext) || getDefaultSortOption(sortContext)
   })
+
+  // Expanded rows state
+  const [expandedRows, setExpandedRows] = useState<Set<string | number>>(new Set())
 
   // Save sort preference when it changes
   useEffect(() => {
@@ -72,8 +81,31 @@ function DataTable<T extends Record<string, any>>({
   // Apply sorting to data
   const sortedData = enableSort ? sortData(data, currentSort) : data
 
+  // Check if we should show expand icons
+  const showExpandIcons = expandable?.showExpandIcon === true
+
   const handleSortChange = (newSort: SortOption) => {
     setCurrentSort(newSort)
+  }
+
+  const toggleRowExpansion = (recordId: string | number) => {
+    const newExpandedRows = new Set(expandedRows)
+    if (newExpandedRows.has(recordId)) {
+      newExpandedRows.delete(recordId)
+    } else {
+      newExpandedRows.add(recordId)
+    }
+    setExpandedRows(newExpandedRows)
+  }
+
+  const handleRowClick = (record: T, event: React.MouseEvent) => {
+    // If expandable is enabled, toggle expansion on row click
+    if (expandable && (!expandable.rowExpandable || expandable.rowExpandable(record))) {
+      event.stopPropagation()
+      toggleRowExpansion(record.id || record.name)
+    }
+    // Still call the original onRowClick if provided
+    onRowClick?.(record)
   }
 
   const renderCellValue = (column: Column<T>, record: T) => {
@@ -147,6 +179,9 @@ function DataTable<T extends Record<string, any>>({
         <table className="min-w-full divide-y divide-neutral-200">
           <thead className="bg-neutral-50">
             <tr>
+              {showExpandIcons && (
+                <th className="px-6 py-3 w-8"></th>
+              )}
               {columns.map((column) => (
                 <th
                   key={column.key}
@@ -176,82 +211,126 @@ function DataTable<T extends Record<string, any>>({
           </thead>
           
           <tbody className="bg-white divide-y divide-neutral-200">
-            {sortedData.map((record, index) => (
-              <tr
-                key={record.id || index}
-                className={cn(
-                  'hover:bg-neutral-50 transition-colors duration-150',
-                  onRowClick && 'cursor-pointer',
-                  columns.some(col => col.key === 'status' || col.key.includes('status')) && 'overflow-visible'
-                )}
-                onClick={() => onRowClick?.(record)}
-              >
-                {columns.map((column) => (
-                  <td
-                    key={column.key}
+            {sortedData.map((record, index) => {
+              const recordId = record.id || index
+              const isExpanded = expandedRows.has(recordId)
+              const isExpandable = expandable && (!expandable.rowExpandable || expandable.rowExpandable(record))
+              
+              return (
+                <React.Fragment key={recordId}>
+                  <tr
                     className={cn(
-                      "px-6 py-4 whitespace-nowrap text-sm text-neutral-900",
-                      (column.key === 'status' || column.key.includes('status')) && "overflow-visible relative"
+                      'hover:bg-neutral-50 transition-colors duration-150',
+                      (onRowClick || isExpandable) && 'cursor-pointer',
+                      columns.some(col => col.key === 'status' || col.key.includes('status')) && 'overflow-visible',
+                      isExpanded && 'bg-neutral-25 border-b-0',
+                      isExpandable && !showExpandIcons && 'hover:bg-blue-25'
                     )}
+                    onClick={(e) => handleRowClick(record, e)}
                   >
-                    {renderCellValue(column, record)}
-                  </td>
-                ))}
-                
-                {actions && actions.length > 0 && (
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
-                      {actions
-                        .filter(action => !action.show || action.show(record))
-                        .map((action, actionIndex) => (
-                        action.iconOnly ? (
-                          action.title ? (
-                            <Tooltip
-                              key={actionIndex}
-                              content={typeof action.title === 'function' ? action.title(record) : action.title}
-                            >
-                              <button
-                                className="p-2 text-neutral-600 hover:text-neutral-900 cursor-pointer transition-colors duration-150"
+                    {showExpandIcons && (
+                      <td className="px-6 py-2 whitespace-nowrap w-8">
+                        {isExpandable ? (
+                          <button
+                            className={cn(
+                              'p-1 text-neutral-400 hover:text-neutral-600 transition-transform duration-200',
+                              isExpanded && 'rotate-90'
+                            )}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleRowExpansion(recordId)
+                            }}
+                          >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        ) : (
+                          <div className="w-6 h-6"></div>
+                        )}
+                      </td>
+                    )}
+                    {columns.map((column) => (
+                      <td
+                        key={column.key}
+                        className={cn(
+                          "px-6 py-2 whitespace-nowrap text-sm text-neutral-900",
+                          (column.key === 'status' || column.key.includes('status')) && "overflow-visible relative"
+                        )}
+                      >
+                        {renderCellValue(column, record)}
+                      </td>
+                    ))}
+                    
+                    {actions && actions.length > 0 && (
+                      <td className="px-6 py-2 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
+                          {actions
+                            .filter(action => !action.show || action.show(record))
+                            .map((action, actionIndex) => (
+                            action.iconOnly ? (
+                              action.title ? (
+                                <Tooltip
+                                  key={actionIndex}
+                                  content={typeof action.title === 'function' ? action.title(record) : action.title}
+                                >
+                                  <button
+                                    className="p-2 text-neutral-600 hover:text-neutral-900 cursor-pointer transition-colors duration-150"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      action.onClick(record)
+                                    }}
+                                  >
+                                    {action.icon}
+                                  </button>
+                                </Tooltip>
+                              ) : (
+                                <button
+                                  key={actionIndex}
+                                  className="p-2 text-neutral-600 hover:text-neutral-900 cursor-pointer transition-colors duration-150"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    action.onClick(record)
+                                  }}
+                                >
+                                  {action.icon}
+                                </button>
+                              )
+                            ) : (
+                              <Button
+                                key={actionIndex}
+                                size="sm"
+                                variant={action.variant || 'secondary'}
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   action.onClick(record)
                                 }}
                               >
-                                {action.icon}
-                              </button>
-                            </Tooltip>
-                          ) : (
-                            <button
-                              key={actionIndex}
-                              className="p-2 text-neutral-600 hover:text-neutral-900 cursor-pointer transition-colors duration-150"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                action.onClick(record)
-                              }}
-                            >
-                              {action.icon}
-                            </button>
-                          )
-                        ) : (
-                          <Button
-                            key={actionIndex}
-                            size="sm"
-                            variant={action.variant || 'secondary'}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              action.onClick(record)
-                            }}
-                          >
-                            {action.icon && <span className="mr-1">{action.icon}</span>}
-                            {typeof action.label === 'function' ? action.label(record) : action.label}
-                          </Button>
-                        )
-                      ))}
-                    </div>
-                  </td>
-                )}
-              </tr>
-            ))}
+                                {action.icon && <span className="mr-1">{action.icon}</span>}
+                                {typeof action.label === 'function' ? action.label(record) : action.label}
+                              </Button>
+                            )
+                          ))}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                  
+                  {/* Expanded row content */}
+                  {isExpandable && isExpanded && (
+                    <tr className="border-t-0">
+                      {showExpandIcons && <td className="px-0 py-0"></td>}
+                      <td className="px-0 py-0" colSpan={columns.length}>
+                        <div className="pl-6 pb-2">
+                          {expandable.expandedRowRender(record)}
+                        </div>
+                      </td>
+                      {actions && actions.length > 0 && <td className="px-0 py-0"></td>}
+                    </tr>
+                  )}
+                </React.Fragment>
+              )
+            })}
           </tbody>
         </table>
         </div>

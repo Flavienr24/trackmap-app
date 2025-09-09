@@ -5,6 +5,7 @@ import { Badge } from '@/components/atoms/Badge'
 import { BackLink } from '@/components/atoms/BackLink'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { Tooltip } from '@/components/atoms/Tooltip'
+import { PropertiesDisplay } from '@/components/molecules/PropertiesDisplay'
 import { CreateEventModal } from '@/components/organisms/CreateEventModal'
 import { EditEventModal } from '@/components/organisms/EditEventModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
@@ -251,7 +252,7 @@ const PageDetail: React.FC = () => {
         return (
           <div>
             <div className="font-medium text-neutral-900">{value}</div>
-            <div className="text-sm text-neutral-500">
+            <div className="text-xs text-neutral-500">
               {variableCount} propriété{variableCount !== 1 ? 's' : ''}
             </div>
           </div>
@@ -359,10 +360,16 @@ const PageDetail: React.FC = () => {
         actions={actions}
         loading={loading}
         emptyMessage="Aucun event trouvé. Créez votre premier event pour cette page."
-        onRowClick={handleViewEvent}
         onStatusChange={handleStatusChange}
         enableSort={true}
         sortContext="events"
+        expandable={{
+          expandedRowRender: (event: Event) => (
+            <PropertiesDisplay properties={event.properties} />
+          ),
+          rowExpandable: (event: Event) => getPropertyCount(event.properties) > 0,
+          showExpandIcon: false,
+        }}
       />
 
       {/* Stats Footer */}
