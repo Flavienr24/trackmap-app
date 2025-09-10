@@ -30,7 +30,6 @@ interface EventDetailModalProps {
   event: Event | null
   onClose: () => void
   onEdit?: (event: Event) => void
-  productId?: string
 }
 
 type TabType = 'details' | 'comments' | 'history' | 'screenshots'
@@ -45,7 +44,6 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
   event,
   onClose,
   onEdit,
-  productId,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('details')
   const [showCopiedTooltip, setShowCopiedTooltip] = useState(false)
