@@ -347,7 +347,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
                   <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  <span className="text-sm">Cliquez pour ajouter des screenshots</span>
+                  <span className="text-xs">Cliquez pour ajouter des screenshots</span>
                 </>
               )}
             </button>
