@@ -332,64 +332,65 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
               </div>
             )}
 
-            {/* Screenshots grid with add button */}
-            <div className="grid grid-cols-4 gap-3">
-              {/* Add screenshot placeholder */}
-              <button
-                type="button"
-                onClick={handleAddScreenshotClick}
-                disabled={loading || uploading}
-                className="aspect-square border-2 border-dashed border-neutral-300 rounded-lg flex flex-col items-center justify-center text-neutral-500 hover:border-neutral-400 hover:text-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                title="Ajouter des screenshots"
-              >
-                {uploading ? (
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-neutral-500"></div>
-                ) : (
-                  <>
-                    <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span className="text-xs">Ajouter</span>
-                  </>
-                )}
-              </button>
+            {/* Upload zone - full width */}
+            <button
+              type="button"
+              onClick={handleAddScreenshotClick}
+              disabled={loading || uploading}
+              className="w-full h-24 border-2 border-dashed border-neutral-300 rounded-lg flex flex-col items-center justify-center text-neutral-500 hover:border-neutral-400 hover:text-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              title="Ajouter des screenshots"
+            >
+              {uploading ? (
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-neutral-500"></div>
+              ) : (
+                <>
+                  <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span className="text-sm">Cliquez pour ajouter des screenshots</span>
+                </>
+              )}
+            </button>
 
-              {/* Existing screenshots */}
-              {formData.screenshots?.map((screenshot, index) => (
-                <div key={screenshot.public_id} className="relative group">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedScreenshot(screenshot)}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all hover:border-blue-500 w-full ${
-                      selectedScreenshot?.public_id === screenshot.public_id
-                        ? 'border-blue-500 shadow-md'
-                        : 'border-neutral-200'
-                    }`}
-                    title={`Voir le screenshot ${index + 1}`}
-                  >
-                    <img
-                      src={screenshot.thumbnail_url || screenshot.secure_url}
-                      alt={`Screenshot ${index + 1}`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      loading="lazy"
-                    />
-                  </button>
-                  
-                  {/* Delete button */}
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteScreenshot(screenshot)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                    title="Supprimer cette image"
-                    disabled={loading}
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
-            </div>
+            {/* Existing screenshots grid */}
+            {formData.screenshots && formData.screenshots.length > 0 && (
+              <div className="grid grid-cols-4 gap-3">
+                {formData.screenshots.map((screenshot, index) => (
+                  <div key={screenshot.public_id} className="relative group">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedScreenshot(screenshot)}
+                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all hover:border-blue-500 w-full ${
+                        selectedScreenshot?.public_id === screenshot.public_id
+                          ? 'border-blue-500 shadow-md'
+                          : 'border-neutral-200'
+                      }`}
+                      title={`Voir le screenshot ${index + 1}`}
+                    >
+                      <img
+                        src={screenshot.thumbnail_url || screenshot.secure_url}
+                        alt={`Screenshot ${index + 1}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        loading="lazy"
+                      />
+                    </button>
+                    
+                    {/* Delete button */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteScreenshot(screenshot)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                      title="Supprimer cette image"
+                      disabled={loading}
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Upload info */}
             {formData.screenshots && formData.screenshots.length > 0 && (
