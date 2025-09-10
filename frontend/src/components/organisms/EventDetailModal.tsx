@@ -460,12 +460,12 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
         {/* Footer - Fixed at bottom */}
         <div className="flex justify-between pt-4 border-t border-neutral-200 flex-shrink-0 bg-white">
-          {onEdit && activeTab !== 'comments' && activeTab !== 'history' && (
+          {onEdit && activeTab !== 'comments' && activeTab !== 'history' && activeTab !== 'screenshots' && (
             <Button variant="primary" onClick={() => onEdit(event)}>
               Modifier l'event
             </Button>
           )}
-          <div className={`flex space-x-3 ${!onEdit || activeTab === 'comments' || activeTab === 'history' ? 'w-full justify-end' : 'ml-auto'}`}>
+          <div className={`flex space-x-3 ${!onEdit || activeTab === 'comments' || activeTab === 'history' || activeTab === 'screenshots' ? 'w-full justify-end' : 'ml-auto'}`}>
             <Button variant="outline" onClick={onClose}>
               Fermer
             </Button>
