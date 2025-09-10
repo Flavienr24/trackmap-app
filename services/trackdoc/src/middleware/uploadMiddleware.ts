@@ -1,7 +1,7 @@
 import multer from 'multer';
 import path from 'path';
 import { Request } from 'express';
-import { logger } from '../config/logger';
+import logger from '../config/logger';
 
 /**
  * Multer middleware configuration for handling file uploads
@@ -110,30 +110,12 @@ export const uploadMultipleImages = upload.array('images', maxFiles);
 
 /**
  * Image validation utility function
- * Can be used for additional validation after multer
+ * Lightweight validation for files already processed by multer
+ * Only checks business logic constraints that multer doesn't handle
  */
 export const validateImageFile = (file: Express.Multer.File): { isValid: boolean; error?: string } => {
-  // Check if file exists
-  if (!file) {
-    return { isValid: false, error: 'No file provided' };
-  }
-
-  // Check file size
-  if (file.size > maxFileSize) {
-    return { 
-      isValid: false, 
-      error: `File too large. Maximum size: ${maxFileSize / 1024 / 1024}MB` 
-    };
-  }
-
-  // Check MIME type
-  if (!allowedMimeTypes.includes(file.mimetype)) {
-    return { 
-      isValid: false, 
-      error: `Invalid file type. Allowed: ${allowedMimeTypes.join(', ')}` 
-    };
-  }
-
+  // Multer already validated file existence, size, and type
+  // This function can be extended for additional business logic validation if needed
   return { isValid: true };
 };
 

@@ -13,6 +13,7 @@ import {
   deleteEventScreenshot
 } from '../controllers/eventsController';
 import { uploadMultipleImages } from '../middleware/uploadMiddleware';
+import { uploadRateLimit, deleteRateLimit } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -38,9 +39,9 @@ router.post('/:id/comments', addEventComment);
 router.get('/:id/history', getEventHistory);
 
 // POST /api/events/:id/screenshots - Upload screenshots for an event
-router.post('/:id/screenshots', uploadMultipleImages, uploadEventScreenshots);
+router.post('/:id/screenshots', uploadRateLimit, uploadMultipleImages, uploadEventScreenshots);
 
 // DELETE /api/events/:id/screenshots/:publicId - Delete a specific screenshot
-router.delete('/:id/screenshots/:publicId', deleteEventScreenshot);
+router.delete('/:id/screenshots/:publicId', deleteRateLimit, deleteEventScreenshot);
 
 export default router;

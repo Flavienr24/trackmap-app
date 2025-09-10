@@ -1,6 +1,8 @@
 // Events controller - handles all event-related HTTP requests
 // Events represent GA4 tracking events on pages
 import { Request, Response, NextFunction } from 'express';
+import fs from 'fs';
+import { promisify } from 'util';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
 import { db } from '../config/database';
@@ -9,8 +11,32 @@ import { cloudinaryService } from '../services/cloudinaryService';
 import { validateImageFiles } from '../middleware/uploadMiddleware';
 import { Screenshot, UploadScreenshotResponse } from '../models/types';
 
+// Promisify fs.unlink for async/await usage
+const unlinkAsync = promisify(fs.unlink);
+
 // Use centralized database instance
 const prisma = db;
+
+/**
+ * Helper function to clean up temporary files
+ */
+const cleanupTempFiles = async (files: Express.Multer.File[]): Promise<void> => {
+  if (!files || files.length === 0) return;
+  
+  const cleanupPromises = files.map(async (file) => {
+    try {
+      await unlinkAsync(file.path);
+      logger.debug('Cleaned up temporary file', { path: file.path });
+    } catch (error) {
+      logger.warn('Failed to cleanup temporary file', { 
+        path: file.path, 
+        error: error instanceof Error ? error.message : error 
+      });
+    }
+  });
+  
+  await Promise.allSettled(cleanupPromises);
+};
 
 // Valid event status values
 const VALID_STATUS = ['TO_IMPLEMENT', 'TO_TEST', 'ERROR', 'VALIDATED'];
@@ -809,9 +835,10 @@ export const getEventHistory = async (req: Request, res: Response, next: NextFun
  * POST /api/events/:id/screenshots
  */
 export const uploadEventScreenshots = async (req: Request, res: Response, next: NextFunction) => {
+  const { id: eventId } = req.params;
+  const files = req.files as Express.Multer.File[];
+  
   try {
-    const { id: eventId } = req.params;
-    const files = req.files as Express.Multer.File[];
     
     logger.debug('Uploading screenshots for event', { 
       eventId, 
@@ -845,13 +872,19 @@ export const uploadEventScreenshots = async (req: Request, res: Response, next: 
     }
 
     // Upload files to Cloudinary
-    const uploadedImages = await cloudinaryService.uploadMultipleImages(
-      files.map(file => file.path),
-      { 
-        folder: `trackmap/screenshots/${eventId}`,
-        tags: ['event-screenshot', eventId]
-      }
-    );
+    let uploadedImages;
+    try {
+      uploadedImages = await cloudinaryService.uploadMultipleImages(
+        files.map(file => file.path),
+        { 
+          folder: `trackmap/screenshots/${eventId}`,
+          tags: ['event-screenshot', eventId]
+        }
+      );
+    } finally {
+      // Clean up temporary files regardless of upload success/failure
+      await cleanupTempFiles(files);
+    }
 
     // Transform to Screenshot interface
     const screenshots: Screenshot[] = uploadedImages.map(image => ({
@@ -870,28 +903,33 @@ export const uploadEventScreenshots = async (req: Request, res: Response, next: 
       safeJsonParse(event.screenshots, []) : [];
     const updatedScreenshots = [...existingScreenshots, ...screenshots];
 
-    // Update event with new screenshots
-    const updatedEvent = await prisma.event.update({
-      where: { id: eventId },
-      data: {
-        screenshots: JSON.stringify(updatedScreenshots)
-      },
-      include: {
-        page: true,
-        comments: true,
-        history: true
-      }
-    });
+    // Update event and create history entry in a transaction
+    const updatedEvent = await prisma.$transaction(async (tx) => {
+      // Update event with new screenshots
+      const event = await tx.event.update({
+        where: { id: eventId },
+        data: {
+          screenshots: JSON.stringify(updatedScreenshots)
+        },
+        include: {
+          page: true,
+          comments: true,
+          history: true
+        }
+      });
 
-    // Create history entry for screenshot upload
-    await prisma.eventHistory.create({
-      data: {
-        eventId,
-        field: 'screenshots',
-        oldValue: JSON.stringify(existingScreenshots),
-        newValue: JSON.stringify(updatedScreenshots),
-        author: 'system'
-      }
+      // Create history entry for screenshot upload
+      await tx.eventHistory.create({
+        data: {
+          eventId,
+          field: 'screenshots',
+          oldValue: JSON.stringify(existingScreenshots),
+          newValue: JSON.stringify(updatedScreenshots),
+          author: 'system'
+        }
+      });
+
+      return event;
     });
 
     logger.info('Screenshots uploaded successfully', { 
@@ -911,6 +949,11 @@ export const uploadEventScreenshots = async (req: Request, res: Response, next: 
       data: response
     });
   } catch (error) {
+    // Clean up temporary files if they still exist (in case upload failed before cleanup)
+    if (files) {
+      await cleanupTempFiles(files);
+    }
+    
     logger.error('Error uploading event screenshots', { 
       error: error instanceof Error ? error.message : error, 
       eventId: req.params.id, 
@@ -963,23 +1006,28 @@ export const deleteEventScreenshot = async (req: Request, res: Response, next: N
     // Remove from screenshots array
     const updatedScreenshots = existingScreenshots.filter(s => s.public_id !== publicId);
 
-    // Update event
-    const updatedEvent = await prisma.event.update({
-      where: { id: eventId },
-      data: {
-        screenshots: JSON.stringify(updatedScreenshots)
-      }
-    });
+    // Update event and create history entry in a transaction
+    const updatedEvent = await prisma.$transaction(async (tx) => {
+      // Update event
+      const event = await tx.event.update({
+        where: { id: eventId },
+        data: {
+          screenshots: JSON.stringify(updatedScreenshots)
+        }
+      });
 
-    // Create history entry for screenshot deletion
-    await prisma.eventHistory.create({
-      data: {
-        eventId,
-        field: 'screenshots',
-        oldValue: JSON.stringify(existingScreenshots),
-        newValue: JSON.stringify(updatedScreenshots),
-        author: 'system'
-      }
+      // Create history entry for screenshot deletion
+      await tx.eventHistory.create({
+        data: {
+          eventId,
+          field: 'screenshots',
+          oldValue: JSON.stringify(existingScreenshots),
+          newValue: JSON.stringify(updatedScreenshots),
+          author: 'system'
+        }
+      });
+
+      return event;
     });
 
     logger.info('Screenshot deleted successfully', { 
