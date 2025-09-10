@@ -10,6 +10,7 @@ import logger from './config/logger';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import dashboardRoutes from './routes/dashboard';
+import proxyRoutes from './routes/proxy';
 import { trackdocClient } from './services/trackdocClient';
 import { trackauditClient } from './services/trackauditClient';
 
@@ -68,12 +69,14 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// BFF API routes - optimized for frontend consumption
+// BFF API routes - optimized for frontend consumption  
 app.use(`${config.api.prefix}/dashboard`, dashboardRoutes);
+
+// Proxy routes - Forward all other /api requests to TrackDoc (must be after specific routes)
+app.use(`${config.api.prefix}`, proxyRoutes);
 
 // Future routes (commented for now)
 // app.use(`${config.api.prefix}/search`, searchRoutes);
-// app.use(`${config.api.prefix}/products`, productsRoutes);
 // app.use(`${config.api.prefix}/analytics`, analyticsRoutes);
 
 // Error handling middleware (must be last)

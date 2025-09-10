@@ -29,7 +29,7 @@ export const config = {
 
   // API settings
   api: {
-    prefix: '/api/bff',
+    prefix: '/api',
     requestLimit: process.env.REQUEST_LIMIT || '10mb',
     rateLimit: {
       windowMs: 15 * 60 * 1000, // 15 minutes
