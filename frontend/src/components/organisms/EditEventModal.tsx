@@ -339,7 +339,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
                 type="button"
                 onClick={handleAddScreenshotClick}
                 disabled={loading || uploading}
-                className="aspect-square border-2 border-dashed border-neutral-300 rounded-lg flex flex-col items-center justify-center text-neutral-500 hover:border-neutral-400 hover:text-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="aspect-square border-2 border-dashed border-neutral-300 rounded-lg flex flex-col items-center justify-center text-neutral-500 hover:border-neutral-400 hover:text-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 title="Ajouter des screenshots"
               >
                 {uploading ? (
