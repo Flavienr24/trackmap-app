@@ -283,57 +283,6 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
           </datalist>
         </FormField>
 
-        <FormField
-          label="Statut"
-          error={errors.status}
-        >
-          <div className="flex flex-wrap gap-2">
-            {eventStatuses.map(status => (
-              <label key={status.value} className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="status"
-                  value={status.value}
-                  checked={formData.status === status.value}
-                  onChange={(e) => handleInputChange('status', e.target.value as EventStatus)}
-                  className="sr-only"
-                  disabled={loading}
-                />
-                <div className={`px-3 py-2 rounded-md border transition-colors ${
-                  formData.status === status.value
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-neutral-300 hover:border-neutral-400'
-                }`}>
-                  <Badge status={status.value}>{status.label}</Badge>
-                </div>
-              </label>
-            ))}
-          </div>
-        </FormField>
-
-        <FormField
-          label="Date de test"
-          error={errors.test_date}
-          hint="Date optionnelle de test de l'événement (format: YYYY-MM-DD)"
-        >
-          <input
-            type="date"
-            value={formData.test_date || ''}
-            onChange={(e) => handleInputChange('test_date', e.target.value)}
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={loading}
-          />
-        </FormField>
-
-        <EventPropertiesInput
-          ref={propertiesInputRef}
-          productId={productId || ''}
-          value={formData.properties || {}}
-          onChange={handlePropertiesChange}
-          disabled={loading}
-          error={errors.properties}
-        />
-
         {/* Screenshots Section */}
         <FormField
           label="Screenshots"
@@ -450,6 +399,57 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
             )}
           </div>
         </FormField>
+
+        <FormField
+          label="Statut"
+          error={errors.status}
+        >
+          <div className="flex flex-wrap gap-2">
+            {eventStatuses.map(status => (
+              <label key={status.value} className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="status"
+                  value={status.value}
+                  checked={formData.status === status.value}
+                  onChange={(e) => handleInputChange('status', e.target.value as EventStatus)}
+                  className="sr-only"
+                  disabled={loading}
+                />
+                <div className={`px-3 py-2 rounded-md border transition-colors ${
+                  formData.status === status.value
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-neutral-300 hover:border-neutral-400'
+                }`}>
+                  <Badge status={status.value}>{status.label}</Badge>
+                </div>
+              </label>
+            ))}
+          </div>
+        </FormField>
+
+        <FormField
+          label="Date de test"
+          error={errors.test_date}
+          hint="Date optionnelle de test de l'événement (format: YYYY-MM-DD)"
+        >
+          <input
+            type="date"
+            value={formData.test_date || ''}
+            onChange={(e) => handleInputChange('test_date', e.target.value)}
+            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={loading}
+          />
+        </FormField>
+
+        <EventPropertiesInput
+          ref={propertiesInputRef}
+          productId={productId || ''}
+          value={formData.properties || {}}
+          onChange={handlePropertiesChange}
+          disabled={loading}
+          error={errors.properties}
+        />
       </form>
     </Modal>
   )
