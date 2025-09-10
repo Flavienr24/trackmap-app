@@ -182,7 +182,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
           <p>Aucun commentaire pour le moment.</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div>
           {comments.map((comment) => (
             <div key={comment.id} className="bg-white rounded-lg p-4">
               <div className="flex items-start justify-between mb-2">

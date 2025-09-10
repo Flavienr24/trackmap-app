@@ -114,10 +114,10 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
       size="2xl"
       fixedHeight={true}
     >
-      <div className="space-y-6">
+      <div className="flex flex-col h-full">
 
         {/* Tabs */}
-        <div className="border-b border-neutral-200">
+        <div className="border-b border-neutral-200 flex-shrink-0">
           <nav className="flex space-x-8">
             {tabs.map((tab) => (
               <button
@@ -141,7 +141,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
         </div>
 
         {/* Tab Content */}
-        <div className="h-full">
+        <div className="flex-1 overflow-y-auto py-6">
           {activeTab === 'details' && (
             <div className="space-y-6">
               {/* Basic Info */}
@@ -240,27 +240,25 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
           )}
 
           {activeTab === 'comments' && (
-            <div className="h-full overflow-y-auto">
-              <CommentsSection 
-                eventId={event.id} 
-                onCommentsCountChange={setCommentsCount}
-              />
-            </div>
+            <CommentsSection 
+              eventId={event.id} 
+              onCommentsCountChange={setCommentsCount}
+            />
           )}
 
           {activeTab === 'history' && (
-            <EventHistorySection eventId={event.id} />
+            <EventHistorySection eventId={event.id} event={event} />
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-between pt-4 border-t border-neutral-200">
-          {onEdit && activeTab !== 'comments' && (
+        {/* Footer - Fixed at bottom */}
+        <div className="flex justify-between pt-4 border-t border-neutral-200 flex-shrink-0 bg-white">
+          {onEdit && activeTab !== 'comments' && activeTab !== 'history' && (
             <Button variant="primary" onClick={() => onEdit(event)}>
               Modifier l'event
             </Button>
           )}
-          <div className={`flex space-x-3 ${!onEdit || activeTab === 'comments' ? 'w-full justify-end' : 'ml-auto'}`}>
+          <div className={`flex space-x-3 ${!onEdit || activeTab === 'comments' || activeTab === 'history' ? 'w-full justify-end' : 'ml-auto'}`}>
             <Button variant="outline" onClick={onClose}>
               Fermer
             </Button>
