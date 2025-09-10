@@ -1,11 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { Modal } from '@/components/organisms/Modal'
 import { Button } from '@/components/atoms/Button'
 import { Badge } from '@/components/atoms/Badge'
 import { CommentsSection } from '@/components/organisms/CommentsSection'
 import { EventHistorySection } from '@/components/organisms/EventHistorySection'
 import { parseProperties, getStatusLabel } from '@/utils/properties'
-import type { Event, EventStatus } from '@/types'
+import type { Event, Screenshot } from '@/types'
 
 // Copy icon component
 const CopyIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
@@ -30,7 +30,7 @@ interface EventDetailModalProps {
   event: Event | null
   onClose: () => void
   onEdit?: (event: Event) => void
-  productId?: string
+  onEventUpdate?: (updatedEvent: Event) => void
 }
 
 type TabType = 'details' | 'comments' | 'history'
@@ -45,11 +45,15 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
   event,
   onClose,
   onEdit,
-  productId,
+  onEventUpdate,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('details')
   const [showCopiedTooltip, setShowCopiedTooltip] = useState(false)
   const [commentsCount, setCommentsCount] = useState<number>(0)
+  const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [currentEvent, setCurrentEvent] = useState<Event | null>(event)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Copy properties to clipboard function
   const copyPropertiesToClipboard = async () => {
@@ -86,7 +90,92 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
     }
   }
 
-  if (!event) return null
+  // Handle file upload
+  const handleFileUpload = async (files: FileList) => {
+    if (!currentEvent || files.length === 0) return
+
+    setUploading(true)
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        
+        const response = await fetch(`/api/events/${currentEvent.id}/screenshots`, {
+          method: 'POST',
+          body: formData
+        })
+        
+        if (!response.ok) {
+          throw new Error('Upload failed')
+        }
+        
+        const result = await response.json()
+        return result.data.screenshot
+      })
+
+      const newScreenshots = await Promise.all(uploadPromises)
+      
+      const updatedEvent = {
+        ...currentEvent,
+        screenshots: [...(currentEvent.screenshots || []), ...newScreenshots]
+      }
+      
+      setCurrentEvent(updatedEvent)
+      if (onEventUpdate) {
+        onEventUpdate(updatedEvent)
+      }
+    } catch (error) {
+      console.error('Error uploading screenshots:', error)
+      alert('Erreur lors de l\'upload des images')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  // Handle screenshot deletion
+  const handleDeleteScreenshot = async (screenshotToDelete: Screenshot) => {
+    if (!currentEvent) return
+
+    try {
+      const response = await fetch(`/api/events/${currentEvent.id}/screenshots/${screenshotToDelete.public_id}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Delete failed')
+      }
+
+      const updatedEvent = {
+        ...currentEvent,
+        screenshots: currentEvent.screenshots?.filter(s => s.public_id !== screenshotToDelete.public_id) || []
+      }
+
+      setCurrentEvent(updatedEvent)
+      if (onEventUpdate) {
+        onEventUpdate(updatedEvent)
+      }
+
+      // Close preview if deleted screenshot was selected
+      if (selectedScreenshot?.public_id === screenshotToDelete.public_id) {
+        setSelectedScreenshot(null)
+      }
+    } catch (error) {
+      console.error('Error deleting screenshot:', error)
+      alert('Erreur lors de la suppression de l\'image')
+    }
+  }
+
+  // Handle add screenshot button click
+  const handleAddScreenshotClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  // Update currentEvent when event prop changes
+  React.useEffect(() => {
+    setCurrentEvent(event)
+  }, [event])
+
+  if (!event || !currentEvent) return null
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -236,6 +325,118 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                   )
                 })()}
               </div>
+
+              {/* Screenshots Section */}
+              <div>
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+                  className="hidden"
+                  disabled={uploading}
+                />
+
+                <h3 className="text-sm font-medium text-neutral-600 mb-3">
+                  Screenshots ({currentEvent.screenshots?.length || 0})
+                </h3>
+                
+                {/* Selected screenshot preview */}
+                {selectedScreenshot && (
+                  <div className="bg-white border border-neutral-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-medium text-neutral-600">Aperçu</h4>
+                      <button
+                        onClick={() => setSelectedScreenshot(null)}
+                        className="text-neutral-400 hover:text-neutral-600 transition-colors"
+                        title="Fermer l'aperçu"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="bg-neutral-50 rounded-lg p-4 flex justify-center">
+                      <img
+                        src={selectedScreenshot.secure_url}
+                        alt="Screenshot preview"
+                        className="max-w-full max-h-64 object-contain rounded border border-neutral-200"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div className="mt-3 text-xs text-neutral-500 space-y-1">
+                      <div>Format: {selectedScreenshot.format.toUpperCase()}</div>
+                      <div>Dimensions: {selectedScreenshot.width} × {selectedScreenshot.height} px</div>
+                      <div>Taille: {Math.round(selectedScreenshot.bytes / 1024)} KB</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Thumbnails grid with add button */}
+                <div className="grid grid-cols-4 gap-3">
+                  {/* Add screenshot placeholder */}
+                  <button
+                    onClick={handleAddScreenshotClick}
+                    disabled={uploading}
+                    className="aspect-square border-2 border-dashed border-neutral-300 rounded-lg flex flex-col items-center justify-center text-neutral-500 hover:border-neutral-400 hover:text-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    title="Ajouter des screenshots"
+                  >
+                    {uploading ? (
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-neutral-500"></div>
+                    ) : (
+                      <>
+                        <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span className="text-xs">Ajouter</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Existing screenshots */}
+                  {currentEvent.screenshots?.map((screenshot, index) => (
+                    <div key={screenshot.public_id} className="relative group">
+                      <button
+                        onClick={() => setSelectedScreenshot(screenshot)}
+                        className={`aspect-square rounded-lg overflow-hidden border-2 transition-all hover:border-blue-500 w-full ${
+                          selectedScreenshot?.public_id === screenshot.public_id
+                            ? 'border-blue-500 shadow-md'
+                            : 'border-neutral-200'
+                        }`}
+                        title={`Voir le screenshot ${index + 1}`}
+                      >
+                        <img
+                          src={screenshot.thumbnail_url || screenshot.secure_url}
+                          alt={`Screenshot ${index + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          loading="lazy"
+                        />
+                        {/* Overlay with preview icon */}
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
+                          <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </div>
+                      </button>
+                      
+                      {/* Delete button */}
+                      <button
+                        onClick={() => handleDeleteScreenshot(screenshot)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                        title="Supprimer cette image"
+                        disabled={uploading}
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
@@ -249,6 +450,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
           {activeTab === 'history' && (
             <EventHistorySection eventId={event.id} event={event} />
           )}
+
         </div>
 
         {/* Footer - Fixed at bottom */}

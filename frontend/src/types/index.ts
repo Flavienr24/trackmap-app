@@ -45,6 +45,20 @@ export interface Page {
 }
 
 /**
+ * Screenshot Model
+ */
+export interface Screenshot {
+  public_id: string
+  secure_url: string
+  width: number
+  height: number
+  format: string
+  bytes: number
+  created_at: string
+  thumbnail_url?: string
+}
+
+/**
  * Event Model
  */
 export interface Event {
@@ -54,6 +68,7 @@ export interface Event {
   status: EventStatus
   test_date?: string
   properties: Record<string, any>
+  screenshots?: Screenshot[]
   created_at: string
   updated_at: string
   // Relations
