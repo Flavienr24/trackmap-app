@@ -33,7 +33,7 @@ interface EventDetailModalProps {
   onEventUpdate?: (updatedEvent: Event) => void
 }
 
-type TabType = 'details' | 'comments' | 'history' | 'screenshots'
+type TabType = 'details' | 'comments' | 'history'
 
 
 /**
@@ -193,7 +193,6 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
     { id: 'details', label: 'Détails' },
     { id: 'comments', label: 'Commentaires', count: commentsCount },
     { id: 'history', label: 'Historique' },
-    { id: 'screenshots', label: 'Screenshots' },
   ]
 
   return (
@@ -326,40 +325,29 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                   )
                 })()}
               </div>
-            </div>
-          )}
 
-          {activeTab === 'comments' && (
-            <CommentsSection 
-              eventId={event.id} 
-              onCommentsCountChange={setCommentsCount}
-            />
-          )}
+              {/* Screenshots Section */}
+              <div>
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+                  className="hidden"
+                  disabled={uploading}
+                />
 
-          {activeTab === 'history' && (
-            <EventHistorySection eventId={event.id} event={event} />
-          )}
-
-          {activeTab === 'screenshots' && (
-            <div className="space-y-6">
-              {/* Hidden file input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
-                className="hidden"
-                disabled={uploading}
-              />
-
-              {/* Screenshots display */}
-              <div className="grid grid-cols-1 gap-6">
+                <h3 className="text-sm font-medium text-neutral-600 mb-3">
+                  Screenshots ({currentEvent.screenshots?.length || 0})
+                </h3>
+                
                 {/* Selected screenshot preview */}
                 {selectedScreenshot && (
-                  <div className="bg-white border border-neutral-200 rounded-lg p-4">
+                  <div className="bg-white border border-neutral-200 rounded-lg p-4 mb-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-medium text-neutral-600">Aperçu</h3>
+                      <h4 className="text-sm font-medium text-neutral-600">Aperçu</h4>
                       <button
                         onClick={() => setSelectedScreenshot(null)}
                         className="text-neutral-400 hover:text-neutral-600 transition-colors"
@@ -374,7 +362,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                       <img
                         src={selectedScreenshot.secure_url}
                         alt="Screenshot preview"
-                        className="max-w-full max-h-96 object-contain rounded border border-neutral-200"
+                        className="max-w-full max-h-64 object-contain rounded border border-neutral-200"
                         loading="lazy"
                       />
                     </div>
@@ -387,85 +375,92 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                 )}
 
                 {/* Thumbnails grid with add button */}
-                <div>
-                  <h3 className="text-sm font-medium text-neutral-600 mb-3">
-                    Screenshots ({currentEvent.screenshots?.length || 0})
-                  </h3>
-                  <div className="grid grid-cols-4 gap-3">
-                    {/* Add screenshot placeholder */}
-                    <button
-                      onClick={handleAddScreenshotClick}
-                      disabled={uploading}
-                      className="aspect-square border-2 border-dashed border-neutral-300 rounded-lg flex flex-col items-center justify-center text-neutral-500 hover:border-neutral-400 hover:text-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                      title="Ajouter des screenshots"
-                    >
-                      {uploading ? (
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-neutral-500"></div>
-                      ) : (
-                        <>
-                          <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
-                          <span className="text-xs">Ajouter</span>
-                        </>
-                      )}
-                    </button>
+                <div className="grid grid-cols-4 gap-3">
+                  {/* Add screenshot placeholder */}
+                  <button
+                    onClick={handleAddScreenshotClick}
+                    disabled={uploading}
+                    className="aspect-square border-2 border-dashed border-neutral-300 rounded-lg flex flex-col items-center justify-center text-neutral-500 hover:border-neutral-400 hover:text-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    title="Ajouter des screenshots"
+                  >
+                    {uploading ? (
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-neutral-500"></div>
+                    ) : (
+                      <>
+                        <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span className="text-xs">Ajouter</span>
+                      </>
+                    )}
+                  </button>
 
-                    {/* Existing screenshots */}
-                    {currentEvent.screenshots?.map((screenshot, index) => (
-                      <div key={screenshot.public_id} className="relative group">
-                        <button
-                          onClick={() => setSelectedScreenshot(screenshot)}
-                          className={`aspect-square rounded-lg overflow-hidden border-2 transition-all hover:border-blue-500 w-full ${
-                            selectedScreenshot?.public_id === screenshot.public_id
-                              ? 'border-blue-500 shadow-md'
-                              : 'border-neutral-200'
-                          }`}
-                          title={`Voir le screenshot ${index + 1}`}
-                        >
-                          <img
-                            src={screenshot.thumbnail_url || screenshot.secure_url}
-                            alt={`Screenshot ${index + 1}`}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                            loading="lazy"
-                          />
-                          {/* Overlay with preview icon */}
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
-                            <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </div>
-                        </button>
-                        
-                        {/* Delete button */}
-                        <button
-                          onClick={() => handleDeleteScreenshot(screenshot)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                          title="Supprimer cette image"
-                          disabled={uploading}
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  {/* Existing screenshots */}
+                  {currentEvent.screenshots?.map((screenshot, index) => (
+                    <div key={screenshot.public_id} className="relative group">
+                      <button
+                        onClick={() => setSelectedScreenshot(screenshot)}
+                        className={`aspect-square rounded-lg overflow-hidden border-2 transition-all hover:border-blue-500 w-full ${
+                          selectedScreenshot?.public_id === screenshot.public_id
+                            ? 'border-blue-500 shadow-md'
+                            : 'border-neutral-200'
+                        }`}
+                        title={`Voir le screenshot ${index + 1}`}
+                      >
+                        <img
+                          src={screenshot.thumbnail_url || screenshot.secure_url}
+                          alt={`Screenshot ${index + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          loading="lazy"
+                        />
+                        {/* Overlay with preview icon */}
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
+                          <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                        </div>
+                      </button>
+                      
+                      {/* Delete button */}
+                      <button
+                        onClick={() => handleDeleteScreenshot(screenshot)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                        title="Supprimer cette image"
+                        disabled={uploading}
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           )}
+
+          {activeTab === 'comments' && (
+            <CommentsSection 
+              eventId={event.id} 
+              onCommentsCountChange={setCommentsCount}
+            />
+          )}
+
+          {activeTab === 'history' && (
+            <EventHistorySection eventId={event.id} event={event} />
+          )}
+
         </div>
 
         {/* Footer - Fixed at bottom */}
         <div className="flex justify-between pt-4 border-t border-neutral-200 flex-shrink-0 bg-white">
-          {onEdit && activeTab !== 'comments' && activeTab !== 'history' && activeTab !== 'screenshots' && (
+          {onEdit && activeTab !== 'comments' && activeTab !== 'history' && (
             <Button variant="primary" onClick={() => onEdit(event)}>
               Modifier l'event
             </Button>
           )}
-          <div className={`flex space-x-3 ${!onEdit || activeTab === 'comments' || activeTab === 'history' || activeTab === 'screenshots' ? 'w-full justify-end' : 'ml-auto'}`}>
+          <div className={`flex space-x-3 ${!onEdit || activeTab === 'comments' || activeTab === 'history' ? 'w-full justify-end' : 'ml-auto'}`}>
             <Button variant="outline" onClick={onClose}>
               Fermer
             </Button>
