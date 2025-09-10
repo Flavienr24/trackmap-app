@@ -5,6 +5,9 @@ import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
 import { db } from '../config/database';
 import { safeJsonParse } from '../utils/helpers';
+import { cloudinaryService } from '../services/cloudinaryService';
+import { validateImageFiles } from '../middleware/uploadMiddleware';
+import { Screenshot, UploadScreenshotResponse } from '../models/types';
 
 // Use centralized database instance
 const prisma = db;
@@ -254,10 +257,11 @@ export const getEventsByPage = async (req: Request, res: Response, next: NextFun
       }
     });
 
-    // Parse properties JSON for each event (temporary: read from variables column)
+    // Parse properties and screenshots JSON for each event
     const eventsWithParsedProperties = events.map((event: any) => ({
       ...event,
-      properties: safeJsonParse(event.properties, {})
+      properties: safeJsonParse(event.properties, {}),
+      screenshots: safeJsonParse(event.screenshots, [])
     }));
 
     logger.info('Events fetched successfully', { 
@@ -344,10 +348,11 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
       }
     });
 
-    // Parse variables for response
+    // Parse properties and screenshots for response
     const eventResponse = {
       ...event,
-      properties: safeJsonParse(event.properties, {})
+      properties: safeJsonParse(event.properties, {}),
+      screenshots: safeJsonParse(event.screenshots, [])
     };
 
     logger.info('Event created successfully', { 
@@ -400,10 +405,11 @@ export const getEventById = async (req: Request, res: Response, next: NextFuncti
       return next(error);
     }
 
-    // Parse properties if stored as JSON string
+    // Parse properties and screenshots if stored as JSON string
     const eventData = {
       ...event,
-      properties: safeJsonParse(event.properties, {})
+      properties: safeJsonParse(event.properties, {}),
+      screenshots: safeJsonParse(event.screenshots, [])
     };
 
     logger.info('Event fetched successfully', { 
@@ -503,10 +509,11 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
       }
     });
 
-    // Parse variables for response
+    // Parse properties and screenshots for response
     const eventResponse = {
       ...event,
-      properties: safeJsonParse(event.properties, {})
+      properties: safeJsonParse(event.properties, {}),
+      screenshots: safeJsonParse(event.screenshots, [])
     };
 
     logger.info('Event updated successfully', { 
@@ -793,6 +800,209 @@ export const getEventHistory = async (req: Request, res: Response, next: NextFun
     });
   } catch (error) {
     logger.error('Error fetching event history', { error, eventId: req.params.id, requestId: req.ip });
+    next(error);
+  }
+};
+
+/**
+ * Upload screenshots for a specific event
+ * POST /api/events/:id/screenshots
+ */
+export const uploadEventScreenshots = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id: eventId } = req.params;
+    const files = req.files as Express.Multer.File[];
+    
+    logger.debug('Uploading screenshots for event', { 
+      eventId, 
+      filesCount: files?.length || 0,
+      requestId: req.ip 
+    });
+
+    // Verify event exists
+    const event = await prisma.event.findUnique({
+      where: { id: eventId }
+    });
+
+    if (!event) {
+      const error: AppError = new Error('Event not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // Validate files
+    if (!files || files.length === 0) {
+      const error: AppError = new Error('No files provided for upload');
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    const validation = validateImageFiles(files);
+    if (!validation.isValid) {
+      const error: AppError = new Error(`File validation failed: ${validation.errors.join(', ')}`);
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    // Upload files to Cloudinary
+    const uploadedImages = await cloudinaryService.uploadMultipleImages(
+      files.map(file => file.path),
+      { 
+        folder: `trackmap/screenshots/${eventId}`,
+        tags: ['event-screenshot', eventId]
+      }
+    );
+
+    // Transform to Screenshot interface
+    const screenshots: Screenshot[] = uploadedImages.map(image => ({
+      public_id: image.public_id,
+      secure_url: image.secure_url,
+      width: image.width,
+      height: image.height,
+      format: image.format,
+      bytes: image.bytes,
+      created_at: image.created_at,
+      thumbnail_url: cloudinaryService.getThumbnailUrl(image.public_id)
+    }));
+
+    // Parse existing screenshots and add new ones
+    const existingScreenshots: Screenshot[] = event.screenshots ? 
+      safeJsonParse(event.screenshots, []) : [];
+    const updatedScreenshots = [...existingScreenshots, ...screenshots];
+
+    // Update event with new screenshots
+    const updatedEvent = await prisma.event.update({
+      where: { id: eventId },
+      data: {
+        screenshots: JSON.stringify(updatedScreenshots)
+      },
+      include: {
+        page: true,
+        comments: true,
+        history: true
+      }
+    });
+
+    // Create history entry for screenshot upload
+    await prisma.eventHistory.create({
+      data: {
+        eventId,
+        field: 'screenshots',
+        oldValue: JSON.stringify(existingScreenshots),
+        newValue: JSON.stringify(updatedScreenshots),
+        author: 'system'
+      }
+    });
+
+    logger.info('Screenshots uploaded successfully', { 
+      eventId,
+      uploadedCount: screenshots.length,
+      totalScreenshots: updatedScreenshots.length,
+      requestId: req.ip 
+    });
+
+    const response: UploadScreenshotResponse = {
+      screenshots,
+      message: `${screenshots.length} screenshot(s) uploaded successfully`
+    };
+
+    res.status(201).json({
+      success: true,
+      data: response
+    });
+  } catch (error) {
+    logger.error('Error uploading event screenshots', { 
+      error: error instanceof Error ? error.message : error, 
+      eventId: req.params.id, 
+      requestId: req.ip 
+    });
+    next(error);
+  }
+};
+
+/**
+ * Delete a specific screenshot from an event
+ * DELETE /api/events/:id/screenshots/:publicId
+ */
+export const deleteEventScreenshot = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id: eventId, publicId } = req.params;
+    
+    logger.debug('Deleting screenshot from event', { 
+      eventId, 
+      publicId,
+      requestId: req.ip 
+    });
+
+    // Verify event exists
+    const event = await prisma.event.findUnique({
+      where: { id: eventId }
+    });
+
+    if (!event) {
+      const error: AppError = new Error('Event not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // Parse existing screenshots
+    const existingScreenshots: Screenshot[] = event.screenshots ? 
+      safeJsonParse(event.screenshots, []) : [];
+    
+    // Find screenshot to delete
+    const screenshotIndex = existingScreenshots.findIndex(s => s.public_id === publicId);
+    if (screenshotIndex === -1) {
+      const error: AppError = new Error('Screenshot not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // Delete from Cloudinary
+    await cloudinaryService.deleteImage(publicId);
+
+    // Remove from screenshots array
+    const updatedScreenshots = existingScreenshots.filter(s => s.public_id !== publicId);
+
+    // Update event
+    const updatedEvent = await prisma.event.update({
+      where: { id: eventId },
+      data: {
+        screenshots: JSON.stringify(updatedScreenshots)
+      }
+    });
+
+    // Create history entry for screenshot deletion
+    await prisma.eventHistory.create({
+      data: {
+        eventId,
+        field: 'screenshots',
+        oldValue: JSON.stringify(existingScreenshots),
+        newValue: JSON.stringify(updatedScreenshots),
+        author: 'system'
+      }
+    });
+
+    logger.info('Screenshot deleted successfully', { 
+      eventId,
+      publicId,
+      remainingScreenshots: updatedScreenshots.length,
+      requestId: req.ip 
+    });
+
+    res.json({
+      success: true,
+      message: 'Screenshot deleted successfully',
+      data: {
+        remainingScreenshots: updatedScreenshots.length
+      }
+    });
+  } catch (error) {
+    logger.error('Error deleting event screenshot', { 
+      error: error instanceof Error ? error.message : error, 
+      eventId: req.params.id,
+      publicId: req.params.publicId,
+      requestId: req.ip 
+    });
     next(error);
   }
 };

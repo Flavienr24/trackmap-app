@@ -59,6 +59,7 @@ model Event {
   status    String @default("TO_IMPLEMENT") // Implementation status
   testDate  DateTime?   @map("test_date") // Date when event was tested
   properties String     // Event properties as JSON string
+  screenshots String?   // Screenshot file paths as JSON array - can be null, empty array, or contain multiple paths
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
 
