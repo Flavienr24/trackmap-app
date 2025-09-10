@@ -19,9 +19,13 @@ export const parseProperties = (properties: any): Record<string, any> => {
 
 /**
  * Get the count of properties in an event
+ * Includes the automatic 'event' property that is always displayed
  */
 export const getPropertyCount = (properties: any): number => {
-  return Object.keys(parseProperties(properties)).length
+  const parsedProperties = parseProperties(properties)
+  // Always count the 'event' property (automatically added in display)
+  // plus the actual properties, filtering out any existing 'event' property to avoid double counting
+  return 1 + Object.keys(parsedProperties).filter(key => key !== 'event').length
 }
 
 /**
