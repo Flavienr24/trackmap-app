@@ -7,6 +7,7 @@ import { EventPropertiesInput, type EventPropertiesInputRef } from '@/components
 import { DragDropZone, type FileWithProgress } from '@/components/molecules/DragDropZone'
 import { parseProperties } from '@/utils/properties'
 import { uploadMultipleFilesWithProgress } from '@/utils/uploadUtils'
+import { deleteScreenshot, generateThumbnailUrl, handleImageError } from '@/utils/screenshotUtils'
 import type { Event, UpdateEventRequest, EventStatus, Screenshot } from '@/types'
 
 interface EditEventModalProps {
@@ -122,17 +123,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     if (!event) return
 
     try {
-      // Extract the actual public_id from the full path (e.g., "trackmap/screenshots/eventId/actualId" -> "actualId")
-      const publicIdParts = screenshotToDelete.public_id.split('/')
-      const actualPublicId = publicIdParts[publicIdParts.length - 1]
-      
-      const response = await fetch(`/api/events/${event.id}/screenshots/${actualPublicId}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) {
-        throw new Error('Delete failed')
-      }
+      await deleteScreenshot(event.id, screenshotToDelete)
 
       setFormData(prev => ({
         ...prev,
@@ -145,7 +136,8 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
       }
     } catch (error) {
       console.error('Error deleting screenshot:', error)
-      alert('Erreur lors de la suppression de l\'image')
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la suppression de l\'image'
+      alert(errorMessage)
     }
   }
 
@@ -377,27 +369,11 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
                           </div>
                         ) : (
                           <img
-                            src={(() => {
-                              const extension = screenshot.secure_url.split('.').pop()
-                              return `https://res.cloudinary.com/dzsa7xwme/image/upload/w_300,h_200,c_fill/${screenshot.public_id}.${extension}`
-                            })()}
+                            src={generateThumbnailUrl(screenshot)}
                             alt={`Screenshot ${index + 1}`}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                             loading="lazy"
-                            onError={(e) => {
-                              console.log('Image failed to load in EditEventModal:', screenshot.thumbnail_url, 'fallback:', screenshot.secure_url)
-                              console.log('Full screenshot object:', screenshot)
-                              
-                              // Try secure_url as fallback
-                              if (e.currentTarget.src !== screenshot.secure_url) {
-                                e.currentTarget.src = screenshot.secure_url
-                              } else {
-                                // Both thumbnail and secure_url failed - image doesn't exist anymore
-                                console.warn('Screenshot appears to be deleted from Cloudinary:', screenshot.public_id)
-                                // Hide the broken image by setting a placeholder or removing it
-                                e.currentTarget.style.display = 'none'
-                              }
-                            }}
+                            onError={(e) => handleImageError(e, screenshot)}
                           />
                         )}
                       </button>

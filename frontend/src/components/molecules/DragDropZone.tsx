@@ -6,6 +6,7 @@ export interface FileWithProgress {
   status: 'uploading' | 'processing' | 'completed' | 'error'
   id: string
   error?: string
+  abortController?: AbortController
 }
 
 interface DragDropZoneProps {
@@ -19,6 +20,7 @@ interface DragDropZoneProps {
   children?: React.ReactNode
   multiple?: boolean
   showProgress?: boolean
+  allowCancellation?: boolean
 }
 
 const DragDropZone: React.FC<DragDropZoneProps> = ({
@@ -31,13 +33,38 @@ const DragDropZone: React.FC<DragDropZoneProps> = ({
   className = "",
   children,
   multiple = true,
-  showProgress = true
+  showProgress = true,
+  allowCancellation = false
 }) => {
   const [isDragOver, setIsDragOver] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [filesWithProgress, setFilesWithProgress] = useState<FileWithProgress[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dragCounterRef = useRef(0)
+
+  // Cancel upload function
+  const cancelUpload = (fileId: string) => {
+    const file = filesWithProgress.find(f => f.id === fileId)
+    if (file?.abortController) {
+      file.abortController.abort()
+      setFilesWithProgress(prev => prev.map(item => 
+        item.id === fileId ? { ...item, status: 'error' as const, error: 'Cancelled by user' } : item
+      ))
+    }
+  }
+
+  // Cancel all uploads
+  const cancelAllUploads = () => {
+    filesWithProgress.forEach(file => {
+      if (file.abortController && file.status === 'uploading') {
+        file.abortController.abort()
+      }
+    })
+    setFilesWithProgress(prev => prev.map(item => 
+      item.status === 'uploading' ? { ...item, status: 'error' as const, error: 'Cancelled by user' } : item
+    ))
+    setIsUploading(false)
+  }
 
   // Validate files
   const validateFiles = (files: FileList): { validFiles: File[], errors: string[] } => {
@@ -106,12 +133,13 @@ const DragDropZone: React.FC<DragDropZoneProps> = ({
     if (onUpload && showProgress) {
       setIsUploading(true)
       
-      // Initialize files with progress
+      // Initialize files with progress and abort controllers
       const initialFiles: FileWithProgress[] = validFiles.map((file, index) => ({
         file,
         progress: 0,
         status: 'uploading' as const,
-        id: `${Date.now()}-${index}`
+        id: `${Date.now()}-${index}`,
+        abortController: new AbortController()
       }))
       
       setFilesWithProgress(initialFiles)
@@ -127,11 +155,12 @@ const DragDropZone: React.FC<DragDropZoneProps> = ({
         await onUpload(initialFiles, setProgress)
       } catch (error) {
         console.error('Upload failed:', error)
-        // Mark all as error
+        const errorMessage = error instanceof Error ? error.message : 'Upload failed'
+        // Update specific files with error messages
         setFilesWithProgress(prev => prev.map(item => ({
           ...item,
           status: 'error' as const,
-          error: 'Upload failed'
+          error: errorMessage
         })))
       } finally {
         setIsUploading(false)
@@ -209,12 +238,25 @@ const DragDropZone: React.FC<DragDropZoneProps> = ({
     return (
       <div className="bg-white border border-neutral-200 rounded-lg p-3 mb-2">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-neutral-700 truncate">
+          <span className="text-sm font-medium text-neutral-700 truncate flex-1">
             {file.name}
           </span>
-          <span className="text-xs text-neutral-500">
-            {getStatusText()}
-          </span>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-neutral-500">
+              {getStatusText()}
+            </span>
+            {allowCancellation && status === 'uploading' && (
+              <button
+                onClick={() => cancelUpload(fileWithProgress.id)}
+                className="text-red-500 hover:text-red-700 transition-colors"
+                title="Cancel upload"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
         <div className="w-full bg-neutral-200 rounded-full h-2">
           <div
@@ -274,6 +316,16 @@ const DragDropZone: React.FC<DragDropZoneProps> = ({
       {/* Progress bars */}
       {showProgress && filesWithProgress.length > 0 && (
         <div className="mt-4">
+          {allowCancellation && isUploading && (
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={cancelAllUploads}
+                className="text-sm text-red-500 hover:text-red-700 transition-colors"
+              >
+                Cancel all uploads
+              </button>
+            </div>
+          )}
           {filesWithProgress.map((fileWithProgress) => (
             <ProgressBar key={fileWithProgress.id} fileWithProgress={fileWithProgress} />
           ))}

@@ -435,7 +435,6 @@ const PageDetail: React.FC = () => {
         onClose={() => setSelectedEvent(null)}
         onEdit={handleEditEventFromDetail}
         onEventUpdate={handleEventUpdate}
-        productId={page.product_id}
       />
     </div>
   )
