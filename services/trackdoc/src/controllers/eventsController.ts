@@ -993,18 +993,29 @@ export const deleteEventScreenshot = async (req: Request, res: Response, next: N
       safeJsonParse(event.screenshots, []) : [];
     
     // Find screenshot to delete
-    const screenshotIndex = existingScreenshots.findIndex(s => s.public_id === publicId);
+    // Handle both full public_id path and short public_id
+    const screenshotIndex = existingScreenshots.findIndex(s => 
+      s.public_id === publicId || s.public_id.endsWith(publicId)
+    );
+    
     if (screenshotIndex === -1) {
+      logger.warn('Screenshot not found for deletion', { 
+        publicId, 
+        eventId,
+        availableScreenshots: existingScreenshots.map(s => s.public_id)
+      });
       const error: AppError = new Error('Screenshot not found');
       error.statusCode = 404;
       return next(error);
     }
+    
+    const screenshotToDelete = existingScreenshots[screenshotIndex];
 
-    // Delete from Cloudinary
-    await cloudinaryService.deleteImage(publicId);
+    // Delete from Cloudinary using the full public_id
+    await cloudinaryService.deleteImage(screenshotToDelete.public_id);
 
     // Remove from screenshots array
-    const updatedScreenshots = existingScreenshots.filter(s => s.public_id !== publicId);
+    const updatedScreenshots = existingScreenshots.filter(s => s.public_id !== screenshotToDelete.public_id);
 
     // Update event and create history entry in a transaction
     const updatedEvent = await prisma.$transaction(async (tx) => {

@@ -187,6 +187,25 @@ const PageDetail: React.FC = () => {
     setSelectedEvent(event)
   }
 
+  const handleEventUpdate = (updatedEvent: Event) => {
+    // Update events list
+    setEvents(prevEvents => 
+      prevEvents.map(event => 
+        event.id === updatedEvent.id ? updatedEvent : event
+      )
+    )
+    
+    // Update selected event if it's the same
+    if (selectedEvent?.id === updatedEvent.id) {
+      setSelectedEvent(updatedEvent)
+    }
+    
+    // Update edit event if it's the same
+    if (editEvent?.id === updatedEvent.id) {
+      setEditEvent(updatedEvent)
+    }
+  }
+
   const handleStatusChange = async (event: Event, newStatus: EventStatus) => {
     try {
       const response = await eventsApi.update(event.id, { status: newStatus })
@@ -415,6 +434,7 @@ const PageDetail: React.FC = () => {
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}
         onEdit={handleEditEventFromDetail}
+        onEventUpdate={handleEventUpdate}
         productId={page.product_id}
       />
     </div>

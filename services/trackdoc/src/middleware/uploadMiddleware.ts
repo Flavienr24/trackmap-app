@@ -8,17 +8,18 @@ import logger from '../config/logger';
  * Provides validation and temporary storage for image files before Cloudinary upload
  */
 
-// Allowed image file types
+// Allowed file types (images and PDF)
 const allowedMimeTypes = [
   'image/jpeg',
   'image/jpg', 
   'image/png',
   'image/gif',
-  'image/webp'
+  'image/webp',
+  'application/pdf'
 ];
 
 // Allowed file extensions
-const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
 
 // Maximum file size (5MB)
 const maxFileSize = 5 * 1024 * 1024;
@@ -109,20 +110,23 @@ export const uploadSingleImage = upload.single('image');
 export const uploadMultipleImages = upload.array('images', maxFiles);
 
 /**
- * Image validation utility function
+ * File validation utility function (images and PDF)
  * Lightweight validation for files already processed by multer
  * Only checks business logic constraints that multer doesn't handle
  */
-export const validateImageFile = (file: Express.Multer.File): { isValid: boolean; error?: string } => {
+export const validateFile = (file: Express.Multer.File): { isValid: boolean; error?: string } => {
   // Multer already validated file existence, size, and type
   // This function can be extended for additional business logic validation if needed
   return { isValid: true };
 };
 
+// Backward compatibility alias
+export const validateImageFile = validateFile;
+
 /**
- * Multiple images validation utility function
+ * Multiple files validation utility function (images and PDF)
  */
-export const validateImageFiles = (files: Express.Multer.File[]): { isValid: boolean; errors: string[] } => {
+export const validateFiles = (files: Express.Multer.File[]): { isValid: boolean; errors: string[] } => {
   if (!files || files.length === 0) {
     return { isValid: false, errors: ['No files provided'] };
   }
@@ -137,7 +141,7 @@ export const validateImageFiles = (files: Express.Multer.File[]): { isValid: boo
   const errors: string[] = [];
   
   files.forEach((file, index) => {
-    const validation = validateImageFile(file);
+    const validation = validateFile(file);
     if (!validation.isValid) {
       errors.push(`File ${index + 1} (${file.originalname}): ${validation.error}`);
     }
@@ -148,6 +152,9 @@ export const validateImageFiles = (files: Express.Multer.File[]): { isValid: boo
     errors
   };
 };
+
+// Backward compatibility alias
+export const validateImageFiles = validateFiles;
 
 // Export configuration constants for reference
 export const uploadConfig = {

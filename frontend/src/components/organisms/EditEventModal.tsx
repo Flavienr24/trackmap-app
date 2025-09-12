@@ -4,7 +4,9 @@ import { Button } from '@/components/atoms/Button'
 import { Badge } from '@/components/atoms/Badge'
 import { FormField } from '@/components/molecules/FormField'
 import { EventPropertiesInput, type EventPropertiesInputRef } from '@/components/organisms/EventPropertiesInput'
+import { DragDropZone, type FileWithProgress } from '@/components/molecules/DragDropZone'
 import { parseProperties } from '@/utils/properties'
+import { uploadMultipleFilesWithProgress } from '@/utils/uploadUtils'
 import type { Event, UpdateEventRequest, EventStatus, Screenshot } from '@/types'
 
 interface EditEventModalProps {
@@ -34,10 +36,8 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     screenshots: []
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [uploading, setUploading] = useState(false)
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null)
   const propertiesInputRef = useRef<EventPropertiesInputRef>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const eventStatuses: { value: EventStatus; label: string }[] = [
     { value: 'to_implement', label: 'À implémenter' },
@@ -81,49 +81,52 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     }
   }
 
-  // Handle file upload
-  const handleFileUpload = async (files: FileList) => {
-    if (!event || files.length === 0) return
+  // Handle files selection from drag drop
+  const handleFilesSelected = (_files: File[]) => {
+    // Files will be uploaded via the DragDropZone onUpload callback
+  }
 
-    setUploading(true)
+  // Handle upload with progress tracking
+  const handleUploadWithProgress = async (
+    filesWithProgress: FileWithProgress[], 
+    setProgress: (id: string, progress: number, status?: FileWithProgress['status']) => void
+  ): Promise<any[]> => {
+    if (!event) return []
+
     try {
-      const uploadPromises = Array.from(files).map(async (file) => {
-        const formData = new FormData()
-        formData.append('file', file)
-        
-        const response = await fetch(`/api/events/${event.id}/screenshots`, {
-          method: 'POST',
-          body: formData
-        })
-        
-        if (!response.ok) {
-          throw new Error('Upload failed')
-        }
-        
-        const result = await response.json()
-        return result.data.screenshot
-      })
-
-      const newScreenshots = await Promise.all(uploadPromises)
+      const results = await uploadMultipleFilesWithProgress(event.id, filesWithProgress, setProgress)
       
-      setFormData(prev => ({
-        ...prev,
-        screenshots: [...(prev.screenshots || []), ...newScreenshots]
-      }))
+      // Extract screenshots from successful results
+      const newScreenshots: Screenshot[] = results
+        .filter(result => result.success && result.data?.screenshots)
+        .flatMap(result => result.data.screenshots)
+      
+      // Update form data with new screenshots
+      if (newScreenshots.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          screenshots: [...(prev.screenshots || []), ...newScreenshots]
+        }))
+      }
+      
+      return results
     } catch (error) {
-      console.error('Error uploading screenshots:', error)
-      alert('Erreur lors de l\'upload des images')
-    } finally {
-      setUploading(false)
+      console.error('Error uploading files:', error)
+      throw error
     }
   }
+
 
   // Handle screenshot deletion
   const handleDeleteScreenshot = async (screenshotToDelete: Screenshot) => {
     if (!event) return
 
     try {
-      const response = await fetch(`/api/events/${event.id}/screenshots/${screenshotToDelete.public_id}`, {
+      // Extract the actual public_id from the full path (e.g., "trackmap/screenshots/eventId/actualId" -> "actualId")
+      const publicIdParts = screenshotToDelete.public_id.split('/')
+      const actualPublicId = publicIdParts[publicIdParts.length - 1]
+      
+      const response = await fetch(`/api/events/${event.id}/screenshots/${actualPublicId}`, {
         method: 'DELETE'
       })
 
@@ -146,10 +149,6 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     }
   }
 
-  // Handle add screenshot button click
-  const handleAddScreenshotClick = () => {
-    fileInputRef.current?.click()
-  }
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
@@ -286,19 +285,8 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
         {/* Screenshots Section */}
         <FormField
           label="Screenshots"
-          hint="Ajoutez des images pour documenter cet événement"
+          hint="Glissez-déposez vos images et PDF ou cliquez pour sélectionner"
         >
-          {/* Hidden file input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
-            className="hidden"
-            disabled={loading || uploading}
-          />
-
           <div className="space-y-4">
             {/* Selected screenshot preview */}
             {selectedScreenshot && (
@@ -332,71 +320,104 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
               </div>
             )}
 
-            {/* Upload zone - full width */}
-            <button
-              type="button"
-              onClick={handleAddScreenshotClick}
-              disabled={loading || uploading}
-              className="w-full h-24 border-2 border-dashed border-neutral-300 rounded-lg flex flex-col items-center justify-center text-neutral-500 hover:border-neutral-400 hover:text-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              title="Ajouter des screenshots"
+            {/* Drag & Drop Upload Zone */}
+            <DragDropZone
+              onFilesSelected={handleFilesSelected}
+              onUpload={handleUploadWithProgress}
+              accept="image/*,.pdf"
+              maxFiles={10}
+              maxSize={5 * 1024 * 1024}
+              disabled={loading}
+              className="p-8"
+              multiple={true}
+              showProgress={true}
             >
-              {uploading ? (
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-neutral-500"></div>
-              ) : (
-                <>
-                  <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  <span className="text-xs">Cliquez pour ajouter des screenshots</span>
-                </>
-              )}
-            </button>
+              <div className="flex flex-col items-center justify-center text-center">
+                <svg className="w-12 h-12 text-neutral-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <div className="text-lg font-medium text-neutral-700 mb-2">
+                  Glissez vos fichiers ici
+                </div>
+                <div className="text-sm text-neutral-500 mb-4">
+                  ou cliquez pour parcourir
+                </div>
+                <div className="text-xs text-neutral-400">
+                  Images (JPEG, PNG, GIF, WebP) et PDF acceptés • Max 5MB • 10 fichiers max
+                </div>
+              </div>
+            </DragDropZone>
 
             {/* Existing screenshots grid */}
             {formData.screenshots && formData.screenshots.length > 0 && (
-              <div className="grid grid-cols-4 gap-3">
-                {formData.screenshots.map((screenshot, index) => (
-                  <div key={screenshot.public_id} className="relative group">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedScreenshot(screenshot)}
-                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all hover:border-blue-500 w-full ${
-                        selectedScreenshot?.public_id === screenshot.public_id
-                          ? 'border-blue-500 shadow-md'
-                          : 'border-neutral-200'
-                      }`}
-                      title={`Voir le screenshot ${index + 1}`}
-                    >
-                      <img
-                        src={screenshot.thumbnail_url || screenshot.secure_url}
-                        alt={`Screenshot ${index + 1}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        loading="lazy"
-                      />
-                    </button>
-                    
-                    {/* Delete button */}
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteScreenshot(screenshot)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                      title="Supprimer cette image"
-                      disabled={loading}
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
+              <div>
+                <h4 className="text-sm font-medium text-neutral-600 mb-3">
+                  Fichiers ajoutés ({formData.screenshots.length})
+                </h4>
+                <div className="grid grid-cols-4 gap-3">
+                  {formData.screenshots.map((screenshot, index) => (
+                    <div key={screenshot.public_id} className="relative group">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedScreenshot(screenshot)}
+                        className={`aspect-square rounded-lg overflow-hidden border-2 transition-all hover:border-blue-500 w-full ${
+                          selectedScreenshot?.public_id === screenshot.public_id
+                            ? 'border-blue-500 shadow-md'
+                            : 'border-neutral-200'
+                        }`}
+                        title={`Voir le screenshot ${index + 1}`}
+                      >
+                        {/* PDF or Image preview */}
+                        {screenshot.format === 'pdf' ? (
+                          <div className="w-full h-full bg-red-50 flex flex-col items-center justify-center">
+                            <svg className="w-8 h-8 text-red-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            <span className="text-xs text-red-600 font-medium">PDF</span>
+                          </div>
+                        ) : (
+                          <img
+                            src={(() => {
+                              const extension = screenshot.secure_url.split('.').pop()
+                              return `https://res.cloudinary.com/dzsa7xwme/image/upload/w_300,h_200,c_fill/${screenshot.public_id}.${extension}`
+                            })()}
+                            alt={`Screenshot ${index + 1}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            loading="lazy"
+                            onError={(e) => {
+                              console.log('Image failed to load in EditEventModal:', screenshot.thumbnail_url, 'fallback:', screenshot.secure_url)
+                              console.log('Full screenshot object:', screenshot)
+                              
+                              // Try secure_url as fallback
+                              if (e.currentTarget.src !== screenshot.secure_url) {
+                                e.currentTarget.src = screenshot.secure_url
+                              } else {
+                                // Both thumbnail and secure_url failed - image doesn't exist anymore
+                                console.warn('Screenshot appears to be deleted from Cloudinary:', screenshot.public_id)
+                                // Hide the broken image by setting a placeholder or removing it
+                                e.currentTarget.style.display = 'none'
+                              }
+                            }}
+                          />
+                        )}
+                      </button>
+                      
+                      {/* Delete button */}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteScreenshot(screenshot)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                        title="Supprimer ce fichier"
+                        disabled={loading}
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
-
-            {/* Upload info */}
-            {formData.screenshots && formData.screenshots.length > 0 && (
-              <p className="text-xs text-neutral-500">
-                {formData.screenshots.length} screenshot{formData.screenshots.length > 1 ? 's' : ''} ajouté{formData.screenshots.length > 1 ? 's' : ''}
-              </p>
             )}
           </div>
         </FormField>

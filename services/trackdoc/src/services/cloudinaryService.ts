@@ -127,6 +127,11 @@ export class CloudinaryService {
       const result = await cloudinary.uploader.destroy(publicId);
       
       if (result.result !== 'ok') {
+        // If image was not found, log warning but don't throw error
+        if (result.result === 'not found') {
+          logger.warn('Image not found in Cloudinary, might have been deleted manually', { publicId });
+          return;
+        }
         throw new Error(`Failed to delete image: ${result.result}`);
       }
       
@@ -173,13 +178,13 @@ export class CloudinaryService {
    * Get optimized thumbnail URL
    */
   getThumbnailUrl(publicId: string, width: number = 300, height: number = 200): string {
-    return this.getTransformedUrl(publicId, {
-      width,
-      height,
-      crop: 'fill',
-      quality: 'auto',
-      format: 'auto'
-    });
+    // Generate URL without authentication parameters to avoid expiration issues
+    const baseUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload`;
+    // Extract format from public_id if it exists (e.g., "path/image.jpg" -> "jpg")
+    const parts = publicId.split('.');
+    const hasExtension = parts.length > 1 && ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(parts[parts.length - 1].toLowerCase());
+    const finalPublicId = hasExtension ? publicId : `${publicId}.jpg`;
+    return `${baseUrl}/w_${width},h_${height},c_fill/${finalPublicId}`;
   }
 
   /**
