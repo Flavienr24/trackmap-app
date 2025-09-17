@@ -5,9 +5,10 @@ import { Badge } from '@/components/atoms/Badge'
 import { FormField } from '@/components/molecules/FormField'
 import { EventPropertiesInput, type EventPropertiesInputRef } from '@/components/organisms/EventPropertiesInput'
 import { DragDropZone, type FileWithProgress } from '@/components/molecules/DragDropZone'
+import { ScreenshotThumbnail } from '@/components/molecules/ScreenshotThumbnail'
 import { parseProperties } from '@/utils/properties'
 import { uploadMultipleFilesWithProgress } from '@/utils/uploadUtils'
-import { deleteScreenshot, generateThumbnailUrl, handleImageError } from '@/utils/screenshotUtils'
+import { deleteScreenshot } from '@/utils/screenshotUtils'
 import type { Event, UpdateEventRequest, EventStatus, Screenshot } from '@/types'
 
 interface EditEventModalProps {
@@ -348,49 +349,15 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
                 </h4>
                 <div className="grid grid-cols-4 gap-3">
                   {formData.screenshots.map((screenshot, index) => (
-                    <div key={screenshot.public_id} className="relative group">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedScreenshot(screenshot)}
-                        className={`aspect-square rounded-lg overflow-hidden border-2 transition-all hover:border-blue-500 w-full ${
-                          selectedScreenshot?.public_id === screenshot.public_id
-                            ? 'border-blue-500 shadow-md'
-                            : 'border-neutral-200'
-                        }`}
-                        title={`Voir le screenshot ${index + 1}`}
-                      >
-                        {/* PDF or Image preview */}
-                        {screenshot.format === 'pdf' ? (
-                          <div className="w-full h-full bg-red-50 flex flex-col items-center justify-center">
-                            <svg className="w-8 h-8 text-red-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                            </svg>
-                            <span className="text-xs text-red-600 font-medium">PDF</span>
-                          </div>
-                        ) : (
-                          <img
-                            src={generateThumbnailUrl(screenshot)}
-                            alt={`Screenshot ${index + 1}`}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                            loading="lazy"
-                            onError={(e) => handleImageError(e, screenshot)}
-                          />
-                        )}
-                      </button>
-                      
-                      {/* Delete button */}
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteScreenshot(screenshot)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                        title="Supprimer ce fichier"
-                        disabled={loading}
-                      >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
+                    <ScreenshotThumbnail
+                      key={screenshot.public_id}
+                      screenshot={screenshot}
+                      index={index}
+                      isSelected={selectedScreenshot?.public_id === screenshot.public_id}
+                      onClick={setSelectedScreenshot}
+                      onDelete={handleDeleteScreenshot}
+                      disabled={loading}
+                    />
                   ))}
                 </div>
               </div>

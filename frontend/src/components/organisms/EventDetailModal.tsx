@@ -5,9 +5,11 @@ import { Badge } from '@/components/atoms/Badge'
 import { CommentsSection } from '@/components/organisms/CommentsSection'
 import { EventHistorySection } from '@/components/organisms/EventHistorySection'
 import { DragDropZone, type FileWithProgress } from '@/components/molecules/DragDropZone'
+import { ScreenshotPreviewModal } from '@/components/molecules/ScreenshotPreviewModal'
+import { ScreenshotThumbnail } from '@/components/molecules/ScreenshotThumbnail'
 import { parseProperties, getStatusLabel } from '@/utils/properties'
 import { uploadMultipleFilesWithProgress } from '@/utils/uploadUtils'
-import { deleteScreenshot, generateThumbnailUrl, handleImageError } from '@/utils/screenshotUtils'
+import { deleteScreenshot } from '@/utils/screenshotUtils'
 import type { Event, Screenshot } from '@/types'
 
 // Copy icon component
@@ -54,6 +56,8 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
   const [showCopiedTooltip, setShowCopiedTooltip] = useState(false)
   const [commentsCount, setCommentsCount] = useState<number>(0)
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null)
+  const [previewModalOpen, setPreviewModalOpen] = useState(false)
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0)
   const [uploading] = useState(false)
   const [currentEvent, setCurrentEvent] = useState<Event | null>(event)
 
@@ -137,6 +141,35 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
   }
 
 
+  // Handle screenshot preview
+  const openScreenshotPreview = (screenshot: Screenshot) => {
+    const index = currentEvent?.screenshots?.findIndex(s => s.public_id === screenshot.public_id) ?? 0
+    setCurrentPreviewIndex(index)
+    setSelectedScreenshot(screenshot)
+    setPreviewModalOpen(true)
+  }
+
+  // Navigate preview modal
+  const navigatePreview = (direction: 'prev' | 'next') => {
+    if (!currentEvent?.screenshots) return
+    
+    let newIndex = currentPreviewIndex
+    if (direction === 'prev' && currentPreviewIndex > 0) {
+      newIndex = currentPreviewIndex - 1
+    } else if (direction === 'next' && currentPreviewIndex < currentEvent.screenshots.length - 1) {
+      newIndex = currentPreviewIndex + 1
+    }
+    
+    setCurrentPreviewIndex(newIndex)
+    setSelectedScreenshot(currentEvent.screenshots[newIndex])
+  }
+
+  // Close preview modal
+  const closePreviewModal = () => {
+    setPreviewModalOpen(false)
+    setSelectedScreenshot(null)
+  }
+
   // Handle screenshot deletion
   const handleDeleteScreenshot = async (screenshotToDelete: Screenshot) => {
     if (!currentEvent) return
@@ -157,6 +190,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
       // Close preview if deleted screenshot was selected
       if (selectedScreenshot?.public_id === screenshotToDelete.public_id) {
         setSelectedScreenshot(null)
+        setPreviewModalOpen(false)
       }
     } catch (error) {
       console.error('Error deleting screenshot:', error)
@@ -328,36 +362,6 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                   Screenshots ({currentEvent.screenshots?.length || 0})
                 </h3>
                 
-                {/* Selected screenshot preview */}
-                {selectedScreenshot && (
-                  <div className="bg-white border border-neutral-200 rounded-lg p-4 mb-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-medium text-neutral-600">Aperçu</h4>
-                      <button
-                        onClick={() => setSelectedScreenshot(null)}
-                        className="text-neutral-400 hover:text-neutral-600 transition-colors"
-                        title="Fermer l'aperçu"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                    <div className="bg-neutral-50 rounded-lg p-4 flex justify-center">
-                      <img
-                        src={selectedScreenshot.secure_url}
-                        alt="Screenshot preview"
-                        className="max-w-full max-h-64 object-contain rounded border border-neutral-200"
-                        loading="lazy"
-                      />
-                    </div>
-                    <div className="mt-3 text-xs text-neutral-500 space-y-1">
-                      <div>Format: {selectedScreenshot.format.toUpperCase()}</div>
-                      <div>Dimensions: {selectedScreenshot.width} × {selectedScreenshot.height} px</div>
-                      <div>Taille: {Math.round(selectedScreenshot.bytes / 1024)} KB</div>
-                    </div>
-                  </div>
-                )}
 
                 {/* Drag & Drop Upload Zone */}
                 <div className="mb-4">
@@ -398,50 +402,15 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                 {currentEvent.screenshots && currentEvent.screenshots.length > 0 && (
                   <div className="grid grid-cols-4 gap-3">
                     {currentEvent.screenshots.map((screenshot, index) => (
-                      <div key={screenshot.public_id} className="relative group">
-                        <button
-                          onClick={() => setSelectedScreenshot(screenshot)}
-                          className={`aspect-square rounded-lg overflow-hidden border-2 transition-all hover:border-blue-500 w-full ${
-                            selectedScreenshot?.public_id === screenshot.public_id
-                              ? 'border-blue-500 shadow-md'
-                              : 'border-neutral-200'
-                          }`}
-                          title={`Voir le screenshot ${index + 1}`}
-                        >
-                          <img
-                            src={generateThumbnailUrl(screenshot)}
-                            alt={`Screenshot ${index + 1}`}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                            loading="lazy"
-                            onError={(e) => handleImageError(e, screenshot, () => {
-                              // Handle broken images by removing them from the state
-                              setCurrentEvent(prev => prev ? ({
-                                ...prev,
-                                screenshots: prev.screenshots?.filter(s => s.public_id !== screenshot.public_id) || []
-                              }) : null)
-                            })}
-                          />
-                          {/* Overlay with preview icon */}
-                          <div className="absolute inset-0 bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
-                            <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </div>
-                        </button>
-                        
-                        {/* Delete button */}
-                        <button
-                          onClick={() => handleDeleteScreenshot(screenshot)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                          title="Supprimer cette image"
-                          disabled={uploading}
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
+                      <ScreenshotThumbnail
+                        key={screenshot.public_id}
+                        screenshot={screenshot}
+                        index={index}
+                        onClick={openScreenshotPreview}
+                        onDelete={handleDeleteScreenshot}
+                        disabled={uploading}
+                        showFullscreenIcon={true}
+                      />
                     ))}
                   </div>
                 )}
@@ -476,6 +445,18 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Screenshot Preview Modal */}
+      {currentEvent?.screenshots && currentEvent.screenshots.length > 0 && (
+        <ScreenshotPreviewModal
+          isOpen={previewModalOpen}
+          screenshots={currentEvent.screenshots}
+          currentIndex={currentPreviewIndex}
+          onClose={closePreviewModal}
+          onDelete={handleDeleteScreenshot}
+          onNavigate={navigatePreview}
+        />
+      )}
     </Modal>
   )
 }
