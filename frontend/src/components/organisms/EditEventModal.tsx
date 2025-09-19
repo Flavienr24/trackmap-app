@@ -389,7 +389,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
           label="Statut"
           error={errors.status || errors.test_date}
         >
-          <div className="flex items-start space-x-4">
+          <div className="flex items-end space-x-4">
             <div className="flex-shrink-0">
               <Badge 
                 status={formData.status || 'to_implement'}
@@ -405,21 +405,17 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
               <div className="flex-shrink-0">
                 <div className="flex flex-col space-y-1">
                   <label className="text-sm font-medium text-neutral-600">Date de test</label>
-                  <div className="relative" style={{ width: '160px' }}>
-                    <input
-                      type="date"
-                      value={formData.test_date || ''}
-                      onChange={(e) => handleInputChange('test_date', e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                      disabled={loading}
-                      style={{ direction: 'ltr' }}
-                    />
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg className="h-4 w-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                  </div>
+                  <input
+                    type="date"
+                    value={formData.test_date || ''}
+                    onChange={(e) => handleInputChange('test_date', e.target.value)}
+                    className="px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    disabled={loading}
+                    style={{ 
+                      width: '160px',
+                      direction: 'rtl'
+                    }}
+                  />
                 </div>
               </div>
             )}
