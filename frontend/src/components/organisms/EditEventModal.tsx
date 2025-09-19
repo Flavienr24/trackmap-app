@@ -387,33 +387,44 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
 
         <FormField
           label="Statut"
-          error={errors.status}
+          error={errors.status || errors.test_date}
         >
-          <Badge 
-            status={formData.status || 'to_implement'}
-            showDropdownArrow={true}
-            onStatusChange={(newStatus) => handleInputChange('status', newStatus)}
-            disabled={loading}
-          >
-            {getStatusLabel(formData.status || 'to_implement')}
-          </Badge>
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0">
+              <Badge 
+                status={formData.status || 'to_implement'}
+                showDropdownArrow={true}
+                onStatusChange={(newStatus) => handleInputChange('status', newStatus)}
+                disabled={loading}
+              >
+                {getStatusLabel(formData.status || 'to_implement')}
+              </Badge>
+            </div>
+            
+            {(formData.status === 'validated' || formData.status === 'error') && (
+              <div className="flex-shrink-0">
+                <div className="flex flex-col space-y-1">
+                  <label className="text-sm font-medium text-neutral-600">Date de test</label>
+                  <div className="relative" style={{ width: '160px' }}>
+                    <input
+                      type="date"
+                      value={formData.test_date || ''}
+                      onChange={(e) => handleInputChange('test_date', e.target.value)}
+                      className="w-full pl-10 pr-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      disabled={loading}
+                      style={{ direction: 'ltr' }}
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className="h-4 w-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </FormField>
-
-        {(formData.status === 'validated' || formData.status === 'error') && (
-          <FormField
-            label="Date de test"
-            error={errors.test_date}
-            hint="Date de test de l'événement (format: YYYY-MM-DD)"
-          >
-            <input
-              type="date"
-              value={formData.test_date || ''}
-              onChange={(e) => handleInputChange('test_date', e.target.value)}
-              className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={loading}
-            />
-          </FormField>
-        )}
 
         <EventPropertiesInput
           ref={propertiesInputRef}
