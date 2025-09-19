@@ -386,19 +386,21 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
         </FormField>
 
         <FormField
-          label="Statut"
           error={errors.status || errors.test_date}
         >
-          <div className="flex items-end space-x-4">
+          <div className="flex items-start space-x-4">
             <div className="flex-shrink-0">
-              <Badge 
-                status={formData.status || 'to_implement'}
-                showDropdownArrow={true}
-                onStatusChange={(newStatus) => handleInputChange('status', newStatus)}
-                disabled={loading}
-              >
-                {getStatusLabel(formData.status || 'to_implement')}
-              </Badge>
+              <div className="flex flex-col space-y-1">
+                <label className="text-sm font-medium text-neutral-600">Statut</label>
+                <Badge 
+                  status={formData.status || 'to_implement'}
+                  showDropdownArrow={true}
+                  onStatusChange={(newStatus) => handleInputChange('status', newStatus)}
+                  disabled={loading}
+                >
+                  {getStatusLabel(formData.status || 'to_implement')}
+                </Badge>
+              </div>
             </div>
             
             {(formData.status === 'validated' || formData.status === 'error') && (
@@ -413,7 +415,13 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
                     disabled={loading}
                     style={{ 
                       width: '160px',
-                      direction: 'rtl'
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'textfield',
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'/%3e%3c/svg%3e")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: '8px center',
+                      backgroundSize: '16px 16px',
+                      paddingLeft: '32px'
                     }}
                   />
                 </div>
