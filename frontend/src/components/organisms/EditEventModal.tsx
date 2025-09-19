@@ -6,7 +6,7 @@ import { FormField } from '@/components/molecules/FormField'
 import { EventPropertiesInput, type EventPropertiesInputRef } from '@/components/organisms/EventPropertiesInput'
 import { DragDropZone, type FileWithProgress } from '@/components/molecules/DragDropZone'
 import { ScreenshotThumbnail } from '@/components/molecules/ScreenshotThumbnail'
-import { parseProperties } from '@/utils/properties'
+import { parseProperties, getStatusLabel } from '@/utils/properties'
 import { uploadMultipleFilesWithProgress } from '@/utils/uploadUtils'
 import { deleteScreenshot } from '@/utils/screenshotUtils'
 import type { Event, UpdateEventRequest, EventStatus, Screenshot } from '@/types'
@@ -43,12 +43,6 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null)
   const propertiesInputRef = useRef<EventPropertiesInputRef>(null)
 
-  const eventStatuses: { value: EventStatus; label: string }[] = [
-    { value: 'to_implement', label: 'À implémenter' },
-    { value: 'to_test', label: 'À tester' },
-    { value: 'validated', label: 'Validé' },
-    { value: 'error', label: 'Erreur' },
-  ]
 
   // Initialize form when event changes
   useEffect(() => {
@@ -384,28 +378,14 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
           label="Statut"
           error={errors.status}
         >
-          <div className="flex flex-wrap gap-2">
-            {eventStatuses.map(status => (
-              <label key={status.value} className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="status"
-                  value={status.value}
-                  checked={formData.status === status.value}
-                  onChange={(e) => handleInputChange('status', e.target.value as EventStatus)}
-                  className="sr-only"
-                  disabled={loading}
-                />
-                <div className={`px-3 py-2 rounded-md border transition-colors ${
-                  formData.status === status.value
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-neutral-300 hover:border-neutral-400'
-                }`}>
-                  <Badge status={status.value}>{status.label}</Badge>
-                </div>
-              </label>
-            ))}
-          </div>
+          <Badge 
+            status={formData.status || 'to_implement'}
+            showDropdownArrow={true}
+            onStatusChange={(newStatus) => handleInputChange('status', newStatus)}
+            disabled={loading}
+          >
+            {getStatusLabel(formData.status || 'to_implement')}
+          </Badge>
         </FormField>
 
         <FormField
