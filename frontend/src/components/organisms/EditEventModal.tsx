@@ -414,14 +414,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
                     className="px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                     disabled={loading}
                     style={{ 
-                      width: '160px',
-                      WebkitAppearance: 'none',
-                      MozAppearance: 'textfield',
-                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'/%3e%3c/svg%3e")`,
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: '8px center',
-                      backgroundSize: '16px 16px',
-                      paddingLeft: '32px'
+                      width: '160px'
                     }}
                   />
                 </div>
