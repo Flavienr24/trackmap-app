@@ -60,7 +60,18 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   }, [event])
 
   const handleInputChange = (field: keyof UpdateEventRequest, value: string | EventStatus) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value }
+      
+      // Auto-set test_date to today when status changes to validated or error
+      if (field === 'status' && (value === 'validated' || value === 'error') && !prev.test_date) {
+        const today = new Date().toISOString().split('T')[0] // Format YYYY-MM-DD
+        newData.test_date = today
+      }
+      
+      return newData
+    })
+    
     // Clear error when user starts typing
     if (errors[field]) {
       const newErrors = { ...errors }
@@ -388,19 +399,21 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
           </Badge>
         </FormField>
 
-        <FormField
-          label="Date de test"
-          error={errors.test_date}
-          hint="Date optionnelle de test de l'événement (format: YYYY-MM-DD)"
-        >
-          <input
-            type="date"
-            value={formData.test_date || ''}
-            onChange={(e) => handleInputChange('test_date', e.target.value)}
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={loading}
-          />
-        </FormField>
+        {(formData.status === 'validated' || formData.status === 'error') && (
+          <FormField
+            label="Date de test"
+            error={errors.test_date}
+            hint="Date de test de l'événement (format: YYYY-MM-DD)"
+          >
+            <input
+              type="date"
+              value={formData.test_date || ''}
+              onChange={(e) => handleInputChange('test_date', e.target.value)}
+              className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={loading}
+            />
+          </FormField>
+        )}
 
         <EventPropertiesInput
           ref={propertiesInputRef}
