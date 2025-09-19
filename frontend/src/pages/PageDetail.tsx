@@ -126,6 +126,10 @@ const PageDetail: React.FC = () => {
     setEditEvent(event)    // Ouvrir le modal d'édition
   }
 
+  const handleEditEventSaveSuccess = (updatedEvent: Event) => {
+    setSelectedEvent(updatedEvent) // Ouvrir le modal de détail avec l'event mis à jour
+  }
+
   const handleEditEventSubmit = async (eventId: string, data: UpdateEventRequest) => {
     setEditEventLoading(true)
     try {
@@ -417,6 +421,7 @@ const PageDetail: React.FC = () => {
         onDelete={handleDeleteEvent}
         loading={editEventLoading}
         productId={page?.product_id}
+        onSaveSuccess={handleEditEventSaveSuccess}
       />
 
       {/* Edit Page Modal */}

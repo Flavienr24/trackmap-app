@@ -19,6 +19,7 @@ interface EditEventModalProps {
   onDelete?: (event: Event) => Promise<void>
   loading?: boolean
   productId?: string
+  onSaveSuccess?: (event: Event) => void
 }
 
 const EditEventModal: React.FC<EditEventModalProps> = ({
@@ -28,7 +29,8 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   onSubmit,
   onDelete,
   loading = false,
-  productId
+  productId,
+  onSaveSuccess
 }) => {
   const [formData, setFormData] = useState<UpdateEventRequest & { screenshots: Screenshot[] }>({
     name: '',
@@ -182,6 +184,19 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
       })
       
       onClose()
+      
+      // If onSaveSuccess callback is provided, call it with the updated event
+      if (onSaveSuccess) {
+        const updatedEvent: Event = {
+          ...event,
+          name: formData.name?.trim() || event.name,
+          status: formData.status || event.status,
+          properties: formData.properties && Object.keys(formData.properties).length > 0 ? formData.properties : {},
+          test_date: formData.test_date?.trim() || event.test_date,
+          screenshots: formData.screenshots
+        }
+        onSaveSuccess(updatedEvent)
+      }
     } catch (error) {
       console.error('Error updating event:', error)
     }
