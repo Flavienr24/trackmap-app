@@ -460,7 +460,7 @@ const EventPropertiesInput = forwardRef<EventPropertiesInputRef, EventProperties
         {propertyEntries.map((entry, index) => (
           <div key={index} className="grid grid-cols-12 gap-3 items-start">
             {/* Key Input */}
-            <div className="col-span-3">
+            <div className="col-span-4">
               <FormField
                 label={index === 0 ? "Clé" : ""}
                 error={entry.keyError}
@@ -523,7 +523,7 @@ const EventPropertiesInput = forwardRef<EventPropertiesInputRef, EventProperties
             </div>
 
             {/* Value Input */}
-            <div className="col-span-8">
+            <div className="col-span-7">
               <FormField
                 label={index === 0 ? "Valeur" : ""}
                 error={entry.valueError}
