@@ -119,8 +119,7 @@ const ScreenshotPreviewModal: React.FC<ScreenshotPreviewModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={`Screenshot ${currentIndex + 1} sur ${screenshots.length}`}
-      size="full"
-      className="screenshot-preview-modal"
+      size="2xl"
     >
       <div className="flex flex-col h-full bg-neutral-900">
         {/* Header with controls */}

@@ -357,7 +357,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
                   <div className="px-3 py-2 text-xs font-medium text-neutral-500 bg-neutral-50 border-b border-neutral-100">
                     Events existants dans ce produit
                   </div>
-                  {filteredSuggestions.map((suggestion, index) => (
+                  {filteredSuggestions.map((suggestion) => (
                     <button
                       key={suggestion.id}
                       type="button"

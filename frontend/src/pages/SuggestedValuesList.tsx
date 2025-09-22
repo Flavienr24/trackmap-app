@@ -304,7 +304,11 @@ const SuggestedValuesList: React.FC = () => {
         onClose={() => setEditSuggestedValue(null)}
         onSubmit={handleEditSubmit}
         onDelete={handleDeleteSuggestedValue}
-        onRefresh={() => product && loadSuggestedValues(product.id)}
+        onRefresh={async () => {
+          if (product) {
+            await loadSuggestedValues(product.id)
+          }
+        }}
         loading={editLoading}
       />
     </div>

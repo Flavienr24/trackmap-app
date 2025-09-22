@@ -130,9 +130,14 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
   try {
     const { name, description, url } = req.body;
 
-    // Validate required name field
+    // Validate required fields
     if (!name) {
       const error: AppError = new Error('Product name is required');
+      error.statusCode = 400;
+      return next(error);
+    }
+    if (!url) {
+      const error: AppError = new Error('Product URL is required');
       error.statusCode = 400;
       return next(error);
     }

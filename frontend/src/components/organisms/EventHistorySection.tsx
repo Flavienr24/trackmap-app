@@ -37,7 +37,7 @@ const EventHistorySection: React.FC<EventHistorySectionProps> = ({
           id: 'creation-' + event.id,
           event_id: event.id,
           field: 'creation',
-          old_value: null,
+          old_value: undefined,
           new_value: event.name,
           author: 'system',
           created_at: event.created_at

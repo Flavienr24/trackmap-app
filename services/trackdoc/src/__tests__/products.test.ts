@@ -38,7 +38,8 @@ describe('Products API', () => {
     it('should create a new product with name and description', async () => {
       const productData = {
         name: 'Test Product 1',
-        description: 'Test description'
+        description: 'Test description',
+        url: 'https://test-product-1.com'
       };
 
       const response = await request(app)
@@ -85,9 +86,10 @@ describe('Products API', () => {
       expect(dbProduct?.url).toBe(productData.url);
     });
 
-    it('should create a new product with only name', async () => {
+    it('should create a new product with only name and url', async () => {
       const productData = {
-        name: 'Test Product 3'
+        name: 'Test Product 3',
+        url: 'https://test-product-3.com'
       };
 
       const response = await request(app)
@@ -98,7 +100,7 @@ describe('Products API', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.name).toBe(productData.name);
       expect(response.body.data.description).toBeNull();
-      expect(response.body.data.url).toBeNull();
+      expect(response.body.data.url).toBe(productData.url);
 
       // Verify in database
       const dbProduct = await prisma.product.findUnique({
@@ -110,6 +112,22 @@ describe('Products API', () => {
 
     it('should return 400 if name is missing', async () => {
       const productData = {
+        description: 'Test description',
+        url: 'https://test.com'
+      };
+
+      const response = await request(app)
+        .post('/api/products')
+        .send(productData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('name is required');
+    });
+
+    it('should return 400 if url is missing', async () => {
+      const productData = {
+        name: 'Test Product',
         description: 'Test description'
       };
 
@@ -119,7 +137,7 @@ describe('Products API', () => {
         .expect(400);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Product name is required');
+      expect(response.body.message).toContain('URL is required');
     });
   });
 

@@ -59,18 +59,19 @@ const ProductsList: React.FC = () => {
   }
 
 
-  const handleDeleteProduct = async (product: Product) => {
-    console.log('handleDeleteProduct called for:', product.name)
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${product.name}" ?`)) {
-      try {
-        await productsApi.delete(product.id)
-        console.log('Product deleted:', product)
-        await loadProducts() // Reload the list
-      } catch (error) {
-        console.error('Error deleting product:', error)
-      }
-    }
-  }
+  // TODO: Connect to delete functionality  
+  // const _handleDeleteProduct = async (product: Product) => {
+  //   console.log('handleDeleteProduct called for:', product.name)
+  //   if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${product.name}" ?`)) {
+  //     try {
+  //       await productsApi.delete(product.id)
+  //       console.log('Product deleted:', product)
+  //       await loadProducts() // Reload the list
+  //     } catch (error) {
+  //       console.error('Error deleting product:', error)
+  //     }
+  //   }
+  // }
 
   const handleViewProduct = (product: Product) => {
     console.log('handleViewProduct called for:', product.name)

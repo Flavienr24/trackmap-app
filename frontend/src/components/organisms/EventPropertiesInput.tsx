@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
+import { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
 import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
 import { FormField } from '@/components/molecules/FormField'
@@ -411,7 +411,7 @@ const EventPropertiesInput = forwardRef<EventPropertiesInputRef, EventProperties
   }
 
 
-  const handleCreateSuggestedValueFromDropdown = async (value: string, entryIndex: number) => {
+  const handleCreateSuggestedValueFromDropdown = async (value: string, _entryIndex: number) => {
     try {
       // Create suggested value directly without modal
       const data: CreateSuggestedValueRequest = {

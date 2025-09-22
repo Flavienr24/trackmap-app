@@ -44,7 +44,7 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
       </label>
       <Select
         value={value}
-        onChange={onChange}
+        onChange={(value: string) => onChange(value as SortOption)}
         options={options}
         className="!w-[210px]"
       />
