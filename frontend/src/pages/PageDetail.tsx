@@ -210,17 +210,6 @@ const PageDetail: React.FC = () => {
     }
   }
 
-  const handleStatusChange = async (event: Event, newStatus: EventStatus) => {
-    try {
-      const response = await eventsApi.update(event.id, { status: newStatus })
-      console.log('Event status updated:', response.data)
-      if (page?.id) {
-        await loadEvents(page.id) // Reload the list
-      }
-    } catch (error) {
-      console.error('Error updating event status:', error)
-    }
-  }
 
   if (!productName || !pageSlug) {
     return (
@@ -286,12 +275,8 @@ const PageDetail: React.FC = () => {
       key: 'status',
       title: 'Statut',
       width: '120px',
-      render: (value, record) => (
-        <Badge 
-          status={value as EventStatus} 
-          showDropdownArrow={true}
-          onStatusChange={(newStatus) => handleStatusChange(record, newStatus)}
-        >
+      render: (value) => (
+        <Badge status={value as EventStatus}>
           {getStatusLabel(value as EventStatus)}
         </Badge>
       ),
@@ -383,7 +368,6 @@ const PageDetail: React.FC = () => {
         actions={actions}
         loading={loading}
         emptyMessage="Aucun event trouvé. Créez votre premier event pour cette page."
-        onStatusChange={handleStatusChange}
         enableSort={true}
         sortContext="events"
         expandable={{
