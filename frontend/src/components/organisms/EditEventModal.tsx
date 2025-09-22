@@ -295,6 +295,53 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
           </datalist>
         </FormField>
 
+        <FormField
+          error={errors.status || errors.test_date}
+        >
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0">
+              <div className="flex flex-col space-y-1">
+                <label className="text-sm font-medium text-neutral-600">Statut</label>
+                <Badge 
+                  status={formData.status || 'to_implement'}
+                  showDropdownArrow={true}
+                  onStatusChange={(newStatus) => handleInputChange('status', newStatus)}
+                  disabled={loading}
+                >
+                  {getStatusLabel(formData.status || 'to_implement')}
+                </Badge>
+              </div>
+            </div>
+            
+            {(formData.status === 'validated' || formData.status === 'error') && (
+              <div className="flex-shrink-0">
+                <div className="flex flex-col space-y-1">
+                  <label className="text-sm font-medium text-neutral-600">Date de test</label>
+                  <input
+                    type="date"
+                    value={formData.test_date || ''}
+                    onChange={(e) => handleInputChange('test_date', e.target.value)}
+                    className="px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    disabled={loading}
+                    style={{ 
+                      width: '160px'
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </FormField>
+
+        <EventPropertiesInput
+          ref={propertiesInputRef}
+          productId={productId || ''}
+          value={formData.properties || {}}
+          onChange={handlePropertiesChange}
+          disabled={loading}
+          error={errors.properties}
+        />
+
         {/* Screenshots Section */}
         <FormField
           label="Screenshots"
@@ -384,53 +431,6 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
             )}
           </div>
         </FormField>
-
-        <FormField
-          error={errors.status || errors.test_date}
-        >
-          <div className="flex items-start space-x-4">
-            <div className="flex-shrink-0">
-              <div className="flex flex-col space-y-1">
-                <label className="text-sm font-medium text-neutral-600">Statut</label>
-                <Badge 
-                  status={formData.status || 'to_implement'}
-                  showDropdownArrow={true}
-                  onStatusChange={(newStatus) => handleInputChange('status', newStatus)}
-                  disabled={loading}
-                >
-                  {getStatusLabel(formData.status || 'to_implement')}
-                </Badge>
-              </div>
-            </div>
-            
-            {(formData.status === 'validated' || formData.status === 'error') && (
-              <div className="flex-shrink-0">
-                <div className="flex flex-col space-y-1">
-                  <label className="text-sm font-medium text-neutral-600">Date de test</label>
-                  <input
-                    type="date"
-                    value={formData.test_date || ''}
-                    onChange={(e) => handleInputChange('test_date', e.target.value)}
-                    className="px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    disabled={loading}
-                    style={{ 
-                      width: '160px'
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </FormField>
-
-        <EventPropertiesInput
-          ref={propertiesInputRef}
-          productId={productId || ''}
-          value={formData.properties || {}}
-          onChange={handlePropertiesChange}
-          disabled={loading}
-          error={errors.properties}
-        />
       </form>
     </Modal>
   )
