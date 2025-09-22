@@ -395,7 +395,16 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
               </div>
             </div>
             
-            {(formData.status === 'validated' || formData.status === 'error') && (
+            {(() => {
+              // More robust check: test both formData and event status (case-insensitive)
+              const formStatus = formData.status?.toLowerCase();
+              const eventStatus = event?.status?.toLowerCase();
+              const shouldShow = 
+                formStatus === 'validated' || formStatus === 'error' ||
+                eventStatus === 'validated' || eventStatus === 'error';
+              
+              return shouldShow;
+            })() && (
               <div className="flex-shrink-0">
                 <div className="flex flex-col space-y-1">
                   <label className="text-sm font-medium text-neutral-600">Date de test</label>
