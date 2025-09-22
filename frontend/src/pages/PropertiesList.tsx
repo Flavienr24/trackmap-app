@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useParams, Navigate, Link, useNavigate } from 'react-router-dom'
+import { useParams, Navigate, Link, useNavigate } from 'react-router'
 import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
 import { BackLink } from '@/components/atoms/BackLink'

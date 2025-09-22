@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router'
 import { Button } from '@/components/atoms/Button'
 import { BackLink } from '@/components/atoms/BackLink'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
