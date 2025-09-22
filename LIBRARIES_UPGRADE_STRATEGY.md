@@ -14,6 +14,11 @@ Moderniser l'ensemble des dépendances du projet TrackMap pour garantir :
 
 ## 📊 **État Actuel - Analyse Complète**
 
+### **💡 Score d'Utilisation des Dépendances : 88%**
+- **15 librairies** utilisées activement ✅
+- **2 librairies** non/sous-utilisées ❌ (TypeScript backend + Jest sous-exploité)
+- **Impact optimisation** : ~40MB d'économies possibles
+
 ### **🟢 Librairies à Jour (6/17)**
 - TailwindCSS 4.1.12 ✅
 - Cloudinary 2.7.0 ✅  
@@ -59,12 +64,29 @@ npm run db:backup
 npm list --depth=0 > pre-upgrade-packages.txt
 cp package-lock.json package-lock.json.backup
 
-# 4. Créer un point de rollback
+# 4. Audit des dépendances inutilisées
+npm list --all | grep -E "(typescript|jest)" > unused-deps-audit.txt
+
+# 5. Créer un point de rollback
 git add . && git commit -m "📦 Pre-upgrade snapshot - Libraries audit Sept 2025"
 
-# 5. Tests de base
+# 6. Tests de base
 npm test
 npm run build
+```
+
+#### **🧹 Phase 1.5 : Nettoyage des Dépendances (Optionnel)**
+```bash
+# Services TrackDoc et BFF : TypeScript inutilisé
+# Option A : Supprimer TypeScript (économie ~15MB/service)
+cd services/trackdoc && npm uninstall typescript @types/node ts-jest
+cd ../bff && npm uninstall typescript @types/node ts-jest
+
+# Option B : Migration vers TypeScript (recommandé long terme)
+# Renommer progressivement .js → .ts
+
+# Jest sous-exploité : Garder mais optimiser
+# Développer les tests ou alléger la configuration
 ```
 
 #### **Vérifications Préalables**
@@ -182,14 +204,27 @@ npm run dev  # Vérifier tous les services
 
 #### **3.1 Outils de Développement**
 ```bash
-# TypeScript
+# TypeScript (UNIQUEMENT si gardé après Phase 1.5)
 npm install typescript@latest
 
 # Jest (attention aux breaking changes)
 npm install jest@^30.0.0
+# Note : TrackDoc utilise Jest mais seulement 1 test pour 10+ controllers
 
 # TSX
 npm install tsx@latest
+```
+
+#### **3.1.5 Consolidation Workspace (Optimisation)**
+```bash
+# Déplacer les dépendances communes vers le workspace root
+# Économie de duplication pour : winston, helmet, cors, morgan, dotenv
+
+# Exemple de consolidation (optionnel)
+cd $PROJECT_ROOT
+npm install --workspaces winston@latest helmet@latest cors@latest
+
+# Supprimer des package.json individuels et utiliser workspace dependencies
 ```
 
 #### **3.2 Librairies Backend**
@@ -279,6 +314,8 @@ npm run build
 | Prisma schema changes | Faible | Critique | Sauvegarde BDD + migration test |
 | Express 5 API changes | Moyenne | Moyen | Tests unitaires complets |
 | Performance dégradée | Faible | Moyen | Monitoring + rollback plan |
+| **Suppression TypeScript accidentelle** | **Faible** | **Moyen** | **Sauvegarde avant nettoyage Phase 1.5** |
+| **Tests manquants après Jest upgrade** | **Moyenne** | **Faible** | **Développer tests ou garder Jest minimal** |
 
 ### **Plan de Rollback**
 
@@ -305,6 +342,8 @@ npm ci
 - [ ] Logs sans erreurs critiques
 - [ ] Fonctionnalités métier opérationnelles
 - [ ] Sécurité renforcée (audit npm)
+- [ ] **Optimisations dépendances validées** (TypeScript/Jest décision prise)
+- [ ] **Économies node_modules mesurées** (~40MB attendus)
 
 ### **Post-Déploiement**
 - [ ] Monitoring actif 24h
@@ -331,6 +370,10 @@ npm ls --depth=0
 
 # Vérification des vulnérabilités
 npm audit --audit-level=high
+
+# Analyse d'utilisation des dépendances
+npm list --all | grep -E "(typescript|jest|@types)" # Dépendances potentiellement inutilisées
+find . -name "*.ts" -not -path "*/node_modules/*" | wc -l # Nombre de fichiers TS
 ```
 
 ### **Maintenance Continue**
@@ -377,16 +420,16 @@ npm run build -- --analyze
 
 | Jour | Phase | Durée | Responsable |
 |------|-------|-------|-------------|
-| J-1 | Préparation | 2h | Dev Senior |
+| J-1 | Préparation + Audit dépendances | 3h | Dev Senior |
 | J1 | Vite + Express | 4h | Dev Senior |
 | J2 | React + Router | 6h | Dev Frontend |
 | J3 | Prisma + Puppeteer | 4h | Dev Backend |
-| J4 | Outils dev | 3h | Dev Junior |
-| J5 | Librairies backend | 3h | Dev Backend |
+| J4 | Outils dev + Optimisations | 4h | Dev Junior |
+| J5 | Librairies backend + Workspace | 4h | Dev Backend |
 | J6 | Tests complets | 4h | QA + Dev |
-| J7 | Validation finale | 2h | Tech Lead |
+| J7 | Validation finale + Métriques | 3h | Tech Lead |
 
-**Total estimé : 28h sur 8 jours**
+**Total estimé : 32h sur 8 jours** (+4h pour optimisations)
 
 ---
 
@@ -397,6 +440,8 @@ npm run build -- --analyze
 3. **Vite 7 peut casser la config CSS existante**
 4. **Express 5 a des breaking changes d'API**
 5. **Surveiller les logs après chaque migration**
+6. **🧹 Décider TypeScript/Jest AVANT Phase 1.5** (Option A: Supprimer, Option B: Migrer)
+7. **💾 Mesurer l'économie node_modules** (objectif ~40MB)
 
 ---
 
