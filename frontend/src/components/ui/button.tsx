@@ -22,7 +22,7 @@ const buttonVariants = cva(
         // Legacy variants from old design system
         primary: "bg-primary text-primary-foreground shadow hover:bg-primary/90",
         danger: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
-        success: "bg-green-600 text-white shadow hover:bg-green-700",
+        success: "bg-success text-success-foreground shadow hover:bg-success/90",
       },
       size: {
         default: "h-9 px-4 py-2",

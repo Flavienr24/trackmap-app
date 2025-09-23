@@ -10,7 +10,7 @@ const inputVariants = cva(
       variant: {
         default: "border-input",
         error: "border-destructive bg-destructive/5 focus-visible:ring-destructive",
-        success: "border-green-500 bg-green-50 focus-visible:ring-green-500",
+        success: "border-success bg-success/5 focus-visible:ring-success",
       },
       size: {
         default: "h-9",

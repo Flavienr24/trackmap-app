@@ -17,7 +17,7 @@ interface CreateEventModalProps {
 
 const CreateEventModal: React.FC<CreateEventModalProps> = ({
   isOpen,
-  pageId,
+  pageId: _pageId,
   productId,
   onClose,
   onSubmit,

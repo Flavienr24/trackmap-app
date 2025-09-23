@@ -19,14 +19,14 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
         outline: "text-foreground",
         // TrackMap business status variants
-        to_implement: "border-yellow-300 bg-yellow-50 text-yellow-800",
-        to_test: "border-blue-300 bg-blue-50 text-blue-800",
-        validated: "border-green-300 bg-green-50 text-green-800",
-        error: "border-red-300 bg-red-50 text-red-800",
-        TO_IMPLEMENT: "border-yellow-300 bg-yellow-50 text-yellow-800",
-        TO_TEST: "border-blue-300 bg-blue-50 text-blue-800",
-        VALIDATED: "border-green-300 bg-green-50 text-green-800",
-        ERROR: "border-red-300 bg-red-50 text-red-800",
+        to_implement: "border-warning/30 bg-warning/10 text-warning-foreground",
+        to_test: "border-info/30 bg-info/10 text-info-foreground",
+        validated: "border-success/30 bg-success/10 text-success-foreground",
+        error: "border-error/30 bg-error/10 text-error-foreground",
+        TO_IMPLEMENT: "border-warning/30 bg-warning/10 text-warning-foreground",
+        TO_TEST: "border-info/30 bg-info/10 text-info-foreground",
+        VALIDATED: "border-success/30 bg-success/10 text-success-foreground",
+        ERROR: "border-error/30 bg-error/10 text-error-foreground",
         // Additional variants
         primary: "border-primary/30 bg-primary/10 text-primary",
       },
@@ -66,14 +66,14 @@ const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
 
     // Define dot colors for status badges (support both cases)
     const dotColors = {
-      to_implement: 'bg-yellow-400',
-      to_test: 'bg-blue-400', 
-      validated: 'bg-green-400',
-      error: 'bg-red-400',
-      TO_IMPLEMENT: 'bg-yellow-400',
-      TO_TEST: 'bg-blue-400', 
-      VALIDATED: 'bg-green-400',
-      ERROR: 'bg-red-400',
+      to_implement: 'bg-warning',
+      to_test: 'bg-info', 
+      validated: 'bg-success',
+      error: 'bg-error',
+      TO_IMPLEMENT: 'bg-warning',
+      TO_TEST: 'bg-info', 
+      VALIDATED: 'bg-success',
+      ERROR: 'bg-error',
     } as const
 
     const hasStatusDot = status && status in dotColors
