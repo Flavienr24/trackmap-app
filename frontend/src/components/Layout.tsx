@@ -1,5 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import packageJson from '../../package.json'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -45,7 +46,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="flex justify-between items-center text-sm text-slate-500">
             <span>TrackMap - Outil de documentation et audit GA4</span>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-              v1.1.0
+              v{packageJson.version}
             </span>
           </div>
         </div>
