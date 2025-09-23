@@ -1,4 +1,10 @@
-import React, { useState } from 'react'
+import React from 'react'
+import {
+  Tooltip as ShadcnTooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 interface TooltipProps {
   content: string
@@ -7,31 +13,20 @@ interface TooltipProps {
 }
 
 /**
- * Simple tooltip component with hover behavior
+ * Tooltip wrapper component using shadcn/ui with backward compatibility
+ * Provides simple interface for existing code while using modern Radix UI underneath
  */
 export const Tooltip: React.FC<TooltipProps> = ({ content, children, className = '' }) => {
-  const [isVisible, setIsVisible] = useState(false)
-
   return (
-    <div 
-      className="relative inline-block"
-      onMouseEnter={() => setIsVisible(true)}
-      onMouseLeave={() => setIsVisible(false)}
-    >
-      {children}
-      <div 
-        className={`absolute -top-8 left-1/2 transform -translate-x-1/2 bg-neutral-800 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-50 ${
-          isVisible 
-            ? 'opacity-100 translate-y-0 scale-100' 
-            : 'opacity-0 translate-y-1 scale-95 pointer-events-none'
-        } transition-all duration-200 ${className}`}
-      >
-        {content}
-        {/* Arrow */}
-        <div className="absolute top-full left-1/2 transform -translate-x-1/2">
-          <div className="border-4 border-transparent border-t-neutral-800"></div>
-        </div>
-      </div>
-    </div>
+    <TooltipProvider>
+      <ShadcnTooltip>
+        <TooltipTrigger asChild>
+          {children}
+        </TooltipTrigger>
+        <TooltipContent className={className}>
+          <p>{content}</p>
+        </TooltipContent>
+      </ShadcnTooltip>
+    </TooltipProvider>
   )
 }

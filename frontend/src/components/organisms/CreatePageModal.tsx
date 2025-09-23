@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Modal } from './Modal'
-import { Button } from '@/components/atoms/Button'
+import { Button } from '@/components/ui/button'
 import { FormField } from '@/components/molecules/FormField'
 import type { CreatePageRequest } from '@/types'
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Button } from '@/components/atoms/Button'
-import { Input } from '@/components/atoms/Input'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { commentsApi } from '@/services/api'
 import type { Comment, CreateCommentRequest } from '@/types'
 

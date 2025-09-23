@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Modal } from '@/components/organisms/Modal'
-import { Button } from '@/components/atoms/Button'
+import { Button } from '@/components/ui/button'
 import type { Screenshot } from '@/types'
 
 interface ScreenshotPreviewModalProps {

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { Modal } from '@/components/organisms/Modal'
 import { FormField } from '@/components/molecules/FormField'
-import { Input } from '@/components/atoms/Input'
+import { Input } from '@/components/ui/input'
 import { SimpleSelect } from '@/components/ui/simple-select'
-import { Button } from '@/components/atoms/Button'
+import { Button } from '@/components/ui/button'
 import { propertiesApi } from '@/services/api'
 import type { Property, UpdatePropertyRequest, PropertyType, PropertyImpactData } from '@/types'
 

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Modal } from '@/components/organisms/Modal'
 import { FormField } from '@/components/molecules/FormField'
-import { Input } from '@/components/atoms/Input'
-import { Button } from '@/components/atoms/Button'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import type { CreateSuggestedValueRequest } from '@/types'
 
 interface CreateSuggestedValueModalProps {

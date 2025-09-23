@@ -1,6 +1,6 @@
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
-import { Button } from '@/components/atoms/Button'
-import { Input } from '@/components/atoms/Input'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/molecules/FormField'
 import { CreatePropertyModal } from '@/components/organisms/CreatePropertyModal'
 import { propertiesApi, suggestedValuesApi } from '@/services/api'

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { Button } from '../atoms/Button'
-import { Badge } from '../atoms/Badge'
-import { Tooltip } from '../atoms/Tooltip'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Tooltip } from '@/components/atoms/Tooltip'
 import { SortSelector, type SortOption } from '../molecules/SortSelector'
 import { cn } from '@/lib/utils'
 import type { EventStatus } from '@/types'
@@ -122,7 +122,7 @@ function DataTable<T extends Record<string, any>>({
         <Badge 
           status={value as EventStatus} 
           showDropdownArrow={true}
-          onStatusChange={onStatusChange ? (newStatus) => onStatusChange(record, newStatus) : undefined}
+          onStatusChange={onStatusChange ? (newStatus: EventStatus) => onStatusChange(record, newStatus) : undefined}
         >
           {value}
         </Badge>
@@ -302,7 +302,7 @@ function DataTable<T extends Record<string, any>>({
                                 key={actionIndex}
                                 size="sm"
                                 variant={action.variant || 'secondary'}
-                                onClick={(e) => {
+                                onClick={(e: React.MouseEvent) => {
                                   e.stopPropagation()
                                   action.onClick(record)
                                 }}
