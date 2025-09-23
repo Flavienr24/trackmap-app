@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Modal } from './Modal'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/molecules/FormField'
 import type { CreateProductRequest } from '@/types'
 
@@ -124,12 +125,11 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
           required
           error={errors.name || serverError}
         >
-          <input
+          <Input
             type="text"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
             placeholder="Ex: E-commerce Mobile App"
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             disabled={loading}
           />
         </FormField>
@@ -138,12 +138,11 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
           label="URL du produit"
           error={errors.url}
         >
-          <input
+          <Input
             type="url"
             value={formData.url}
             onChange={(e) => handleInputChange('url', e.target.value)}
             placeholder="https://exemple.com"
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             disabled={loading}
           />
         </FormField>
@@ -157,7 +156,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
             onChange={(e) => handleInputChange('description', e.target.value)}
             placeholder="Description du produit (optionnel)"
             rows={3}
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+            className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
             disabled={loading}
           />
         </FormField>

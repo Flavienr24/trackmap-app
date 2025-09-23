@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Modal } from './Modal'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/molecules/FormField'
 import { EventPropertiesInput } from '@/components/organisms/EventPropertiesInput'
 import type { CreateEventRequest, EventStatus } from '@/types'
@@ -136,12 +137,12 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
           error={errors.name}
           hint="Nom de l'événement GA4 (ex: page_view, button_click)"
         >
-          <input
+          <Input
             type="text"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
             placeholder="Ex: page_view, button_click, purchase"
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm"
+            className="font-mono"
             disabled={loading}
             list="event-suggestions"
           />

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Modal } from './Modal'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/molecules/FormField'
 import type { CreatePageRequest } from '@/types'
 
@@ -108,12 +109,11 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
           required
           error={errors.name}
         >
-          <input
+          <Input
             type="text"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
             placeholder="Ex: Homepage, Product Page, Checkout"
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             disabled={loading}
           />
         </FormField>
@@ -123,12 +123,12 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
           error={errors.url}
           hint="Slug ou pattern pour identifier la page (optionnel)"
         >
-          <input
+          <Input
             type="text"
             value={formData.url}
             onChange={(e) => handleInputChange('url', e.target.value)}
             placeholder="Ex: /homepage, /products/*, /checkout"
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm"
+            className="font-mono"
             disabled={loading}
           />
         </FormField>

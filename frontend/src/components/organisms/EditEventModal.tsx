@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Modal } from './Modal'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/molecules/FormField'
 import { EventPropertiesInput, type EventPropertiesInputRef } from '@/components/organisms/EventPropertiesInput'
 import { DragDropZone, type FileWithProgress } from '@/components/molecules/DragDropZone'
@@ -340,13 +341,13 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
           hint="Nom de l'événement GA4 (ex: page_view, button_click)"
         >
           <div className="relative">
-            <input
+            <Input
               type="text"
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
               onBlur={handleInputBlur}
               placeholder="Nom de l'événement GA4"
-              className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+              className="font-mono"
               disabled={loading}
             />
             
@@ -408,11 +409,10 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
               <div className="flex-shrink-0">
                 <div className="flex flex-col space-y-1">
                   <label className="text-sm font-medium text-neutral-600">Date de test</label>
-                  <input
+                  <Input
                     type="date"
                     value={formData.test_date || ''}
                     onChange={(e) => handleInputChange('test_date', e.target.value)}
-                    className="px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                     disabled={loading}
                     style={{ 
                       width: '160px'
