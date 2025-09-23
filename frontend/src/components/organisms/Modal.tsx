@@ -51,7 +51,7 @@ const Modal: React.FC<ModalProps> = ({
         </div>
 
         {footer && (
-          <DialogFooter className="flex-shrink-0 bg-muted/30 -mx-6 -mb-6 mt-6 px-6 py-4 rounded-b-lg sm:justify-between">
+          <DialogFooter className="flex-shrink-0 bg-muted/30 -mx-6 -mb-6 mt-6 px-6 py-4 rounded-b-lg">
             {footer}
           </DialogFooter>
         )}

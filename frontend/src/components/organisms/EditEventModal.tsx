@@ -303,7 +303,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
 
 
   const footer = (
-    <div className="flex justify-between items-center">
+    <div className="flex justify-between items-center w-full">
       <div className="flex">
         {onDelete && (
           <Button 
