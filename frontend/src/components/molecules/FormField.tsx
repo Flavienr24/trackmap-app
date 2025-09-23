@@ -33,7 +33,9 @@ const FormField: React.FC<FormFieldProps> = ({
         </label>
       )}
       
-      {children}
+      <div className="px-1">
+        {children}
+      </div>
       
       {(error || helperText || hint) && (
         <p className={cn(
