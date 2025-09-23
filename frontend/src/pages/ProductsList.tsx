@@ -132,7 +132,7 @@ const ProductsList: React.FC = () => {
       width: '120px',
       render: (value) => {
         if (!value) return '-'
-        const colorClass = value >= 80 ? 'text-green-600' : value >= 60 ? 'text-yellow-600' : 'text-red-600'
+        const colorClass = value >= 80 ? 'text-success' : value >= 60 ? 'text-warning' : 'text-destructive'
         return <span className={`font-medium ${colorClass}`}>{value}%</span>
       },
     },
@@ -148,7 +148,7 @@ const ProductsList: React.FC = () => {
     {
       label: '',
       icon: (
-        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
         </svg>
       ),
