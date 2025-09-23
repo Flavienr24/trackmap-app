@@ -21,7 +21,7 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         // Legacy variants from old design system
         primary: "bg-primary text-primary-foreground shadow hover:bg-primary/90",
-        danger: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+        danger: "bg-destructive text-white shadow-sm hover:bg-destructive/90",
         success: "bg-success text-success-foreground shadow hover:bg-success/90",
       },
       size: {
