@@ -7,7 +7,7 @@ import type { EventStatus } from '@/types'
 import { getStatusLabel } from '@/utils/properties'
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
@@ -17,16 +17,16 @@ const badgeVariants = cva(
           "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive:
           "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
-        outline: "text-foreground",
+        outline: "text-neutral-900",
         // TrackMap business status variants
-        to_implement: "border-warning/30 bg-warning/10 text-warning-foreground",
-        to_test: "border-info/30 bg-info/10 text-info-foreground",
-        validated: "border-success/30 bg-success/10 text-success-foreground",
-        error: "border-error/30 bg-error/10 text-error-foreground",
-        TO_IMPLEMENT: "border-warning/30 bg-warning/10 text-warning-foreground",
-        TO_TEST: "border-info/30 bg-info/10 text-info-foreground",
-        VALIDATED: "border-success/30 bg-success/10 text-success-foreground",
-        ERROR: "border-error/30 bg-error/10 text-error-foreground",
+        to_implement: "border-warning/30 bg-warning/10 text-black",
+        to_test: "border-info/30 bg-info/10 text-black",
+        validated: "border-success/30 bg-success/10 text-black",
+        error: "border-error/30 bg-error/10 text-black",
+        TO_IMPLEMENT: "border-warning/30 bg-warning/10 text-black",
+        TO_TEST: "border-info/30 bg-info/10 text-black",
+        VALIDATED: "border-success/30 bg-success/10 text-black",
+        ERROR: "border-error/30 bg-error/10 text-black",
         // Additional variants
         primary: "border-primary/30 bg-primary/10 text-primary",
       },
