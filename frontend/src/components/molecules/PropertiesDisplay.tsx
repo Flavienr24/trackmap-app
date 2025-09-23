@@ -1,5 +1,5 @@
 import React from 'react'
-import { cn } from '@/design-system'
+import { cn } from '@/lib/utils'
 
 export interface PropertiesDisplayProps {
   properties: Record<string, any>

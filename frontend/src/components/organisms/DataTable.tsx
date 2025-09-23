@@ -3,7 +3,8 @@ import { Button } from '../atoms/Button'
 import { Badge } from '../atoms/Badge'
 import { Tooltip } from '../atoms/Tooltip'
 import { SortSelector, type SortOption } from '../molecules/SortSelector'
-import { cn, type StatusType } from '@/design-system'
+import { cn } from '@/lib/utils'
+import type { EventStatus } from '@/types'
 import { sortData, getDefaultSortOption, saveSortPreference, loadSortPreference } from '@/utils/sorting'
 
 export interface Column<T = any> {
@@ -119,7 +120,7 @@ function DataTable<T extends Record<string, any>>({
     if (column.key === 'status' || column.key.includes('status')) {
       return (
         <Badge 
-          status={value as StatusType} 
+          status={value as EventStatus} 
           showDropdownArrow={true}
           onStatusChange={onStatusChange ? (newStatus) => onStatusChange(record, newStatus) : undefined}
         >
