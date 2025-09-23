@@ -39,7 +39,7 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
 }) => {
   return (
     <div className={`flex items-center space-x-2 ${className || ''}`}>
-      <label className="text-sm font-medium text-neutral-700">
+      <label className="text-sm font-medium text-muted-foreground">
         Tri :
       </label>
       <SimpleSelect

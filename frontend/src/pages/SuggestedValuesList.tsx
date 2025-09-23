@@ -301,7 +301,7 @@ const SuggestedValuesList: React.FC = () => {
         onClose={() => setEditSuggestedValue(null)}
         onSubmit={handleEditSubmit}
         onDelete={handleDeleteSuggestedValue}
-        onRefresh={() => product && loadSuggestedValues(product.id)}
+        onRefresh={() => product ? loadSuggestedValues(product.id) : Promise.resolve()}
         loading={editLoading}
       />
     </div>
