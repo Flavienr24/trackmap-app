@@ -1,5 +1,4 @@
 import React from 'react'
-import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -7,7 +6,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { X } from 'lucide-react'
 
 interface ModalProps {
   isOpen: boolean
@@ -43,20 +41,9 @@ const Modal: React.FC<ModalProps> = ({
         onPointerDownOutside={onClose}
       >
         <DialogHeader className="flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-semibold text-foreground">
-              {title}
-            </DialogTitle>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={onClose}
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Close</span>
-            </Button>
-          </div>
+          <DialogTitle className="text-xl font-semibold text-foreground">
+            {title}
+          </DialogTitle>
         </DialogHeader>
         
         <div className={`${fixedHeight ? 'overflow-y-auto flex-1' : ''}`}>
