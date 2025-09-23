@@ -303,17 +303,19 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
 
 
   const footer = (
-    <div className="flex justify-between">
-      {onDelete && (
-        <Button 
-          variant="danger" 
-          onClick={handleDelete} 
-          disabled={loading}
-        >
-          Supprimer l'event
-        </Button>
-      )}
-      <div className="flex space-x-3 ml-auto">
+    <div className="flex justify-between items-center">
+      <div className="flex">
+        {onDelete && (
+          <Button 
+            variant="danger" 
+            onClick={handleDelete} 
+            disabled={loading}
+          >
+            Supprimer l'event
+          </Button>
+        )}
+      </div>
+      <div className="flex space-x-3">
         <Button variant="secondary" onClick={handleClose} disabled={loading}>
           Annuler
         </Button>
