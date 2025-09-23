@@ -1,5 +1,13 @@
 import React from 'react'
-import { Button } from '@/components/atoms/Button'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { X } from 'lucide-react'
 
 interface ModalProps {
   isOpen: boolean
@@ -20,8 +28,6 @@ const Modal: React.FC<ModalProps> = ({
   size = 'md',
   fixedHeight = false
 }) => {
-  if (!isOpen) return null
-
   const sizeClasses = {
     sm: 'max-w-sm',
     md: 'max-w-md', 
@@ -30,45 +36,40 @@ const Modal: React.FC<ModalProps> = ({
     '2xl': 'max-w-2xl'
   }
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose()
-    }
-  }
-
   return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-modal"
-      onClick={handleBackdropClick}
-    >
-      <div className={`bg-white rounded-lg ${sizeClasses[size]} w-full ${fixedHeight ? 'h-[80vh] flex flex-col' : ''}`}>
-        <div className="px-6 py-4 border-b border-neutral-200 flex-shrink-0">
+    <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
+      <DialogContent 
+        className={`${sizeClasses[size]} ${fixedHeight ? 'h-[80vh] flex flex-col' : ''}`}
+        onPointerDownOutside={onClose}
+      >
+        <DialogHeader className="flex-shrink-0">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-neutral-900">{title}</h2>
+            <DialogTitle className="text-xl font-semibold text-foreground">
+              {title}
+            </DialogTitle>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={onClose}
-              className="text-neutral-400 hover:text-neutral-600"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
             </Button>
           </div>
-        </div>
+        </DialogHeader>
         
-        <div className={`px-6 py-4 ${fixedHeight ? 'overflow-y-auto flex-1' : ''}`}>
+        <div className={`${fixedHeight ? 'overflow-y-auto flex-1' : ''}`}>
           {children}
         </div>
 
         {footer && (
-          <div className="px-6 py-4 border-t border-neutral-200 bg-neutral-50 flex-shrink-0">
+          <DialogFooter className="flex-shrink-0 bg-muted/30 -mx-6 -mb-6 mt-6 px-6 py-4 rounded-b-lg">
             {footer}
-          </div>
+          </DialogFooter>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 

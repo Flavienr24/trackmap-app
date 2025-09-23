@@ -1,5 +1,5 @@
 import React from 'react'
-import { Select } from '@/components/atoms/Select'
+import { SimpleSelect } from '@/components/ui/simple-select'
 
 export type SortOption = 
   | 'created_desc' 
@@ -42,9 +42,9 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
       <label className="text-sm font-medium text-neutral-700">
         Tri :
       </label>
-      <Select
+      <SimpleSelect
         value={value}
-        onChange={onChange}
+        onChange={(newValue: string) => onChange(newValue as SortOption)}
         options={options}
         className="!w-[210px]"
       />
