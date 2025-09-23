@@ -36,7 +36,7 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
   const [mergeLoading, setMergeLoading] = useState(false)
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
   const [impactData, setImpactData] = useState<SuggestedValueImpactData | null>(null)
-  const [_impactLoading, setImpactLoading] = useState(false) // TODO: Implement impact analysis loading state
+  const [_impactLoading, setImpactLoading] = useState(false)
 
   // Update form data when suggested value changes
   useEffect(() => {

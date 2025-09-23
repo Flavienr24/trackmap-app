@@ -1,5 +1,5 @@
 import React from 'react'
-import { cn } from '@/design-system'
+import { cn } from '@/lib/utils'
 
 export interface PropertiesDisplayProps {
   properties: Record<string, any>
@@ -27,7 +27,7 @@ export const PropertiesDisplay: React.FC<PropertiesDisplayProps> = ({
 
   if (propertyEntries.length === 0) {
     return (
-      <div className={cn('pt-2 pr-4 pb-2 text-sm text-neutral-500', className)}>
+      <div className={cn('pt-2 pr-4 pb-2 text-sm text-muted-foreground', className)}>
         Aucune propriété définie
       </div>
     )
@@ -39,15 +39,15 @@ export const PropertiesDisplay: React.FC<PropertiesDisplayProps> = ({
       <div className="space-y-1">
         {propertyEntries.map(([key, value]) => (
           <div key={key} className="flex flex-col sm:flex-row sm:items-start gap-1">
-            <div className="text-xs font-normal text-neutral-700 min-w-0 sm:w-1/6 font-mono">
+            <div className="text-xs font-normal text-muted-foreground min-w-0 sm:w-1/6 font-mono">
               {key}
             </div>
-            <div className="text-sm text-neutral-900 min-w-0 sm:w-5/6">
+            <div className="text-sm text-foreground min-w-0 sm:w-5/6">
               <code className={cn(
-                "bg-neutral-100 px-2 py-1 rounded text-xs break-all font-mono",
+                "bg-muted px-2 py-1 rounded text-xs break-all font-mono",
                 isContextualValue(value) 
-                  ? "text-purple-700" 
-                  : "text-neutral-900"
+                  ? "text-purple-700 dark:text-purple-300" 
+                  : "text-foreground"
               )}>
                 {typeof value === 'object' ? JSON.stringify(value) : String(value)}
               </code>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
@@ -58,20 +58,6 @@ const ProductsList: React.FC = () => {
     }
   }
 
-
-  // TODO: Connect to delete functionality  
-  // const _handleDeleteProduct = async (product: Product) => {
-  //   console.log('handleDeleteProduct called for:', product.name)
-  //   if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${product.name}" ?`)) {
-  //     try {
-  //       await productsApi.delete(product.id)
-  //       console.log('Product deleted:', product)
-  //       await loadProducts() // Reload the list
-  //     } catch (error) {
-  //       console.error('Error deleting product:', error)
-  //     }
-  //   }
-  // }
 
   const handleViewProduct = (product: Product) => {
     console.log('handleViewProduct called for:', product.name)
@@ -133,7 +119,7 @@ const ProductsList: React.FC = () => {
       width: '120px',
       render: (value) => {
         if (!value) return '-'
-        const colorClass = value >= 80 ? 'text-green-600' : value >= 60 ? 'text-yellow-600' : 'text-red-600'
+        const colorClass = value >= 80 ? 'text-success' : value >= 60 ? 'text-warning' : 'text-destructive'
         return <span className={`font-medium ${colorClass}`}>{value}%</span>
       },
     },
@@ -149,7 +135,7 @@ const ProductsList: React.FC = () => {
     {
       label: '',
       icon: (
-        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-neutral-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
         </svg>
       ),

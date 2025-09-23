@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, Navigate, Link, useNavigate } from 'react-router'
 import { Button } from '@/components/atoms/Button'
 import { Input } from '@/components/atoms/Input'
+import { Badge } from '@/components/atoms/Badge'
 import { BackLink } from '@/components/atoms/BackLink'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreatePropertyModal } from '@/components/organisms/CreatePropertyModal'
@@ -213,18 +214,18 @@ const PropertiesList: React.FC = () => {
       title: 'Type',
       width: '120px',
       render: (value) => {
-        const typeColors = {
-          string: 'bg-blue-100 text-blue-800',
-          number: 'bg-green-100 text-green-800',
-          boolean: 'bg-purple-100 text-purple-800',
-          array: 'bg-orange-100 text-orange-800',
-          object: 'bg-red-100 text-red-800',
+        const typeVariants = {
+          string: 'default',
+          number: 'secondary', 
+          boolean: 'outline',
+          array: 'default',
+          object: 'destructive',
         }
-        const colorClass = typeColors[value as keyof typeof typeColors] || 'bg-neutral-100 text-neutral-800'
+        const variant = typeVariants[value as keyof typeof typeVariants] || 'secondary'
         return (
-          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${colorClass}`}>
+          <Badge variant={variant as any}>
             {value}
-          </span>
+          </Badge>
         )
       },
     },

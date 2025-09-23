@@ -4,7 +4,6 @@ import { Button } from '@/components/atoms/Button'
 import { Badge } from '@/components/atoms/Badge'
 import { FormField } from '@/components/molecules/FormField'
 import { EventPropertiesInput } from '@/components/organisms/EventPropertiesInput'
-import { getStatusLabel } from '@/utils/properties'
 import type { CreateEventRequest, EventStatus } from '@/types'
 
 interface CreateEventModalProps {
@@ -18,34 +17,28 @@ interface CreateEventModalProps {
 
 const CreateEventModal: React.FC<CreateEventModalProps> = ({
   isOpen,
-  pageId: _pageId, // pageId is required by the interface but not used in this component
+  pageId: _pageId,
   productId,
   onClose,
   onSubmit,
   loading = false
 }) => {
-  const [formData, setFormData] = useState<CreateEventRequest & { test_date?: string }>({
+  const [formData, setFormData] = useState<CreateEventRequest>({
     name: '',
     status: 'to_implement',
-    properties: {},
-    test_date: ''
+    properties: {}
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  const eventStatuses: { value: EventStatus; label: string }[] = [
+    { value: 'to_implement', label: 'À implémenter' },
+    { value: 'to_test', label: 'À tester' },
+    { value: 'validated', label: 'Validé' },
+    { value: 'error', label: 'Erreur' },
+  ]
 
-  const handleInputChange = (field: keyof (CreateEventRequest & { test_date?: string }), value: string | EventStatus) => {
-    setFormData(prev => {
-      const newData = { ...prev, [field]: value }
-      
-      // Auto-set test_date to today when status changes to validated or error
-      if (field === 'status' && (value === 'validated' || value === 'error') && !prev.test_date) {
-        const today = new Date().toISOString().split('T')[0] // Format YYYY-MM-DD
-        newData.test_date = today
-      }
-      
-      return newData
-    })
-    
+  const handleInputChange = (field: keyof CreateEventRequest, value: string | EventStatus) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
     // Clear error when user starts typing
     if (errors[field]) {
       const newErrors = { ...errors }
@@ -81,17 +74,14 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     if (!validateForm()) return
     
     try {
-      const submitData: CreateEventRequest & { test_date?: string } = {
+      await onSubmit({
         name: formData.name.trim(),
         status: formData.status,
-        properties: Object.keys(formData.properties || {}).length > 0 ? formData.properties : undefined,
-        test_date: formData.test_date?.trim() || undefined
-      }
-      
-      await onSubmit(submitData as CreateEventRequest)
+        properties: Object.keys(formData.properties || {}).length > 0 ? formData.properties : undefined
+      })
       
       // Reset form
-      setFormData({ name: '', status: 'to_implement', properties: {}, test_date: '' })
+      setFormData({ name: '', status: 'to_implement', properties: {} })
       setErrors({})
       onClose()
     } catch (error) {
@@ -100,7 +90,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
   }
 
   const handleClose = () => {
-    setFormData({ name: '', status: 'to_implement', properties: {}, test_date: '' })
+    setFormData({ name: '', status: 'to_implement', properties: {} })
     setErrors({})
     onClose()
   }
@@ -163,40 +153,30 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
         </FormField>
 
         <FormField
-          error={errors.status || errors.test_date}
+          label="Statut initial"
+          error={errors.status}
         >
-          <div className="flex items-start space-x-4">
-            <div className="flex-shrink-0">
-              <div className="flex flex-col space-y-1">
-                <label className="text-sm font-medium text-neutral-600">Statut initial</label>
-                <Badge 
-                  status={formData.status || 'to_implement'}
-                  showDropdownArrow={true}
-                  onStatusChange={(newStatus) => handleInputChange('status', newStatus)}
+          <div className="flex flex-wrap gap-2">
+            {eventStatuses.map(status => (
+              <label key={status.value} className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="status"
+                  value={status.value}
+                  checked={formData.status === status.value}
+                  onChange={(e) => handleInputChange('status', e.target.value as EventStatus)}
+                  className="sr-only"
                   disabled={loading}
-                >
-                  {getStatusLabel(formData.status || 'to_implement')}
-                </Badge>
-              </div>
-            </div>
-            
-            {(formData.status === 'validated' || formData.status === 'error') && (
-              <div className="flex-shrink-0">
-                <div className="flex flex-col space-y-1">
-                  <label className="text-sm font-medium text-neutral-600">Date de test</label>
-                  <input
-                    type="date"
-                    value={formData.test_date || ''}
-                    onChange={(e) => handleInputChange('test_date', e.target.value)}
-                    className="px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    disabled={loading}
-                    style={{ 
-                      width: '160px'
-                    }}
-                  />
+                />
+                <div className={`px-3 py-2 rounded-md border transition-colors ${
+                  formData.status === status.value
+                    ? 'border-primary-500 bg-primary-50'
+                    : 'border-neutral-300 hover:border-neutral-400'
+                }`}>
+                  <Badge status={status.value}>{status.label}</Badge>
                 </div>
-              </div>
-            )}
+              </label>
+            ))}
           </div>
         </FormField>
 

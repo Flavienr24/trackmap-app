@@ -1,6 +1,6 @@
 import React from 'react'
-import { Link } from 'react-router'
-import { cn } from '@/design-system'
+import { Link } from 'react-router-dom'
+import { cn } from '@/lib/utils'
 
 interface BackLinkProps {
   to: string

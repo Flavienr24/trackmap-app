@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Modal } from '@/components/organisms/Modal'
 import { FormField } from '@/components/molecules/FormField'
 import { Input } from '@/components/atoms/Input'
-import { Select } from '@/components/atoms/Select'
+import { SimpleSelect } from '@/components/ui/simple-select'
 import { Button } from '@/components/atoms/Button'
 import { propertiesApi } from '@/services/api'
 import type { Property, UpdatePropertyRequest, PropertyType, PropertyImpactData } from '@/types'
@@ -263,9 +263,9 @@ const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
           required
           error={errors.type}
         >
-          <Select
+          <SimpleSelect
             value={formData.type}
-            onChange={(value) => setFormData({ ...formData, type: value as PropertyType })}
+            onChange={(value: string) => setFormData({ ...formData, type: value as PropertyType })}
             options={typeOptions}
             disabled={loading}
           />
