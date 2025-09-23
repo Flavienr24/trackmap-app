@@ -1,6 +1,6 @@
 {
   "name": "trackmap-frontend",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Frontend React app for TrackMap application",
   "type": "module",
   "private": true,
