@@ -80,7 +80,7 @@ export const AppSidebar: React.FC = () => {
   }
 
   return (
-    <Sidebar>
+    <Sidebar className="relative w-64 flex-shrink-0">
       <SidebarHeader className="p-4">
         {/* Logo TrackMap */}
         <div 

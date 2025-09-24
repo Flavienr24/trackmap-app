@@ -77,7 +77,7 @@ const ProductSelector: React.FC = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       {/* Header */}
       <div className="text-center">
         <h1 className="text-4xl font-bold text-slate-900 mb-4">

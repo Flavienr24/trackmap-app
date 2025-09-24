@@ -33,32 +33,7 @@ const Dashboard: React.FC = () => {
   const [showEditProductModal, setShowEditProductModal] = useState(false)
   const [editProductLoading, setEditProductLoading] = useState(false)
 
-  // Load product and pages data
-  const loadData = useCallback(async (productSlug: string) => {
-    setLoading(true)
-    try {
-      // Set current product using the slug
-      const productSet = setCurrentProductBySlug(productSlug)
-      
-      if (!productSet) {
-        console.error('Product not found for slug:', productSlug)
-        navigate('/', { replace: true })
-        return
-      }
-
-      // Load pages for the current product
-      if (currentProduct) {
-        const response = await pagesApi.getByProduct(currentProduct.id)
-        setPages(response.data)
-      }
-    } catch (error) {
-      console.error('Error loading dashboard data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [currentProduct, setCurrentProductBySlug, navigate])
-
-  // Load pages separately when product changes
+  // Load pages for the current product
   const loadPages = useCallback(async () => {
     if (!currentProduct) return
     try {
@@ -69,17 +44,18 @@ const Dashboard: React.FC = () => {
     }
   }, [currentProduct])
 
-  // Initialize data on mount
+  // Initialize product on mount
   useEffect(() => {
-    if (productName) {
-      loadData(productName)
+    if (productName && !currentProduct) {
+      setCurrentProductBySlug(productName)
     }
-  }, [productName, loadData])
+  }, [productName, currentProduct, setCurrentProductBySlug])
 
-  // Load pages when product is set
+  // Load pages when product is available
   useEffect(() => {
     if (currentProduct) {
-      loadPages()
+      setLoading(true)
+      loadPages().finally(() => setLoading(false))
     }
   }, [currentProduct, loadPages])
 

@@ -17,86 +17,113 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useProduct } from '@/hooks/useProduct'
 
-interface BreadcrumbItem {
-  label: string
-  href?: string
-}
-
 export const AppHeader: React.FC = () => {
   const location = useLocation()
   const params = useParams()
   const { currentProduct } = useProduct()
 
-  // Generate breadcrumb items based on current route
-  const generateBreadcrumbs = (): BreadcrumbItem[] => {
-    const breadcrumbs: BreadcrumbItem[] = []
+  // Exact reproduction of the old breadcrumb logic using shadcn components
+  const generateBreadcrumbs = () => {
     const { productName, pageSlug } = params
+    const path = location.pathname
 
-    // Always start with Products
-    breadcrumbs.push({ label: 'Produits', href: '/' })
+    const items = []
 
-    if (productName && currentProduct) {
-      // Add product name
-      breadcrumbs.push({ 
-        label: currentProduct.name, 
-        href: `/products/${productName}` 
-      })
-
-      // Add specific sections based on path
-      const path = location.pathname
-      
-      if (path.includes('/pages')) {
-        if (pageSlug) {
-          breadcrumbs.push({ 
-            label: 'Pages', 
-            href: `/products/${productName}/pages` 
-          })
-          // Find page name - this could be enhanced with actual page data
-          breadcrumbs.push({ label: pageSlug })
-        } else {
-          breadcrumbs.push({ label: 'Pages' })
-        }
-      } else if (path.includes('/events')) {
-        breadcrumbs.push({ label: 'Events' })
-      } else if (path.includes('/properties')) {
-        breadcrumbs.push({ label: 'Propriétés' })
-      } else if (path.includes('/suggested-values')) {
-        breadcrumbs.push({ label: 'Valeurs suggérées' })
-      } else if (path === `/products/${productName}`) {
-        breadcrumbs.push({ label: 'Dashboard' })
-      }
+    // Home page - no breadcrumb
+    if (path === '/') {
+      return items
     }
 
-    return breadcrumbs
+    // Always start with "Produits" for any non-home page
+    items.push({
+      label: 'Produits',
+      href: '/products',
+      isActive: false
+    })
+
+    // If we have a productName in URL and currentProduct is loaded
+    if (productName && currentProduct) {
+      // Add product name (always linkable to dashboard except when we're on dashboard)
+      items.push({
+        label: currentProduct.name,
+        href: path === `/products/${productName}` ? undefined : `/products/${productName}`,
+        isActive: path === `/products/${productName}`
+      })
+
+      // Specific page logic based on exact path patterns from old code
+      if (path.includes('/properties') && path.includes('/suggested-values')) {
+        // SuggestedValuesList: Produits › NomProduit › Propriétés › Valeurs suggérées
+        items.push({
+          label: 'Propriétés',
+          href: `/products/${productName}/properties`,
+          isActive: false
+        })
+        items.push({
+          label: 'Valeurs suggérées',
+          isActive: true
+        })
+      } else if (path.includes('/properties')) {
+        // PropertiesList: Produits › NomProduit › Propriétés
+        items.push({
+          label: 'Propriétés',
+          isActive: true
+        })
+      } else if (path.includes('/pages')) {
+        if (pageSlug) {
+          // PageDetail: Produits › NomProduit › NomPage (pageSlug is the page name)
+          items.push({
+            label: pageSlug,
+            isActive: true
+          })
+        } else {
+          // PagesList: Produits › NomProduit › Pages
+          items.push({
+            label: 'Pages',
+            isActive: true
+          })
+        }
+      } else if (path.includes('/events')) {
+        // EventsList: Produits › NomProduit › Events
+        items.push({
+          label: 'Events',
+          isActive: true
+        })
+      }
+      // Note: Dashboard (path === `/products/${productName}`) doesn't add extra breadcrumb
+    }
+
+    return items
   }
 
-  const breadcrumbs = generateBreadcrumbs()
+  const breadcrumbItems = generateBreadcrumbs()
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center justify-between px-6">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center">
-          <Breadcrumb>
-            <BreadcrumbList>
-              {breadcrumbs.map((item, index) => (
-                <React.Fragment key={index}>
-                  <BreadcrumbItem>
-                    {item.href ? (
-                      <BreadcrumbLink href={item.href} className="text-sm">
-                        {item.label}
-                      </BreadcrumbLink>
-                    ) : (
-                      <BreadcrumbPage className="text-sm font-medium">
-                        {item.label}
-                      </BreadcrumbPage>
-                    )}
-                  </BreadcrumbItem>
-                  {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
-                </React.Fragment>
-              ))}
-            </BreadcrumbList>
-          </Breadcrumb>
+          {breadcrumbItems.length > 0 && (
+            <Breadcrumb>
+              <BreadcrumbList>
+                {breadcrumbItems.map((item, index) => (
+                  <React.Fragment key={index}>
+                    <BreadcrumbItem>
+                      {item.href && !item.isActive ? (
+                        <BreadcrumbLink href={item.href} className="text-sm">
+                          {item.label}
+                        </BreadcrumbLink>
+                      ) : (
+                        <BreadcrumbPage className="text-sm">
+                          {item.label}
+                        </BreadcrumbPage>
+                      )}
+                    </BreadcrumbItem>
+                    {index < breadcrumbItems.length - 1 && <BreadcrumbSeparator />}
+                  </React.Fragment>
+                ))}
+              </BreadcrumbList>
+            </Breadcrumb>
+          )}
         </div>
 
         {/* User Menu - Prepared for future */}
