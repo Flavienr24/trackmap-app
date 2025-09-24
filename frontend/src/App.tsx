@@ -1,24 +1,27 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import Layout from './components/Layout'
-import { ProductsList } from './pages/ProductsList'
-import { ProductDetail } from './pages/ProductDetail'
+import { AppLayout } from './components/layout/AppLayout'
+import { ProductSelector } from './pages/ProductSelector'
+import { Dashboard } from './pages/Dashboard'
+import { PagesList } from './pages/PagesList'
 import { PageDetail } from './pages/PageDetail'
 import { PropertiesList } from './pages/PropertiesList'
 import { SuggestedValuesList } from './pages/SuggestedValuesList'
+import { EventsList } from './pages/EventsList'
 
 function App() {
   return (
     <Router>
-      <Layout>
+      <AppLayout>
         <Routes>
-          <Route path="/" element={<ProductsList />} />
-          <Route path="/products" element={<ProductsList />} />
-          <Route path="/products/:productName" element={<ProductDetail />} />
+          <Route path="/" element={<ProductSelector />} />
+          <Route path="/products/:productName" element={<Dashboard />} />
+          <Route path="/products/:productName/pages" element={<PagesList />} />
+          <Route path="/products/:productName/pages/:pageSlug" element={<PageDetail />} />
+          <Route path="/products/:productName/events" element={<EventsList />} />
           <Route path="/products/:productName/properties" element={<PropertiesList />} />
           <Route path="/products/:productName/suggested-values" element={<SuggestedValuesList />} />
-          <Route path="/products/:productName/pages/:pageSlug" element={<PageDetail />} />
         </Routes>
-      </Layout>
+      </AppLayout>
     </Router>
   )
 }
