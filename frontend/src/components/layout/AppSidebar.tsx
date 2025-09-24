@@ -14,10 +14,15 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+import { CreateProductModal } from '@/components/organisms/CreateProductModal'
 import { useProduct } from '@/hooks/useProduct'
+import { productsApi } from '@/services/api'
+import { slugifyProductName } from '@/utils/slug'
+import type { CreateProductRequest } from '@/types'
 import packageJson from '../../../package.json'
 
 const navigationItems = [
@@ -57,8 +62,13 @@ export const AppSidebar: React.FC = () => {
     setCurrentProduct, 
     currentProductSlug,
     hasSelectedProduct,
-    isLoading 
+    isLoading,
+    loadProducts
   } = useProduct()
+
+  const [showCreateModal, setShowCreateModal] = React.useState(false)
+  const [createLoading, setCreateLoading] = React.useState(false)
+
 
   const handleProductSelect = (productId: string) => {
     const product = products.find(p => p.id === productId)
@@ -66,6 +76,34 @@ export const AppSidebar: React.FC = () => {
       setCurrentProduct(product)
       const slug = currentProductSlug || product.name.toLowerCase()
       navigate(`/products/${slug}`)
+    }
+  }
+
+  const handleSeeAllProducts = () => {
+    navigate('/')
+  }
+
+  const handleAddNewProduct = () => {
+    setShowCreateModal(true)
+  }
+
+  const handleCreateSubmit = async (data: CreateProductRequest) => {
+    setCreateLoading(true)
+    try {
+      const response = await productsApi.create(data)
+      await loadProducts() // Refresh products list
+      
+      // Select the newly created product and navigate to it
+      if (response.data) {
+        setCurrentProduct(response.data)
+        const slug = slugifyProductName(response.data.name)
+        navigate(`/products/${slug}`)
+      }
+    } catch (error) {
+      console.error('Error creating product:', error)
+      throw error // Let the modal handle the error display
+    } finally {
+      setCreateLoading(false)
     }
   }
 
@@ -119,28 +157,56 @@ export const AppSidebar: React.FC = () => {
               </svg>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-64">
+          <DropdownMenuContent 
+            className="w-[--radix-dropdown-menu-trigger-width] max-w-none z-50"
+            side="bottom"
+            align="start"
+          >
             {products.length === 0 ? (
               <DropdownMenuItem disabled>
                 {isLoading ? 'Chargement...' : 'Aucun produit disponible'}
               </DropdownMenuItem>
             ) : (
-              products.map((product) => (
+              <>
+                {products.map((product) => (
+                  <DropdownMenuItem
+                    key={product.id}
+                    onClick={() => handleProductSelect(product.id)}
+                    className="cursor-pointer"
+                  >
+                    <div className="w-full">
+                      <div className="font-medium">{product.name}</div>
+                      {product.description && (
+                        <div className="text-sm text-muted-foreground truncate">
+                          {product.description}
+                        </div>
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+                
+                <DropdownMenuSeparator />
+                
                 <DropdownMenuItem
-                  key={product.id}
-                  onClick={() => handleProductSelect(product.id)}
-                  className="cursor-pointer"
+                  onClick={handleSeeAllProducts}
+                  className="cursor-pointer text-muted-foreground"
                 >
-                  <div>
-                    <div className="font-medium">{product.name}</div>
-                    {product.description && (
-                      <div className="text-sm text-muted-foreground truncate">
-                        {product.description}
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <span>📋</span>
+                    <span>See all products</span>
                   </div>
                 </DropdownMenuItem>
-              ))
+                
+                <DropdownMenuItem
+                  onClick={handleAddNewProduct}
+                  className="cursor-pointer text-muted-foreground"
+                >
+                  <div className="flex items-center gap-2">
+                    <span>➕</span>
+                    <span>Add new product</span>
+                  </div>
+                </DropdownMenuItem>
+              </>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -181,6 +247,14 @@ export const AppSidebar: React.FC = () => {
           <div className="mt-1">Audit & Documentation GA4</div>
         </div>
       </SidebarFooter>
+
+      {/* Create Product Modal */}
+      <CreateProductModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleCreateSubmit}
+        loading={createLoading}
+      />
     </Sidebar>
   )
 }
