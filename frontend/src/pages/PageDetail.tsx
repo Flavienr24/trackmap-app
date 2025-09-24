@@ -22,7 +22,7 @@ import type { Page, Event, EventStatus, CreateEventRequest, UpdateEventRequest, 
 const PageDetail: React.FC = () => {
   const { productName, pageSlug } = useParams<{ productName: string; pageSlug: string }>()
   const navigate = useNavigate()
-  const { currentProduct, setCurrentProductBySlug, hasSelectedProduct } = useProduct()
+  const { currentProduct } = useProduct()
   
   const [page, setPage] = useState<Page | null>(null)
   const [events, setEvents] = useState<Event[]>([])
@@ -35,41 +35,15 @@ const PageDetail: React.FC = () => {
   const [editPageLoading, setEditPageLoading] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
 
-  // Find product by matching slug against product name
-  const findProductBySlug = useCallback(async (productSlug: string) => {
-    try {
-      // Get all products and find the one that matches the slug
-      const allProductsResponse = await productsApi.getAll()
-      const targetProduct = allProductsResponse.data.find(product => 
-        doesProductNameMatchSlug(product.name, productSlug)
-      )
-      return targetProduct
-    } catch (error) {
-      console.error('Error finding product by slug:', error)
-      return null
-    }
-  }, [])
-
   // Load page and events data
   useEffect(() => {
-    if (!productName || !pageSlug) return
+    if (!productName || !pageSlug || !currentProduct) return
     
     const loadAllData = async () => {
       setLoading(true)
       try {
-        // First find the product by slug
-        const product = await findProductBySlug(productName)
-        if (!product) {
-          console.error('Product not found for slug:', productName)
-          navigate('/products', { replace: true })
-          return
-        }
-        
-        // Store the product in state for breadcrumb
-        setProduct(product)
-        
-        // Then load page using product ID and page slug
-        const pageResponse = await pagesApi.getBySlug(product.id, pageSlug)
+        // Load page using current product ID and page slug
+        const pageResponse = await pagesApi.getBySlug(currentProduct.id, pageSlug)
         setPage(pageResponse.data)
         
         // Finally load events for that page
@@ -86,7 +60,7 @@ const PageDetail: React.FC = () => {
     }
     
     loadAllData()
-  }, [productName, pageSlug, navigate, findProductBySlug])
+  }, [productName, pageSlug, navigate, currentProduct])
 
   const loadEvents = useCallback(async (pageId: string) => {
     try {
@@ -157,13 +131,10 @@ const PageDetail: React.FC = () => {
     try {
       const response = await pagesApi.update(pageId, data)
       console.log('Page updated:', response.data)
-      if (productName && pageSlug) {
-        // Find the product first, then reload the page data
-        const product = await findProductBySlug(productName)
-        if (product) {
-          const pageResponse = await pagesApi.getBySlug(product.id, pageSlug)
-          setPage(pageResponse.data)
-        }
+      if (currentProduct && pageSlug) {
+        // Reload the page data using current product
+        const pageResponse = await pagesApi.getBySlug(currentProduct.id, pageSlug)
+        setPage(pageResponse.data)
       }
     } catch (error) {
       console.error('Error updating page:', error)
@@ -327,13 +298,6 @@ const PageDetail: React.FC = () => {
       {/* Navigation */}
       <div className="flex items-center justify-between">
         <BackLink to={`/products/${productName}`}>Retour au produit</BackLink>
-        <nav className="flex items-center space-x-2 text-sm text-neutral-600">
-          <Link to="/products" className="hover:text-neutral-900">Produits</Link>
-          <span>›</span>
-          <Link to={`/products/${productName}`} className="hover:text-neutral-900">{product?.name || 'Chargement...'}</Link>
-          <span>›</span>
-          <span className="text-neutral-900 font-medium">{page.name}</span>
-        </nav>
       </div>
 
       {/* Page Header */}

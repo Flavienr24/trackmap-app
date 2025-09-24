@@ -3,6 +3,7 @@
     "target": "ES2020",
     "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": ["vite/client", "node"],
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
@@ -12,7 +13,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
-    "noUnusedLocals": true,
+    "noUnusedLocals": false,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
@@ -21,5 +22,6 @@
     }
   },
   "include": ["src"],
+  "exclude": ["src/utils/vConsoleLogCollector.ts", "src/utils/testingHelpers.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

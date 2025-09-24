@@ -1,5 +1,5 @@
 import React from 'react'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,80 +16,93 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useProduct } from '@/hooks/useProduct'
+import { slugifyProductName, unslugifyProductName } from '@/utils/slug'
 
 export const AppHeader: React.FC = () => {
   const location = useLocation()
-  const params = useParams()
-  const { currentProduct } = useProduct()
+  const { currentProduct, findProductBySlug } = useProduct()
 
-  // Exact reproduction of the old breadcrumb logic using shadcn components
+  // New breadcrumb logic according to specifications
   const generateBreadcrumbs = () => {
-    const { productName, pageSlug } = params
+    // Extract parameters manually from pathname since useParams() doesn't work in AppHeader
+    const pathSegments = location.pathname.split('/').filter(Boolean)
+    const productName = pathSegments[1] // /products/[productName]/...
+    const pageSlug = pathSegments[3] // /products/productName/pages/[pageSlug]
+    
     const path = location.pathname
 
-    const items = []
+    const items: Array<{
+      label: string
+      href?: string
+      isActive: boolean
+      isProductName?: boolean
+    }> = []
 
     // Home page - no breadcrumb
     if (path === '/') {
       return items
     }
 
-    // Always start with "Produits" for any non-home page
-    items.push({
-      label: 'Produits',
-      href: '/products',
-      isActive: false
-    })
+    // Try to find the product by slug if currentProduct doesn't match
+    const productForBreadcrumb = currentProduct && productName && 
+      slugifyProductName(currentProduct.name) === productName 
+        ? currentProduct 
+        : productName ? findProductBySlug(productName) 
+        : currentProduct // Fallback: use currentProduct even if productName is undefined
 
-    // If we have a productName in URL and currentProduct is loaded
-    if (productName && currentProduct) {
-      // Add product name (always linkable to dashboard except when we're on dashboard)
-      items.push({
-        label: currentProduct.name,
-        href: path === `/products/${productName}` ? undefined : `/products/${productName}`,
-        isActive: path === `/products/${productName}`
-      })
+    // If we have found a matching product (either through URL matching or fallback)
+    if (productForBreadcrumb) {
+      // Always start with product name as first element (in bold, clickable to dashboard)
+      const productSlug = productName || slugifyProductName(productForBreadcrumb.name)
+      const dashboardPath = `/products/${productSlug}`
+      const productItem = {
+        label: productForBreadcrumb.name,
+        href: path === dashboardPath ? undefined : dashboardPath,
+        isActive: path === dashboardPath,
+        isProductName: true // Flag to make it bold
+      }
+      items.push(productItem)
 
-      // Specific page logic based on exact path patterns from old code
-      if (path.includes('/properties') && path.includes('/suggested-values')) {
-        // SuggestedValuesList: Produits › NomProduit › Propriétés › Valeurs suggérées
-        items.push({
-          label: 'Propriétés',
-          href: `/products/${productName}/properties`,
-          isActive: false
-        })
+      // Specific page logic based on new requirements
+      if (path.includes('/suggested-values')) {
+        // SuggestedValuesList: NomProduit › Valeurs suggérées (second level)
         items.push({
           label: 'Valeurs suggérées',
           isActive: true
         })
       } else if (path.includes('/properties')) {
-        // PropertiesList: Produits › NomProduit › Propriétés
+        // PropertiesList: NomProduit › Propriétés
         items.push({
           label: 'Propriétés',
           isActive: true
         })
       } else if (path.includes('/pages')) {
         if (pageSlug) {
-          // PageDetail: Produits › NomProduit › NomPage (pageSlug is the page name)
+          // PageDetail: NomProduit › Pages › NomPage (third level)
           items.push({
-            label: pageSlug,
+            label: 'Pages',
+            href: `/products/${productSlug}/pages`,
+            isActive: false
+          })
+          items.push({
+            label: unslugifyProductName(pageSlug),
             isActive: true
           })
         } else {
-          // PagesList: Produits › NomProduit › Pages
+          // PagesList: NomProduit › Pages (second level)
           items.push({
             label: 'Pages',
             isActive: true
           })
         }
       } else if (path.includes('/events')) {
-        // EventsList: Produits › NomProduit › Events
+        // EventsList: NomProduit › Events (second level)
         items.push({
           label: 'Events',
           isActive: true
         })
       }
-      // Note: Dashboard (path === `/products/${productName}`) doesn't add extra breadcrumb
+      // Note: Dashboard (path === `/products/${productName}`) shows only product name
     }
 
     return items
@@ -109,11 +122,14 @@ export const AppHeader: React.FC = () => {
                   <React.Fragment key={index}>
                     <BreadcrumbItem>
                       {item.href && !item.isActive ? (
-                        <BreadcrumbLink href={item.href} className="text-sm">
+                        <BreadcrumbLink 
+                          href={item.href} 
+                          className={`text-sm ${item.isProductName ? 'font-bold' : ''}`}
+                        >
                           {item.label}
                         </BreadcrumbLink>
                       ) : (
-                        <BreadcrumbPage className="text-sm">
+                        <BreadcrumbPage className={`text-sm ${item.isProductName ? 'font-bold' : ''}`}>
                           {item.label}
                         </BreadcrumbPage>
                       )}
