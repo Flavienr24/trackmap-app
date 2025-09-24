@@ -158,7 +158,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
                 onFocus={() => setShowExtendedForm(true)}
                 placeholder="Votre nom (optionnel)"
                 disabled={addingComment}
-                size="sm"
+                className="h-8"
               />
             </div>
             

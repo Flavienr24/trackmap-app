@@ -10,9 +10,9 @@ import { CreateEventModal } from '@/components/organisms/CreateEventModal'
 import { EditEventModal } from '@/components/organisms/EditEventModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { EventDetailModal } from '@/components/organisms/EventDetailModal'
-import { pagesApi, eventsApi, productsApi } from '@/services/api'
+import { pagesApi, eventsApi } from '@/services/api'
 import { getPropertyCount, getStatusLabel } from '@/utils/properties'
-import { doesProductNameMatchSlug } from '@/utils/slug'
+import { useProduct } from '@/hooks/useProduct'
 import type { Page, Event, EventStatus, CreateEventRequest, UpdateEventRequest, UpdatePageRequest } from '@/types'
 
 /**
@@ -22,9 +22,9 @@ import type { Page, Event, EventStatus, CreateEventRequest, UpdateEventRequest, 
 const PageDetail: React.FC = () => {
   const { productName, pageSlug } = useParams<{ productName: string; pageSlug: string }>()
   const navigate = useNavigate()
+  const { currentProduct, setCurrentProductBySlug, hasSelectedProduct } = useProduct()
   
   const [page, setPage] = useState<Page | null>(null)
-  const [product, setProduct] = useState<any>(null)
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateEventModal, setShowCreateEventModal] = useState(false)
