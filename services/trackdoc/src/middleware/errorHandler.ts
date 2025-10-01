@@ -25,7 +25,7 @@ export const errorHandler = (
   const statusCode = error.statusCode || 500;
   const message = error.message || 'Internal Server Error';
   
-  // Log the error with comprehensive request context
+  // Log the error with request context (sanitized - no body to prevent PII leakage)
   logger.error('Application Error', {
     error: {
       message: error.message,
@@ -36,8 +36,8 @@ export const errorHandler = (
       method: req.method,
       url: req.url,
       ip: req.ip,
-      userAgent: req.get('User-Agent'),
-      body: req.body
+      userAgent: req.get('User-Agent')
+      // Note: req.body removed to prevent logging of sensitive data (passwords, API keys, PII)
     }
   });
   
