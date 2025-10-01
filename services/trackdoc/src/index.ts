@@ -8,6 +8,7 @@ import { PrismaClient } from '@prisma/client';
 import logger from './config/logger';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { authenticate } from './middleware/auth';
 import productsRoutes from './routes/products';
 import pagesRoutes from './routes/pages';
 import eventsRoutes from './routes/events';
@@ -50,33 +51,33 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Health check endpoint with database connectivity test
+// Health check endpoint with database connectivity test (no auth required)
 app.get('/api/health', async (req, res) => {
   try {
     // Test database connection with a simple query
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ 
-      status: 'OK', 
+    res.json({
+      status: 'OK',
       database: 'connected',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     logger.error('Database health check failed', { error });
-    res.status(503).json({ 
-      status: 'ERROR', 
+    res.status(503).json({
+      status: 'ERROR',
       database: 'disconnected',
       timestamp: new Date().toISOString()
     });
   }
 });
 
-// TrackDoc API routes - Documentation CRUD operations
-app.use('/api/products', productsRoutes);
-app.use('/api/pages', pagesRoutes);
-app.use('/api/events', eventsRoutes);
-app.use('/api/properties', propertiesRoutes);
-app.use('/api/suggested-values', suggestedValuesRoutes);
-app.use('/api/comments', commentsRoutes);
+// TrackDoc API routes - Documentation CRUD operations (all protected with authentication)
+app.use('/api/products', authenticate, productsRoutes);
+app.use('/api/pages', authenticate, pagesRoutes);
+app.use('/api/events', authenticate, eventsRoutes);
+app.use('/api/properties', authenticate, propertiesRoutes);
+app.use('/api/suggested-values', authenticate, suggestedValuesRoutes);
+app.use('/api/comments', authenticate, commentsRoutes);
 
 // Error handling middleware (must be last)
 app.use(notFoundHandler); // 404 handler
