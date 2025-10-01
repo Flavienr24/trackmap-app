@@ -24,9 +24,43 @@ const app = express();
 const PORT = process.env.PORT || 3002;
 const prisma = new PrismaClient();
 
+// CORS configuration - restrict to allowed origins
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.BFF_URL,
+].filter(Boolean); // Remove undefined values
+
+// Log allowed origins on startup
+logger.info('CORS configured with allowed origins', { allowedOrigins });
+
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      logger.debug('CORS request allowed', { origin });
+      callback(null, true);
+    } else {
+      logger.warn('CORS blocked request from unauthorized origin', {
+        origin,
+        allowedOrigins
+      });
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
+  exposedHeaders: ['Content-Length', 'X-Request-ID'],
+  maxAge: 86400 // 24 hours
+};
+
 // Security and parsing middleware
 app.use(helmet()); // Security headers
-app.use(cors()); // Cross-origin resource sharing
+app.use(cors(corsOptions)); // Cross-origin resource sharing with restrictions
 app.use(express.json({ limit: '10mb' })); // JSON body parser with size limit
 app.use(express.urlencoded({ extended: true })); // URL-encoded body parser
 
