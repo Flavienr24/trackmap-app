@@ -8,56 +8,120 @@ import { db } from '../config/database';
 const prisma = db;
 
 /**
- * Get all products with their related data
- * Includes pages, events, variables, and suggested values
+ * Get all products with optimized payload
+ * Uses query parameter ?full=true for complete data, otherwise returns light version
+ * Light version: only counts, no nested relations (faster, smaller payload)
+ * Full version: includes all related data (pages, events, properties, suggestedValues)
  * Returns products ordered by last update date
  */
 export const getAllProducts = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    logger.debug('Fetching all products', { requestId: req.ip });
-    
-    // Fetch all products with comprehensive related data
-    const products = await prisma.product.findMany({
-      include: {
-        pages: {
-          include: {
-            events: true // Include events for each page
-          }
+    const fullData = req.query.full === 'true';
+
+    logger.debug('Fetching all products', { fullData, requestId: req.ip });
+
+    if (fullData) {
+      // Full data with all relations (backward compatibility)
+      const products = await prisma.product.findMany({
+        include: {
+          pages: {
+            include: {
+              events: true
+            }
+          },
+          properties: true,
+          suggestedValues: true
         },
-        properties: true,
-        suggestedValues: true
+        orderBy: {
+          updatedAt: 'desc'
+        }
+      });
+
+      const enrichedProducts = products.map(product => {
+        const totalEvents = product.pages.reduce((acc, page) => acc + page.events.length, 0);
+
+        return {
+          ...product,
+          pages_count: product.pages.length,
+          events_count: totalEvents,
+          health_score: totalEvents > 0 ? Math.round((product.pages.length * 20) + (totalEvents * 10)) : 0
+        };
+      });
+
+      logger.info('Products (full) fetched successfully', {
+        count: enrichedProducts.length,
+        requestId: req.ip
+      });
+
+      return res.json({
+        success: true,
+        data: enrichedProducts,
+        count: enrichedProducts.length
+      });
+    }
+
+    // Light version: only basic product data with counts (optimized)
+    const products = await prisma.product.findMany({
+      select: {
+        id: true,
+        name: true,
+        url: true,
+        description: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            pages: true,
+            properties: true,
+            suggestedValues: true
+          }
+        }
       },
       orderBy: {
-        updatedAt: 'desc' // Most recently updated first
+        updatedAt: 'desc'
       }
     });
 
-    // Add computed fields for each product
-    const enrichedProducts = products.map(product => {
-      const totalEvents = product.pages.reduce((acc, page) => acc + page.events.length, 0);
-      
-      return {
-        ...product,
-        pages_count: product.pages.length,
-        events_count: totalEvents,
-        health_score: totalEvents > 0 ? Math.round((product.pages.length * 20) + (totalEvents * 10)) : 0
-      };
+    // Calculate events count separately for light version (single aggregation query)
+    const productsWithCounts = await Promise.all(
+      products.map(async (product) => {
+        const eventsCount = await prisma.event.count({
+          where: {
+            page: {
+              productId: product.id
+            }
+          }
+        });
+
+        return {
+          id: product.id,
+          name: product.name,
+          url: product.url,
+          description: product.description,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt,
+          pages_count: product._count.pages,
+          properties_count: product._count.properties,
+          suggested_values_count: product._count.suggestedValues,
+          events_count: eventsCount,
+          health_score: eventsCount > 0 ? Math.round((product._count.pages * 20) + (eventsCount * 10)) : 0
+        };
+      })
+    );
+
+    logger.info('Products (light) fetched successfully', {
+      count: productsWithCounts.length,
+      requestId: req.ip
     });
 
-    logger.info('Products fetched successfully', { 
-      count: enrichedProducts.length,
-      requestId: req.ip 
-    });
-
-    // Return standardized API response
     res.json({
       success: true,
-      data: enrichedProducts,
-      count: enrichedProducts.length
+      data: productsWithCounts,
+      count: productsWithCounts.length
     });
   } catch (error) {
     logger.error('Error fetching products', { error, requestId: req.ip });
-    next(error); // Pass to error handler middleware
+    next(error);
   }
 };
 
