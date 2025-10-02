@@ -309,3 +309,4 @@ const SuggestedValuesList: React.FC = () => {
 }
 
 export { SuggestedValuesList }
+export default SuggestedValuesList

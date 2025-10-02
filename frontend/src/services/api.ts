@@ -43,54 +43,17 @@ import type {
 const API_BASE_URL = '/api'
 
 /**
- * Transform API response data from camelCase to snake_case
- * Maps backend field names to frontend interface expectations
- * Protected against circular references
+ * NOTE: transformApiData function removed (P1.4.2 optimization)
+ *
+ * The backend (Prisma) already returns camelCase data.
+ * The previous transformApiData() converted camelCase → snake_case, which was:
+ * - Unnecessary (double conversion)
+ * - Expensive (deep object traversal on every API call)
+ * - Fragile (manual field mapping maintenance)
+ *
+ * Frontend types now align with backend camelCase convention.
+ * No transformation needed - direct passthrough for better performance.
  */
-function transformApiData(data: any, visited: WeakSet<any> = new WeakSet()): any {
-  if (!data) return data
-  
-  // Prevent circular references
-  if (typeof data === 'object' && visited.has(data)) {
-    return '[Circular Reference]'
-  }
-  
-  if (Array.isArray(data)) {
-    visited.add(data)
-    const result = data.map(item => transformApiData(item, visited))
-    visited.delete(data)
-    return result
-  }
-  
-  if (typeof data === 'object') {
-    visited.add(data)
-    const transformed: any = {}
-    
-    for (const [key, value] of Object.entries(data)) {
-      let newKey = key
-      
-      // Transform common field mappings
-      if (key === 'createdAt') newKey = 'created_at'
-      if (key === 'updatedAt') newKey = 'updated_at'
-      if (key === 'productId') newKey = 'product_id'
-      if (key === 'pageId') newKey = 'page_id'
-      if (key === 'eventId') newKey = 'event_id'
-      if (key === 'propertyId') newKey = 'property_id'
-      if (key === 'suggestedValueId') newKey = 'suggested_value_id'
-      if (key === 'testDate') newKey = 'test_date'
-      if (key === 'isContextual') newKey = 'is_contextual'
-      if (key === 'oldValue') newKey = 'old_value'
-      if (key === 'newValue') newKey = 'new_value'
-      
-      transformed[newKey] = transformApiData(value, visited)
-    }
-    
-    visited.delete(data)
-    return transformed
-  }
-  
-  return data
-}
 
 /**
  * Generic API request handler with error handling
@@ -131,14 +94,9 @@ async function apiRequest<T>(
     }
     
     const jsonData = await response.json()
-    
-    // Transform the response data to match frontend interfaces
-    if (jsonData.data) {
-      jsonData.data = transformApiData(jsonData.data)
-    } else {
-      return transformApiData(jsonData)
-    }
-    
+
+    // Return data as-is (camelCase from Prisma backend)
+    // No transformation needed - backend and frontend use same convention
     return jsonData
   } catch (error) {
     console.error(`API request failed: ${endpoint}`, error)

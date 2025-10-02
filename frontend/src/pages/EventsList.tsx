@@ -317,3 +317,4 @@ const EventsList: React.FC = () => {
 }
 
 export { EventsList }
+export default EventsList

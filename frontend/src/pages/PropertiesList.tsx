@@ -357,3 +357,4 @@ const PropertiesList: React.FC = () => {
 }
 
 export { PropertiesList }
+export default PropertiesList

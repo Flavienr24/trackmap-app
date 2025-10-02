@@ -394,3 +394,4 @@ const PageDetail: React.FC = () => {
 }
 
 export { PageDetail }
+export default PageDetail
