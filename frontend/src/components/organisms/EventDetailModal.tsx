@@ -368,7 +368,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                   <DragDropZone
                     onFilesSelected={handleFilesSelected}
                     onUpload={handleUploadWithProgress}
-                    accept="image/*,.pdf"
+                    accept="image/*"
                     maxFiles={10}
                     maxSize={5 * 1024 * 1024}
                     disabled={uploading}

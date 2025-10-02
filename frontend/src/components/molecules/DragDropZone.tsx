@@ -26,7 +26,7 @@ interface DragDropZoneProps {
 const DragDropZone: React.FC<DragDropZoneProps> = ({
   onFilesSelected,
   onUpload,
-  accept = "image/*,.pdf",
+  accept = "image/*",
   maxFiles = 10,
   maxSize = 5 * 1024 * 1024, // 5MB
   disabled = false,

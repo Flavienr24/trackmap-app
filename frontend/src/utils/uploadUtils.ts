@@ -129,13 +129,6 @@ export const uploadMultipleFilesWithProgress = async (
 }
 
 /**
- * Utility to check if file is PDF
- */
-export const isPDF = (file: File): boolean => {
-  return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
-}
-
-/**
  * Utility to check if file is image
  */
 export const isImage = (file: File): boolean => {
@@ -146,7 +139,6 @@ export const isImage = (file: File): boolean => {
  * Get file type label for display
  */
 export const getFileTypeLabel = (file: File): string => {
-  if (isPDF(file)) return 'PDF'
   if (isImage(file)) return 'Image'
   return 'File'
 }
