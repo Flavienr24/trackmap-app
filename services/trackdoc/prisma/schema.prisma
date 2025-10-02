@@ -47,6 +47,7 @@ model Page {
   events    Event[]  // Tracking events on this page
 
   @@unique([productId, slug]) // Unique slug per product
+  @@index([productId])
   @@map("pages")
 }
 
@@ -68,6 +69,9 @@ model Event {
   comments  Comment[]   // Comments about this event
   history   EventHistory[] // Change history for this event
 
+  @@index([pageId])
+  @@index([status])
+  @@index([updatedAt])
   @@map("events")
 }
 

@@ -69,6 +69,16 @@ Thumbs.db
 # Database
 *.sqlite
 *.sqlite3
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+dev.db
+test.db
+
+# Database backups
+**/backups/
+**/prisma/backups/
 
 # Prisma
 services/trackdoc/prisma/migrations/
