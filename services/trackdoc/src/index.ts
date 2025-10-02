@@ -9,6 +9,7 @@ import { db, disconnectDatabase, checkDatabaseHealth } from './config/database';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { authenticate } from './middleware/auth';
+import { apiRateLimit } from './middleware/rateLimiter';
 import productsRoutes from './routes/products';
 import pagesRoutes from './routes/pages';
 import eventsRoutes from './routes/events';
@@ -60,6 +61,7 @@ const corsOptions = {
 // Security and parsing middleware
 app.use(helmet()); // Security headers
 app.use(cors(corsOptions)); // Cross-origin resource sharing with restrictions
+app.use(apiRateLimit); // Global rate limiting (100 req/15min per IP)
 app.use(express.json({ limit: '10mb' })); // JSON body parser with size limit
 app.use(express.urlencoded({ extended: true })); // URL-encoded body parser
 
