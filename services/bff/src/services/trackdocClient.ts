@@ -8,12 +8,20 @@ class TrackDocApiClient implements TrackDocClient {
   private client: AxiosInstance;
 
   constructor() {
+    const apiKey = process.env.TRACKDOC_API_KEY;
+
+    if (!apiKey) {
+      logger.error('TRACKDOC_API_KEY not configured in environment variables');
+      throw new Error('TRACKDOC_API_KEY is required for TrackDoc API client');
+    }
+
     this.client = axios.create({
       baseURL: config.services.trackdoc.baseUrl,
       timeout: config.services.trackdoc.timeout,
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'TrackMap-BFF/1.0.0'
+        'User-Agent': 'TrackMap-BFF/1.0.0',
+        'X-API-Key': apiKey
       }
     });
 
