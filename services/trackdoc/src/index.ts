@@ -4,8 +4,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
 import logger from './config/logger';
+import { db, disconnectDatabase, checkDatabaseHealth } from './config/database';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { authenticate } from './middleware/auth';
@@ -22,7 +22,6 @@ dotenv.config();
 // Initialize Express app and configuration
 const app = express();
 const PORT = process.env.PORT || 3002;
-const prisma = new PrismaClient();
 
 // CORS configuration - restrict to allowed origins
 const allowedOrigins = [
@@ -88,13 +87,21 @@ app.get('/health', (req, res) => {
 // Health check endpoint with database connectivity test (no auth required)
 app.get('/api/health', async (req, res) => {
   try {
-    // Test database connection with a simple query
-    await prisma.$queryRaw`SELECT 1`;
-    res.json({
-      status: 'OK',
-      database: 'connected',
-      timestamp: new Date().toISOString()
-    });
+    // Use singleton database client for health check
+    const isHealthy = await checkDatabaseHealth();
+    if (isHealthy) {
+      res.json({
+        status: 'OK',
+        database: 'connected',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(503).json({
+        status: 'ERROR',
+        database: 'disconnected',
+        timestamp: new Date().toISOString()
+      });
+    }
   } catch (error) {
     logger.error('Database health check failed', { error });
     res.status(503).json({
@@ -119,14 +126,18 @@ app.use(errorHandler); // Global error handler
 
 /**
  * Start the server with proper error handling
- * Ensures database connection before accepting requests
+ * Database connection is already established via singleton
  */
 const startServer = async () => {
   try {
-    // Connect to database first
-    await prisma.$connect();
-    logger.info('Database connected successfully');
-    
+    // Verify database connection using singleton
+    const isHealthy = await checkDatabaseHealth();
+    if (!isHealthy) {
+      throw new Error('Database connection failed');
+    }
+
+    logger.info('Database connected successfully via singleton');
+
     // Start HTTP server
     app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`, {
@@ -141,16 +152,16 @@ const startServer = async () => {
   }
 };
 
-// Graceful shutdown handlers
+// Graceful shutdown handlers using singleton disconnect function
 process.on('SIGINT', async () => {
   logger.info('Received SIGINT, shutting down gracefully');
-  await prisma.$disconnect();
+  await disconnectDatabase();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   logger.info('Received SIGTERM, shutting down gracefully');
-  await prisma.$disconnect();
+  await disconnectDatabase();
   process.exit(0);
 });
 
