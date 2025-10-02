@@ -8,18 +8,18 @@ import logger from '../config/logger';
  * Provides validation and temporary storage for image files before Cloudinary upload
  */
 
-// Allowed file types (images and PDF)
+// Allowed file types (images only)
 const allowedMimeTypes = [
   'image/jpeg',
-  'image/jpg', 
+  'image/jpg',
   'image/png',
   'image/gif',
   'image/webp',
-  'application/pdf'
+  'image/svg+xml'
 ];
 
 // Allowed file extensions
-const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
+const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
 
 // Maximum file size (5MB)
 const maxFileSize = 5 * 1024 * 1024;
@@ -110,7 +110,7 @@ export const uploadSingleImage = upload.single('image');
 export const uploadMultipleImages = upload.array('images', maxFiles);
 
 /**
- * File validation utility function (images and PDF)
+ * File validation utility function (images only)
  * Lightweight validation for files already processed by multer
  * Only checks business logic constraints that multer doesn't handle
  */
@@ -124,7 +124,7 @@ export const validateFile = (file: Express.Multer.File): { isValid: boolean; err
 export const validateImageFile = validateFile;
 
 /**
- * Multiple files validation utility function (images and PDF)
+ * Multiple files validation utility function (images only)
  */
 export const validateFiles = (files: Express.Multer.File[]): { isValid: boolean; errors: string[] } => {
   if (!files || files.length === 0) {
