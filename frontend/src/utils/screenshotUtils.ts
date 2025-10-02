@@ -35,14 +35,29 @@ export const deleteScreenshot = async (eventId: string, screenshot: Screenshot):
 
 /**
  * Generates a Cloudinary thumbnail URL for a screenshot
+ * Uses thumbnail_url from API response if available, otherwise generates one
  * @param screenshot - The screenshot object
  * @param width - Thumbnail width (default: 300)
  * @param height - Thumbnail height (default: 200)
  * @returns The thumbnail URL
  */
 export const generateThumbnailUrl = (screenshot: Screenshot, width = 300, height = 200): string => {
-  const extension = screenshot.secure_url.split('.').pop()
-  return `https://res.cloudinary.com/dzsa7xwme/image/upload/w_${width},h_${height},c_fill/${screenshot.public_id}.${extension}`
+  // Prefer thumbnail_url from backend if available (contains correct cloud name)
+  if (screenshot.thumbnail_url) {
+    return screenshot.thumbnail_url
+  }
+
+  // Fallback: generate thumbnail URL from secure_url
+  // Extract cloud name from secure_url to avoid hardcoding
+  const urlMatch = screenshot.secure_url.match(/https:\/\/res\.cloudinary\.com\/([^\/]+)/)
+  if (urlMatch) {
+    const cloudName = urlMatch[1]
+    const extension = screenshot.secure_url.split('.').pop()
+    return `https://res.cloudinary.com/${cloudName}/image/upload/w_${width},h_${height},c_fill/${screenshot.public_id}.${extension}`
+  }
+
+  // Last resort: return secure_url as-is
+  return screenshot.secure_url
 }
 
 /**
