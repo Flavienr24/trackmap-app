@@ -231,3 +231,4 @@ const ProductSelector: React.FC = () => {
 }
 
 export { ProductSelector }
+export default ProductSelector

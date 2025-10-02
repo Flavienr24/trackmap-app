@@ -321,3 +321,4 @@ const PagesList: React.FC = () => {
 }
 
 export { PagesList }
+export default PagesList
