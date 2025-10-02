@@ -20,11 +20,9 @@ dotenv.config();
 // Initialize Express app
 const app = express();
 
-// Security and parsing middleware
+// Security middleware (applied globally)
 app.use(helmet()); // Security headers
 app.use(cors()); // Cross-origin resource sharing
-app.use(express.json({ limit: config.api.requestLimit })); // JSON body parser
-app.use(express.urlencoded({ extended: true })); // URL-encoded body parser
 
 // Custom request logging middleware
 app.use(requestLogger);
@@ -45,11 +43,11 @@ app.get('/health', async (req, res) => {
       trackdocClient.healthCheck(),
       trackauditClient.healthCheck()
     ]);
-    
+
     const allHealthy = trackdocHealth && trackauditHealth;
-    
-    res.status(allHealthy ? 200 : 503).json({ 
-      status: allHealthy ? 'OK' : 'DEGRADED', 
+
+    res.status(allHealthy ? 200 : 503).json({
+      status: allHealthy ? 'OK' : 'DEGRADED',
       service: 'trackmap-bff',
       timestamp: new Date().toISOString(),
       dependencies: {
@@ -69,8 +67,14 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// BFF API routes - optimized for frontend consumption  
-app.use(`${config.api.prefix}/dashboard`, dashboardRoutes);
+// BFF API routes with body parsing (optimized for frontend consumption)
+// Body parsing applied only to dashboard routes to avoid interfering with proxy
+app.use(
+  `${config.api.prefix}/dashboard`,
+  express.json({ limit: config.api.requestLimit }),
+  express.urlencoded({ extended: true }),
+  dashboardRoutes
+);
 
 // Proxy routes - Forward all other /api requests to TrackDoc (must be after specific routes)
 app.use(`${config.api.prefix}`, proxyRoutes);
