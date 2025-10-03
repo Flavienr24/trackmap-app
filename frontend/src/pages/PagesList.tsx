@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
+import { VirtualizedDataTable } from '@/components/organisms/VirtualizedDataTable'
+import type { Column, Action } from '@/components/organisms/DataTable'
 import { CreatePageModal } from '@/components/organisms/CreatePageModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { pagesApi } from '@/services/api'
@@ -281,13 +282,15 @@ const PagesList: React.FC = () => {
       {/* Pages Table */}
       <Card>
         <CardContent className="p-0">
-          <DataTable
+          <VirtualizedDataTable
             data={filteredPages}
             columns={columns}
             actions={actions}
             loading={loading}
             emptyMessage="Aucune page trouvée. Créez votre première page pour commencer le tracking."
             onRowClick={handleViewPage}
+            rowHeight={60}
+            height={600}
           />
         </CardContent>
       </Card>

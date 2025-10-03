@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { DataTable, type Column } from '@/components/organisms/DataTable'
+import { VirtualizedDataTable } from '@/components/organisms/VirtualizedDataTable'
+import type { Column } from '@/components/organisms/DataTable'
 import { pagesApi } from '@/services/api'
 import { useProduct } from '@/hooks/useProduct'
 import type { Page } from '@/types'
@@ -296,11 +297,13 @@ const EventsList: React.FC = () => {
       {/* Events Table */}
       <Card>
         <CardContent className="p-0">
-          <DataTable
+          <VirtualizedDataTable
             data={filteredEvents}
             columns={columns}
             loading={loading}
             emptyMessage="Aucun événement trouvé pour ce produit."
+            rowHeight={70}
+            height={600}
           />
         </CardContent>
       </Card>
