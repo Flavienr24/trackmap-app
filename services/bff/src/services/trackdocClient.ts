@@ -19,7 +19,9 @@ class TrackDocApiClient implements TrackDocClient {
       baseURL: config.services.trackdoc.baseUrl,
       timeout: config.services.trackdoc.timeout,
       headers: {
-        'Content-Type': 'application/json',
+        // Note: Content-Type intentionally omitted to let Axios set it automatically
+        // based on request body (e.g., application/json for objects, multipart/form-data for FormData)
+        // Multipart uploads go through the HTTP proxy (routes/proxy.ts), not this client
         'User-Agent': 'TrackMap-BFF/1.0.0',
         'X-API-Key': apiKey
       }
