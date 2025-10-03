@@ -22,7 +22,29 @@ const app = express();
 
 // Security middleware (applied globally)
 app.use(helmet()); // Security headers
-app.use(cors()); // Cross-origin resource sharing
+
+// CORS configuration - Restrict origins to frontend only
+const allowedOrigins = [
+  'http://localhost:3000', // Frontend dev server (Vite)
+  // TODO: Add production/staging URLs when deploying
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests for dev)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      logger.warn('CORS blocked request from unauthorized origin', { origin, allowedOrigins });
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Custom request logging middleware
 app.use(requestLogger);
