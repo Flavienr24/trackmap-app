@@ -86,7 +86,11 @@ const CreatePropertyModal: React.FC<CreatePropertyModalProps> = ({
       handleClose()
     } catch (error) {
       console.error('Error creating property:', error)
-      setErrors({ submit: 'Erreur lors de la création de la propriété' })
+      // Extract specific error message from API response
+      const errorMessage = (error as any)?.response?.data?.message ||
+                          (error as Error)?.message ||
+                          'Erreur lors de la création de la propriété'
+      setErrors({ submit: errorMessage })
     }
   }
 
