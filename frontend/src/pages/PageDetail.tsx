@@ -13,6 +13,7 @@ import { EventDetailModal } from '@/components/organisms/EventDetailModal'
 import { pagesApi, eventsApi } from '@/services/api'
 import { getPropertyCount, getStatusLabel } from '@/utils/properties'
 import { useProduct } from '@/hooks/useProduct'
+import { doesProductNameMatchSlug } from '@/utils/slug'
 import type { Page, Event, EventStatus, CreateEventRequest, UpdateEventRequest, UpdatePageRequest } from '@/types'
 
 /**
@@ -22,7 +23,7 @@ import type { Page, Event, EventStatus, CreateEventRequest, UpdateEventRequest, 
 const PageDetail: React.FC = () => {
   const { productName, pageSlug } = useParams<{ productName: string; pageSlug: string }>()
   const navigate = useNavigate()
-  const { currentProduct } = useProduct()
+  const { currentProduct, setCurrentProductBySlug } = useProduct()
   
   const [page, setPage] = useState<Page | null>(null)
   const [events, setEvents] = useState<Event[]>([])
@@ -34,6 +35,19 @@ const PageDetail: React.FC = () => {
   const [editPage, setEditPage] = useState<Page | null>(null)
   const [editPageLoading, setEditPageLoading] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+
+  // Sync product with URL slug
+  useEffect(() => {
+    if (productName) {
+      // Always sync current product with URL slug to ensure consistency
+      const productMatchesSlug = currentProduct &&
+        doesProductNameMatchSlug(currentProduct.name, productName)
+
+      if (!productMatchesSlug) {
+        setCurrentProductBySlug(productName)
+      }
+    }
+  }, [productName, currentProduct, setCurrentProductBySlug])
 
   // Load page and events data
   useEffect(() => {
@@ -357,7 +371,7 @@ const PageDetail: React.FC = () => {
         onSubmit={handleCreateEventSubmit}
         loading={createEventLoading}
         pageId={page?.id}
-        productId={page?.productId}
+        productId={page?.product_id}
       />
 
       {/* Edit Event Modal */}
@@ -368,7 +382,7 @@ const PageDetail: React.FC = () => {
         onSubmit={handleEditEventSubmit}
         onDelete={handleDeleteEvent}
         loading={editEventLoading}
-        productId={page?.productId}
+        productId={page?.product_id}
         onSaveSuccess={handleEditEventSaveSuccess}
       />
 

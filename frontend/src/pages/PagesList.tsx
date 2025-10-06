@@ -3,12 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { VirtualizedDataTable } from '@/components/organisms/VirtualizedDataTable'
-import type { Column, Action } from '@/components/organisms/DataTable'
+import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreatePageModal } from '@/components/organisms/CreatePageModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { pagesApi } from '@/services/api'
 import { useProduct } from '@/hooks/useProduct'
+import { doesProductNameMatchSlug } from '@/utils/slug'
 import type { Page, CreatePageRequest, UpdatePageRequest } from '@/types'
 
 /**
@@ -45,8 +45,18 @@ const PagesList: React.FC = () => {
 
   // Initialize product and load data
   useEffect(() => {
-    if (productName && !currentProduct) {
-      setCurrentProductBySlug(productName)
+    console.log('[PagesList] Init effect:', { productName, currentProduct: currentProduct?.name })
+    if (productName) {
+      // Always sync current product with URL slug to ensure consistency
+      const productMatchesSlug = currentProduct &&
+        doesProductNameMatchSlug(currentProduct.name, productName)
+
+      console.log('[PagesList] Match check:', { productMatchesSlug, currentProductName: currentProduct?.name, urlSlug: productName })
+
+      if (!productMatchesSlug) {
+        console.log('[PagesList] Setting product by slug:', productName)
+        setCurrentProductBySlug(productName)
+      }
     }
   }, [productName, currentProduct, setCurrentProductBySlug])
 
@@ -282,15 +292,13 @@ const PagesList: React.FC = () => {
       {/* Pages Table */}
       <Card>
         <CardContent className="p-0">
-          <VirtualizedDataTable
+          <DataTable
             data={filteredPages}
             columns={columns}
             actions={actions}
             loading={loading}
             emptyMessage="Aucune page trouvée. Créez votre première page pour commencer le tracking."
             onRowClick={handleViewPage}
-            rowHeight={60}
-            height={600}
           />
         </CardContent>
       </Card>

@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { BackLink } from '@/components/atoms/BackLink'
-import { VirtualizedDataTable } from '@/components/organisms/VirtualizedDataTable'
-import type { Column, Action } from '@/components/organisms/DataTable'
+import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreatePropertyModal } from '@/components/organisms/CreatePropertyModal'
 import { EditPropertyModal } from '@/components/organisms/EditPropertyModal'
 import { propertiesApi, productsApi } from '@/services/api'
@@ -320,14 +319,12 @@ const PropertiesList: React.FC = () => {
       </div>
 
       {/* Properties Table */}
-      <VirtualizedDataTable
+      <DataTable
         data={filteredProperties}
         columns={columns}
         actions={actions}
         loading={loading}
         emptyMessage="Aucune propriété trouvée. Créez votre première propriété pour commencer."
-        rowHeight={60}
-        height={600}
       />
 
       {/* Stats Footer */}

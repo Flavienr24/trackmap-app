@@ -1,10 +1,10 @@
 import React from 'react'
-// @ts-ignore - react-window types issue
-import { FixedSizeList as List } from 'react-window'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { EventStatus } from '@/types'
 import type { Column, Action } from './DataTable'
+// @ts-ignore - react-window types compatibility
+import { FixedSizeList } from 'react-window'
 
 export interface VirtualizedDataTableProps<T = any> {
   data: T[]
@@ -174,14 +174,14 @@ function VirtualizedDataTable<T extends Record<string, any>>({
         </div>
 
         {/* Virtualized body */}
-        <List
+        <FixedSizeList
           height={height}
           itemCount={data.length}
           itemSize={rowHeight}
           width="100%"
         >
           {Row}
-        </List>
+        </FixedSizeList>
       </div>
 
       <div className="mt-2 text-sm text-neutral-500 text-center">

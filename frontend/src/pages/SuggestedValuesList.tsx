@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { BackLink } from '@/components/atoms/BackLink'
-import { VirtualizedDataTable } from '@/components/organisms/VirtualizedDataTable'
-import type { Column, Action } from '@/components/organisms/DataTable'
+import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreateSuggestedValueModal } from '@/components/organisms/CreateSuggestedValueModal'
 import { EditSuggestedValueModal } from '@/components/organisms/EditSuggestedValueModal'
 import { suggestedValuesApi, productsApi } from '@/services/api'
@@ -271,14 +270,12 @@ const SuggestedValuesList: React.FC = () => {
       </div>
 
       {/* Suggested Values Table */}
-      <VirtualizedDataTable
+      <DataTable
         data={filteredSuggestedValues}
         columns={columns}
         actions={actions}
         loading={loading}
         emptyMessage="Aucune valeur suggérée trouvée. Créez votre première valeur pour commencer."
-        rowHeight={60}
-        height={600}
       />
 
       {/* Stats Footer */}
