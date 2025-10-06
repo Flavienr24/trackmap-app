@@ -8,6 +8,7 @@ import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { EditProductModal } from '@/components/organisms/EditProductModal'
 import { pagesApi } from '@/services/api'
 import { useProduct } from '@/hooks/useProduct'
+import { doesProductNameMatchSlug } from '@/utils/slug'
 import type { Page, CreatePageRequest, UpdatePageRequest, UpdateProductRequest } from '@/types'
 
 /**
@@ -46,8 +47,14 @@ const Dashboard: React.FC = () => {
 
   // Initialize product on mount
   useEffect(() => {
-    if (productName && !currentProduct) {
-      setCurrentProductBySlug(productName)
+    if (productName) {
+      // Always sync current product with URL slug to ensure consistency
+      const productMatchesSlug = currentProduct &&
+        doesProductNameMatchSlug(currentProduct.name, productName)
+
+      if (!productMatchesSlug) {
+        setCurrentProductBySlug(productName)
+      }
     }
   }, [productName, currentProduct, setCurrentProductBySlug])
 

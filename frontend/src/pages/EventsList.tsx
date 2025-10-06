@@ -4,10 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { VirtualizedDataTable } from '@/components/organisms/VirtualizedDataTable'
-import type { Column } from '@/components/organisms/DataTable'
+import { DataTable, type Column } from '@/components/organisms/DataTable'
 import { pagesApi } from '@/services/api'
 import { useProduct } from '@/hooks/useProduct'
+import { doesProductNameMatchSlug } from '@/utils/slug'
 import type { Page } from '@/types'
 
 // Type for flattened event data
@@ -77,8 +77,14 @@ const EventsList: React.FC = () => {
 
   // Initialize product and load data
   useEffect(() => {
-    if (productName && !currentProduct) {
-      setCurrentProductBySlug(productName)
+    if (productName) {
+      // Always sync current product with URL slug to ensure consistency
+      const productMatchesSlug = currentProduct &&
+        doesProductNameMatchSlug(currentProduct.name, productName)
+
+      if (!productMatchesSlug) {
+        setCurrentProductBySlug(productName)
+      }
     }
   }, [productName, currentProduct, setCurrentProductBySlug])
 
@@ -297,13 +303,11 @@ const EventsList: React.FC = () => {
       {/* Events Table */}
       <Card>
         <CardContent className="p-0">
-          <VirtualizedDataTable
+          <DataTable
             data={filteredEvents}
             columns={columns}
             loading={loading}
             emptyMessage="Aucun événement trouvé pour ce produit."
-            rowHeight={70}
-            height={600}
           />
         </CardContent>
       </Card>
