@@ -45,16 +45,12 @@ const PagesList: React.FC = () => {
 
   // Initialize product and load data
   useEffect(() => {
-    console.log('[PagesList] Init effect:', { productName, currentProduct: currentProduct?.name })
     if (productName) {
       // Always sync current product with URL slug to ensure consistency
       const productMatchesSlug = currentProduct &&
         doesProductNameMatchSlug(currentProduct.name, productName)
 
-      console.log('[PagesList] Match check:', { productMatchesSlug, currentProductName: currentProduct?.name, urlSlug: productName })
-
       if (!productMatchesSlug) {
-        console.log('[PagesList] Setting product by slug:', productName)
         setCurrentProductBySlug(productName)
       }
     }
