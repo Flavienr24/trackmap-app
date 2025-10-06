@@ -964,6 +964,89 @@ export const uploadEventScreenshots = async (req: Request, res: Response, next: 
 };
 
 /**
+ * Duplicate an event with all its properties
+ * POST /api/events/:id/duplicate
+ */
+export const duplicateEvent = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    logger.debug('Duplicating event', { eventId: id, requestId: req.ip });
+
+    // Find original event
+    const originalEvent = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        page: {
+          include: {
+            product: true
+          }
+        }
+      }
+    });
+
+    if (!originalEvent) {
+      const error: AppError = new Error('Event not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // Parse properties for auto-creation
+    const properties = safeJsonParse(originalEvent.properties, {});
+
+    // Auto-create properties and suggested values if they don't exist
+    if (properties && Object.keys(properties).length > 0) {
+      await autoCreateProperties(originalEvent.page.productId, properties);
+      await autoCreateSuggestedValues(originalEvent.page.productId, properties);
+    }
+
+    // Create duplicated event with "Copy" suffix
+    const duplicatedEvent = await prisma.event.create({
+      data: {
+        pageId: originalEvent.pageId,
+        name: `${originalEvent.name} - Copy`,
+        status: 'TO_IMPLEMENT', // Reset status for duplicated event
+        testDate: null, // Reset test date
+        properties: originalEvent.properties, // Copy properties as-is
+        screenshots: '[]' // Don't copy screenshots
+      },
+      include: {
+        page: {
+          include: {
+            product: true,
+          }
+        },
+        comments: true,
+        history: true
+      }
+    });
+
+    // Parse properties and screenshots for response
+    const eventResponse = {
+      ...duplicatedEvent,
+      properties: safeJsonParse(duplicatedEvent.properties, {}),
+      screenshots: safeJsonParse(duplicatedEvent.screenshots, [])
+    };
+
+    logger.info('Event duplicated successfully', {
+      originalEventId: id,
+      originalEventName: originalEvent.name,
+      duplicatedEventId: duplicatedEvent.id,
+      duplicatedEventName: duplicatedEvent.name,
+      requestId: req.ip
+    });
+
+    res.status(201).json({
+      success: true,
+      data: eventResponse
+    });
+  } catch (error) {
+    logger.error('Error duplicating event', { error, eventId: req.params.id, requestId: req.ip });
+    next(error);
+  }
+};
+
+/**
  * Delete a specific screenshot from an event
  * DELETE /api/events/:id/screenshots/:publicId
  */

@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { DataTable, type Column } from '@/components/organisms/DataTable'
-import { pagesApi } from '@/services/api'
+import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
+import { pagesApi, eventsApi } from '@/services/api'
 import { useProduct } from '@/hooks/useProduct'
 import { doesProductNameMatchSlug } from '@/utils/slug'
 import type { Page } from '@/types'
@@ -116,6 +116,21 @@ const EventsList: React.FC = () => {
   // Get unique event types for filter
   const eventTypes = Array.from(new Set(events.map(event => event.type)))
 
+  // Handle duplicate event
+  const handleDuplicateEvent = async (event: EventData) => {
+    try {
+      const response = await eventsApi.duplicate(event.id)
+
+      if (response.success) {
+        // Reload data to show the duplicated event
+        await loadData()
+      }
+    } catch (error) {
+      console.error('Error duplicating event:', error)
+      alert('Erreur lors de la duplication de l\'événement')
+    }
+  }
+
   if (!hasSelectedProduct || !currentProduct) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -189,6 +204,21 @@ const EventsList: React.FC = () => {
         <span className="text-slate-600">
           {new Date(value).toLocaleDateString('fr-FR')}
         </span>
+      ),
+    },
+  ]
+
+  // Table actions
+  const actions: Action<EventData>[] = [
+    {
+      label: 'Dupliquer',
+      onClick: handleDuplicateEvent,
+      iconOnly: true,
+      title: 'Dupliquer cet événement',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
       ),
     },
   ]
@@ -306,6 +336,7 @@ const EventsList: React.FC = () => {
           <DataTable
             data={filteredEvents}
             columns={columns}
+            actions={actions}
             loading={loading}
             emptyMessage="Aucun événement trouvé pour ce produit."
           />

@@ -216,6 +216,12 @@ export const eventsApi = {
     apiRequest(`/events/${id}`, {
       method: 'DELETE',
     }),
+
+  // Duplicate event with its properties
+  duplicate: (id: string): Promise<ApiResponse<Event>> =>
+    apiRequest(`/events/${id}/duplicate`, {
+      method: 'POST',
+    }),
 }
 
 /**

@@ -10,7 +10,8 @@ import {
   addEventComment,
   getEventHistory,
   uploadEventScreenshots,
-  deleteEventScreenshot
+  deleteEventScreenshot,
+  duplicateEvent
 } from '../controllers/eventsController';
 import { uploadMultipleImages } from '../middleware/uploadMiddleware';
 import { uploadRateLimit, deleteRateLimit } from '../middleware/rateLimiter';
@@ -25,6 +26,9 @@ router.put('/:id', updateEvent);
 
 // PUT /api/events/:id/status - Update event status only (with history tracking)
 router.put('/:id/status', updateEventStatus);
+
+// POST /api/events/:id/duplicate - Duplicate an event with its properties
+router.post('/:id/duplicate', duplicateEvent);
 
 // DELETE /api/events/:id - Delete an event and all related data
 router.delete('/:id', deleteEvent);
