@@ -38,11 +38,20 @@ export const getPagesByProduct = async (req: Request, res: Response, next: NextF
       return next(error);
     }
 
-    // Fetch pages with event filtering
+    // Fetch pages with optimized event data (only essential fields)
     const pages = await prisma.page.findMany({
       where: { productId: product.id },
       include: {
-        events: true
+        events: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+            properties: true
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'
@@ -138,7 +147,16 @@ export const createPage = async (req: Request, res: Response, next: NextFunction
       },
       include: {
         product: true,
-        events: true
+        events: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+            properties: true
+          }
+        }
       }
     });
 
@@ -175,12 +193,22 @@ export const getPageById = async (req: Request, res: Response, next: NextFunctio
     let page;
     
     if (id.startsWith('c') && id.length > 20) {
-      // Look up by ID
+      // Look up by ID with optimized event data
       page = await prisma.page.findUnique({
         where: { id },
         include: {
           product: true,
-          events: true
+          events: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              testDate: true,
+              createdAt: true,
+              updatedAt: true,
+              properties: true
+            }
+          }
         }
       });
     } else {
@@ -236,15 +264,25 @@ export const getPageBySlug = async (req: Request, res: Response, next: NextFunct
       return next(error);
     }
 
-    // Then find the page by product ID and page slug
+    // Then find the page by product ID and page slug with optimized event data
     const page = await prisma.page.findFirst({
-      where: { 
+      where: {
         productId: product.id,
         slug: pageSlug
       },
       include: {
         product: true,
-        events: true
+        events: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            testDate: true,
+            createdAt: true,
+            updatedAt: true,
+            properties: true
+          }
+        }
       }
     });
 
@@ -338,7 +376,16 @@ export const updatePage = async (req: Request, res: Response, next: NextFunction
       data: updateData,
       include: {
         product: true,
-        events: true
+        events: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+            properties: true
+          }
+        }
       }
     });
 

@@ -21,12 +21,28 @@ export class DashboardService {
     try {
       logger.info('Fetching dashboard data');
 
-      // Fetch data in parallel for performance
-      const [products, allPages, allEvents] = await Promise.all([
+      // Fetch products and pages only (pages already include events)
+      const [products, allPages] = await Promise.all([
         this.getProducts(),
-        this.getAllPages(),
-        this.getAllEvents()
+        this.getAllPages()
       ]);
+
+      // Enrich events from pages with full product context to avoid N+1 queries
+      const allEvents = allPages.flatMap(page =>
+        (page.events || []).map((event: any) => ({
+          ...event,
+          pageId: event.pageId || page.id,
+          page: {
+            id: page.id,
+            name: page.name,
+            productId: page.productId,
+            product: {
+              id: page.productId,
+              name: products.find(p => p.id === page.productId)?.name || 'Unknown'
+            }
+          }
+        }))
+      );
 
       const summary = this.calculateSummary(products, allPages, allEvents);
       const recentActivity = this.generateRecentActivity(allEvents, allPages);
@@ -60,13 +76,23 @@ export class DashboardService {
     try {
       logger.info('Fetching product overview', { productId });
 
-      // Fetch product data in parallel
-      const [product, pages, events, variables] = await Promise.all([
-        trackdocClient.get<any>(`/api/doc/products/${productId}`),
-        trackdocClient.get<any[]>(`/api/doc/products/${productId}/pages`),
-        this.getProductEvents(productId),
-        trackdocClient.get<any[]>(`/api/doc/products/${productId}/variables`)
+      // Fetch product and variables only (product includes pages with events)
+      const [product, variables] = await Promise.all([
+        trackdocClient.get<any>(`/api/products/${productId}`),
+        trackdocClient.get<any[]>(`/api/products/${productId}/variables`)
       ]);
+
+      // Reuse pages from product response to avoid redundant fetch
+      const pages = product.pages || [];
+
+      // Enrich events from pages.events with page context
+      const events = pages.flatMap((page: any) =>
+        (page.events || []).map((event: any) => ({
+          ...event,
+          pageId: page.id,
+          page: { id: page.id, name: page.name, productId: product.id }
+        }))
+      );
 
       // Calculate stats
       const stats = this.calculateProductStats(pages, events);
@@ -88,56 +114,31 @@ export class DashboardService {
 
       return overview;
     } catch (error) {
-      logger.error('Failed to fetch product overview', { 
-        productId, 
-        error: (error as Error).message 
+      logger.error('Failed to fetch product overview', {
+        productId,
+        error: (error as Error).message
       });
       throw error;
     }
   }
 
   private async getProducts(): Promise<any[]> {
-    return trackdocClient.get<any[]>('/api/doc/products');
+    return trackdocClient.get<any[]>('/api/products');
   }
 
   private async getAllPages(): Promise<any[]> {
     // Get all products first, then fetch their pages
     const products = await this.getProducts();
-    const pagesPromises = products.map(product => 
-      trackdocClient.get<any[]>(`/api/doc/products/${product.id}/pages`)
+    const pagesPromises = products.map(product =>
+      trackdocClient.get<any[]>(`/api/products/${product.id}/pages`)
         .catch(error => {
           logger.warn(`Failed to fetch pages for product ${product.id}`, { error: error.message });
           return [];
         })
     );
-    
+
     const pagesArrays = await Promise.all(pagesPromises);
     return pagesArrays.flat();
-  }
-
-  private async getAllEvents(): Promise<any[]> {
-    const pages = await this.getAllPages();
-    const eventsPromises = pages.map(page => 
-      trackdocClient.get<any[]>(`/api/doc/pages/${page.id}/events`)
-        .catch(error => {
-          logger.warn(`Failed to fetch events for page ${page.id}`, { error: error.message });
-          return [];
-        })
-    );
-    
-    const eventsArrays = await Promise.all(eventsPromises);
-    return eventsArrays.flat();
-  }
-
-  private async getProductEvents(productId: string): Promise<any[]> {
-    const pages = await trackdocClient.get<any[]>(`/api/doc/products/${productId}/pages`);
-    const eventsPromises = pages.map(page => 
-      trackdocClient.get<any[]>(`/api/doc/pages/${page.id}/events`)
-        .catch(() => [])
-    );
-    
-    const eventsArrays = await Promise.all(eventsPromises);
-    return eventsArrays.flat();
   }
 
   private calculateSummary(products: any[], pages: any[], events: any[]) {

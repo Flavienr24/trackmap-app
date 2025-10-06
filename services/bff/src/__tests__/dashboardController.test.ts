@@ -91,11 +91,10 @@ describe('Dashboard Controller', () => {
 
   describe('GET /stats/summary', () => {
     beforeEach(() => {
-      // Mock successful responses
+      // Mock successful responses (pages now include events)
       mockedTrackDocClient.get
         .mockResolvedValueOnce([]) // products
-        .mockResolvedValueOnce([]) // pages for products (empty array)
-        .mockResolvedValueOnce([]); // events (empty array)
+        .mockResolvedValueOnce([]); // pages with events included
     });
 
     it('should return stats summary', async () => {
@@ -119,11 +118,10 @@ describe('Dashboard Controller', () => {
 
   describe('GET /dashboard', () => {
     beforeEach(() => {
-      // Mock empty responses for clean test
+      // Mock empty responses for clean test (pages now include events)
       mockedTrackDocClient.get
         .mockResolvedValueOnce([]) // products
-        .mockResolvedValueOnce([]) // pages
-        .mockResolvedValueOnce([]); // events
+        .mockResolvedValueOnce([]); // pages with events included
     });
 
     it('should return dashboard data structure', async () => {
