@@ -76,10 +76,10 @@ export class DashboardService {
     try {
       logger.info('Fetching product overview', { productId });
 
-      // Fetch product and variables only (product includes pages with events)
-      const [product, variables] = await Promise.all([
+      // Fetch product and properties only (product includes pages with events)
+      const [product, properties] = await Promise.all([
         trackdocClient.get<any>(`/api/products/${productId}`),
-        trackdocClient.get<any[]>(`/api/products/${productId}/variables`)
+        trackdocClient.get<any[]>(`/api/products/${productId}/properties`)
       ]);
 
       // Reuse pages from product response to avoid redundant fetch
@@ -100,7 +100,7 @@ export class DashboardService {
       // Get recent items (limited for performance)
       const recentPages = this.getRecentPages(pages, events).slice(0, 5);
       const recentEvents = this.getRecentEvents(events, pages).slice(0, 10);
-      const variablesLibrary = this.summarizeVariables(variables, events).slice(0, 20);
+      const variablesLibrary = this.summarizeProperties(properties, events).slice(0, 20);
 
       const overview: ProductOverview = {
         ...product,
@@ -274,19 +274,19 @@ export class DashboardService {
       .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
   }
 
-  private summarizeVariables(variables: any[], events: any[]) {
-    return variables.map(variable => {
-      // Count usage across events
-      const usageCount = events.filter(event => 
-        event.variables && Object.keys(event.variables).includes(variable.name)
+  private summarizeProperties(properties: any[], events: any[]) {
+    return properties.map(property => {
+      // Count usage across events (check if property key exists in event.properties)
+      const usageCount = events.filter(event =>
+        event.properties && Object.keys(event.properties).includes(property.name)
       ).length;
 
       return {
-        id: variable.id,
-        name: variable.name,
-        type: variable.type,
+        id: property.id,
+        name: property.name,
+        type: property.type || 'string',
         usageCount,
-        description: variable.description
+        description: property.description
       };
     }).sort((a, b) => b.usageCount - a.usageCount);
   }
