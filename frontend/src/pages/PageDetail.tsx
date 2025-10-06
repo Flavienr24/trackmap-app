@@ -176,19 +176,33 @@ const PageDetail: React.FC = () => {
     setSelectedEvent(event)
   }
 
+  const handleDuplicateEvent = async (event: Event) => {
+    try {
+      const response = await eventsApi.duplicate(event.id)
+
+      if (response.success && page?.id) {
+        // Reload events to show the duplicated event
+        await loadEvents(page.id)
+      }
+    } catch (error) {
+      console.error('Error duplicating event:', error)
+      alert('Erreur lors de la duplication de l\'événement')
+    }
+  }
+
   const handleEventUpdate = (updatedEvent: Event) => {
     // Update events list
-    setEvents(prevEvents => 
-      prevEvents.map(event => 
+    setEvents(prevEvents =>
+      prevEvents.map(event =>
         event.id === updatedEvent.id ? updatedEvent : event
       )
     )
-    
+
     // Update selected event if it's the same
     if (selectedEvent?.id === updatedEvent.id) {
       setSelectedEvent(updatedEvent)
     }
-    
+
     // Update edit event if it's the same
     if (editEvent?.id === updatedEvent.id) {
       setEditEvent(updatedEvent)
@@ -301,6 +315,18 @@ const PageDetail: React.FC = () => {
         <Tooltip content="Modifier">
           <svg className="w-4 h-4 text-neutral-900 hover:text-neutral-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+        </Tooltip>
+      ),
+    },
+    {
+      label: 'Dupliquer',
+      onClick: handleDuplicateEvent,
+      iconOnly: true,
+      icon: (
+        <Tooltip content="Dupliquer cet événement">
+          <svg className="w-4 h-4 text-neutral-900 hover:text-neutral-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
           </svg>
         </Tooltip>
       ),
