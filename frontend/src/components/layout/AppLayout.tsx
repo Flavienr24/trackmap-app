@@ -13,7 +13,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     <ProductProvider>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="flex flex-col h-screen overflow-hidden">
           <AppHeader />
           <main className="flex-1 overflow-auto p-6 w-full">
             {children}
