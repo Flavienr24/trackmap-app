@@ -37,7 +37,7 @@ export interface Product {
 export interface ProductOverview extends Product {
   recentPages: PageSummary[];
   recentEvents: EventSummary[];
-  variablesLibrary: VariableSummary[];
+  propertiesLibrary: VariableSummary[];
 }
 
 export interface PageSummary {

@@ -103,14 +103,14 @@ export class DashboardService {
       // Get recent items (limited for performance)
       const recentPages = this.getRecentPages(pages, events).slice(0, 5);
       const recentEvents = this.getRecentEvents(events, pages).slice(0, 10);
-      const variablesLibrary = this.summarizeProperties(properties, events).slice(0, 20);
+      const propertiesLibrary = this.summarizeProperties(properties, events).slice(0, 20);
 
       const overview: ProductOverview = {
         ...product,
         stats,
         recentPages,
         recentEvents,
-        variablesLibrary
+        propertiesLibrary
       };
 
       logger.info('Product overview fetched successfully', { productId, stats });
