@@ -96,9 +96,14 @@ const EventPropertiesInput = forwardRef<EventPropertiesInputRef, EventProperties
 
   // Convert value object to entries when value changes
   useEffect(() => {
+    console.log('[EventPropertiesInput] useEffect triggered', {
+      value,
+      currentPropertyEntries: propertyEntries
+    })
+
     const valueKeys = new Set(Object.keys(value || {}))
     const newEntries: PropertyEntry[] = []
-    
+
     // First, preserve existing entries in their original order
     propertyEntries.forEach(existingEntry => {
       if (existingEntry.key.trim() || existingEntry.value.trim()) {
@@ -113,11 +118,12 @@ const EventPropertiesInput = forwardRef<EventPropertiesInputRef, EventProperties
           valueKeys.delete(existingEntry.key) // Mark as processed
         } else {
           // Keep existing entry as-is (partially filled or cleared)
+          console.log('[EventPropertiesInput] Preserving entry', existingEntry)
           newEntries.push(existingEntry)
         }
       }
     })
-    
+
     // Add any new entries from value that weren't in existing entries
     valueKeys.forEach(key => {
       const val = value[key]
@@ -127,12 +133,13 @@ const EventPropertiesInput = forwardRef<EventPropertiesInputRef, EventProperties
         isValidated: true, // Si c'est dans value, c'est validé
       })
     })
-    
+
     // Add empty entry if none exist
     if (newEntries.length === 0) {
       newEntries.push({ key: '', value: '', isValidated: false })
     }
-    
+
+    console.log('[EventPropertiesInput] Setting new entries', newEntries)
     setPropertyEntries(newEntries)
   }, [value])
 
