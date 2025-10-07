@@ -157,28 +157,14 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
           label="Statut initial"
           error={errors.status}
         >
-          <div className="flex flex-wrap gap-2">
-            {eventStatuses.map(status => (
-              <label key={status.value} className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="status"
-                  value={status.value}
-                  checked={formData.status === status.value}
-                  onChange={(e) => handleInputChange('status', e.target.value as EventStatus)}
-                  className="sr-only"
-                  disabled={loading}
-                />
-                <div className={`px-3 py-2 rounded-md border transition-colors ${
-                  formData.status === status.value
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-neutral-300 hover:border-neutral-400'
-                }`}>
-                  <Badge status={status.value}>{status.label}</Badge>
-                </div>
-              </label>
-            ))}
-          </div>
+          <Badge
+            status={formData.status || 'to_implement'}
+            showDropdownArrow={true}
+            onStatusChange={(newStatus) => handleInputChange('status', newStatus)}
+            disabled={loading}
+          >
+            {eventStatuses.find(s => s.value === formData.status)?.label || 'À implémenter'}
+          </Badge>
         </FormField>
 
         <EventPropertiesInput
