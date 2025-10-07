@@ -22,7 +22,7 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<CreateSuggestedValueRequest>({
     value: initialValue,
-    is_contextual: initialValue.startsWith('$'),
+    isContextual: initialValue.startsWith('$'),
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [manualTypeSelection, setManualTypeSelection] = useState<boolean>(false)
@@ -32,7 +32,7 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
     if (initialValue) {
       setFormData({
         value: initialValue,
-        is_contextual: initialValue.startsWith('$'),
+        isContextual: initialValue.startsWith('$'),
       })
       setManualTypeSelection(false) // Reset manual selection flag
     }
@@ -40,7 +40,7 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
 
   const handleClose = () => {
     if (!loading) {
-      setFormData({ value: '', is_contextual: false })
+      setFormData({ value: '', isContextual: false })
       setErrors({})
       onClose()
     }
@@ -67,7 +67,7 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
     try {
       await onSubmit({
         value: formData.value.trim(),
-        is_contextual: formData.is_contextual,
+        isContextual: formData.isContextual,
       })
       handleClose()
     } catch (error) {
@@ -82,12 +82,12 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
       const isContextual = value.startsWith('$')
       setFormData({
         value,
-        is_contextual: isContextual
+        isContextual: isContextual
       })
     } else {
       // If manual selection and contextual, ensure $ prefix
       let finalValue = value
-      if (formData.is_contextual && !value.startsWith('$')) {
+      if (formData.isContextual && !value.startsWith('$')) {
         finalValue = '$' + value
       }
       setFormData({
@@ -112,7 +112,7 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
 
     setFormData({
       value: newValue,
-      is_contextual: isContextual
+      isContextual: isContextual
     })
   }
 
@@ -124,26 +124,6 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
       size="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Type Selection */}
-        <FormField
-          label="Type de valeur"
-          required
-        >
-          <select
-            value={formData.is_contextual ? 'contextual' : 'static'}
-            onChange={(e) => handleTypeChange(e.target.value === 'contextual')}
-            disabled={loading}
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-neutral-100 disabled:cursor-not-allowed"
-          >
-            <option value="static">Statique</option>
-            <option value="contextual">Contextuelle</option>
-          </select>
-          <div className="text-sm text-neutral-500 mt-1">
-            <p>• <strong>Statique :</strong> Valeur fixe (ex: "homepage", "checkout")</p>
-            <p>• <strong>Contextuelle :</strong> Valeur variable avec préfixe $ (ex: "$page-name", "$user-id")</p>
-          </div>
-        </FormField>
-
         {/* Value */}
         <FormField
           label="Valeur"
@@ -153,14 +133,34 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
           <Input
             value={formData.value}
             onChange={(e) => handleValueChange(e.target.value)}
-            placeholder={formData.is_contextual ? "$page-name, $user-id..." : "homepage, checkout..."}
+            placeholder={formData.isContextual ? "$page-name, $user-id..." : "homepage, checkout..."}
             disabled={loading}
           />
-          {formData.is_contextual && !manualTypeSelection && (
+          {formData.isContextual && !manualTypeSelection && (
             <div className="text-xs text-neutral-500 mt-1 italic">
               💡 Le symbole $ a été détecté automatiquement
             </div>
           )}
+        </FormField>
+
+        {/* Type Selection */}
+        <FormField
+          label="Type de valeur"
+          required
+        >
+          <select
+            value={formData.isContextual ? 'contextual' : 'static'}
+            onChange={(e) => handleTypeChange(e.target.value === 'contextual')}
+            disabled={loading}
+            className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+          >
+            <option value="static">Statique</option>
+            <option value="contextual">Contextuelle</option>
+          </select>
+          <div className="text-sm text-neutral-500 mt-1">
+            <p>• <strong>Statique :</strong> Valeur fixe (ex: "homepage", "checkout")</p>
+            <p>• <strong>Contextuelle :</strong> Valeur variable avec préfixe $ (ex: "$page-name", "$user-id")</p>
+          </div>
         </FormField>
 
         {/* Submit Error */}

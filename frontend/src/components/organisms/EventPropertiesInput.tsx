@@ -344,10 +344,10 @@ const EventPropertiesInput = forwardRef<EventPropertiesInputRef, EventProperties
     if (!property) {
       // If property doesn't exist, prioritize contextual values, then all values
       const contextualValues = suggestedValues
-        .filter(sv => sv.is_contextual)
+        .filter(sv => sv.isContextual)
         .map(sv => sv.value)
       const staticValues = suggestedValues
-        .filter(sv => !sv.is_contextual)
+        .filter(sv => !sv.isContextual)
         .map(sv => sv.value)
       allSuggestions = [...contextualValues, ...staticValues]
     } else {
@@ -357,16 +357,16 @@ const EventPropertiesInput = forwardRef<EventPropertiesInputRef, EventProperties
       if (associatedValues.length > 0) {
         // Show associated values first, then contextual values as fallback
         const contextualValues = suggestedValues
-          .filter(sv => sv.is_contextual && !associatedValues.includes(sv.value))
+          .filter(sv => sv.isContextual && !associatedValues.includes(sv.value))
           .map(sv => sv.value)
         allSuggestions = [...associatedValues, ...contextualValues]
       } else {
         // No associations yet - show contextual values first, then all values
         const contextualValues = suggestedValues
-          .filter(sv => sv.is_contextual)
+          .filter(sv => sv.isContextual)
           .map(sv => sv.value)
         const staticValues = suggestedValues
-          .filter(sv => !sv.is_contextual)
+          .filter(sv => !sv.isContextual)
           .map(sv => sv.value)
         allSuggestions = [...contextualValues, ...staticValues]
       }

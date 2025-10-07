@@ -149,13 +149,13 @@ const SuggestedValuesList: React.FC = () => {
       render: (value, record) => (
         <div className="flex items-center space-x-3">
           <div className="font-medium text-neutral-900">
-            {record.is_contextual ? (
+            {record.isContextual ? (
               <span className="font-mono text-secondary-foreground">{value}</span>
             ) : (
               <span>{value}</span>
             )}
           </div>
-          {record.is_contextual && (
+          {record.isContextual && (
             <Badge variant="secondary">
               Contextuelle
             </Badge>
@@ -164,7 +164,7 @@ const SuggestedValuesList: React.FC = () => {
       ),
     },
     {
-      key: 'is_contextual',
+      key: 'isContextual',
       title: 'Type',
       width: '120px',
       render: (value) => (
@@ -174,12 +174,12 @@ const SuggestedValuesList: React.FC = () => {
       ),
     },
     {
-      key: 'created_at',
+      key: 'createdAt',
       title: 'Créée le',
       width: '160px',
     },
     {
-      key: 'updated_at',
+      key: 'updatedAt',
       title: 'Modifiée le',
       width: '160px',
     },
