@@ -74,7 +74,7 @@ export const AppSidebar: React.FC = () => {
     const product = products.find(p => p.id === productId)
     if (product) {
       setCurrentProduct(product)
-      const slug = currentProductSlug || product.name.toLowerCase()
+      const slug = slugifyProductName(product.name)
       navigate(`/products/${slug}`)
     }
   }
