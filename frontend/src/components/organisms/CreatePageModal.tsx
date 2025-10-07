@@ -34,16 +34,17 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
 
   const validateForm = (): boolean => {
     const newErrors: Partial<CreatePageRequest> = {}
-    
+
     if (!formData.name.trim()) {
       newErrors.name = 'Le nom de la page est requis'
     }
-    
-    // Validate URL format only if provided
-    if (formData.url && formData.url.trim() && !isValidUrl(formData.url.trim())) {
+
+    if (!formData.url || !formData.url.trim()) {
+      newErrors.url = 'L\'URL de la page est requise'
+    } else if (!isValidUrl(formData.url.trim())) {
       newErrors.url = 'Format d\'URL invalide'
     }
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -60,16 +61,16 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) return
-    
+
     try {
       await onSubmit({
         name: formData.name.trim(),
-        url: formData.url?.trim() || undefined
+        url: formData.url.trim()
       })
-      
-      // Reset form
+
+      // Reset form and close modal
       setFormData({ name: '', url: '' })
       setErrors({})
       onClose()
@@ -119,9 +120,10 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
         </FormField>
 
         <FormField
-          label="Slug de la page"
+          label="URL de la page"
+          required
           error={errors.url}
-          hint="Slug ou pattern pour identifier la page (optionnel)"
+          hint="URL ou pattern pour identifier la page"
         >
           <Input
             type="text"

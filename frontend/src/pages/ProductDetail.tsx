@@ -141,12 +141,16 @@ const ProductDetail: React.FC = () => {
 
   const handleCreatePageSubmit = async (data: CreatePageRequest) => {
     if (!productName || !product) return
-    
+
     setCreatePageLoading(true)
     try {
       const response = await pagesApi.create(product.id, data)
-      console.log('Page created:', response.data)
-      await loadPages(productName) // Reload the list
+      const newPage = response.data
+
+      // Navigate to the newly created page
+      if (newPage && productName) {
+        navigate(`/products/${productName}/pages/${newPage.slug}`)
+      }
     } catch (error) {
       console.error('Error creating page:', error)
       throw error
@@ -176,14 +180,11 @@ const ProductDetail: React.FC = () => {
 
   const handleDeletePage = async (page: Page) => {
     if (!productName) return
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la page "${page.name}" ?`)) {
-      try {
-        await pagesApi.delete(page.id)
-        console.log('Page deleted:', page)
-        await loadPages(productName) // Reload the list
-      } catch (error) {
-        console.error('Error deleting page:', error)
-      }
+    try {
+      await pagesApi.delete(page.id)
+      await loadPages(productName)
+    } catch (error) {
+      console.error('Error deleting page:', error)
     }
   }
 

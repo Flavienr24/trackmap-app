@@ -59,19 +59,19 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) return
-    
+
     try {
       // Clear any previous server error
       setServerError('')
-      
+
       await onSubmit({
         name: formData.name.trim(),
         url: formData.url?.trim() || undefined,
         description: formData.description?.trim() || undefined
       })
-      
+
       // Reset form
       setFormData({ name: '', url: '', description: '' })
       setErrors({})
@@ -79,17 +79,28 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
       onClose()
     } catch (error: any) {
       console.error('Error creating product:', error)
-      
-      // Extract error message from API response
-      let errorMessage = 'Une erreur est survenue lors de la création du produit'
-      
+
+      // Extract error message from API response and map to appropriate field
+      const newErrors: Partial<CreateProductRequest> = {}
+
       if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message
+        const message = error.response.data.message
+
+        // Map error to appropriate field based on message content
+        if (message.toLowerCase().includes('url')) {
+          newErrors.url = message
+        } else if (message.toLowerCase().includes('name') || message.toLowerCase().includes('nom')) {
+          newErrors.name = message
+        } else {
+          setServerError(message)
+        }
       } else if (error?.message) {
-        errorMessage = error.message
+        setServerError(error.message)
+      } else {
+        setServerError('Une erreur est survenue lors de la création du produit')
       }
-      
-      setServerError(errorMessage)
+
+      setErrors(newErrors)
     }
   }
 
@@ -123,7 +134,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
         <FormField
           label="Nom du produit"
           required
-          error={errors.name || serverError}
+          error={errors.name}
         >
           <Input
             type="text"
