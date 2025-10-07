@@ -406,7 +406,7 @@ const PageDetail: React.FC = () => {
         event={editEvent}
         onClose={() => setEditEvent(null)}
         onSubmit={handleEditEventSubmit}
-        onDelete={handleDeleteEvent}
+        onDeleteRequest={handleDeleteEvent}
         loading={editEventLoading}
         productId={page?.productId}
         onSaveSuccess={handleEditEventSaveSuccess}

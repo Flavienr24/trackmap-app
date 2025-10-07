@@ -18,7 +18,7 @@ interface EditEventModalProps {
   event: Event | null
   onClose: () => void
   onSubmit: (id: string, data: UpdateEventRequest) => Promise<void>
-  onDelete?: (event: Event) => Promise<void>
+  onDeleteRequest?: (event: Event) => Promise<void>
   loading?: boolean
   productId?: string
   onSaveSuccess?: (event: Event) => void
@@ -29,7 +29,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   event,
   onClose,
   onSubmit,
-  onDelete,
+  onDeleteRequest,
   loading = false,
   productId,
   onSaveSuccess
@@ -287,15 +287,13 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   }
 
   const handleDelete = async () => {
-    if (!event || !onDelete) return
-    
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer l'event "${event.name}" ?`)) {
-      try {
-        await onDelete(event)
-        onClose()
-      } catch (error) {
-        console.error('Error deleting event:', error)
-      }
+    if (!event || !onDeleteRequest) return
+
+    try {
+      await onDeleteRequest(event)
+      onClose()
+    } catch (error) {
+      console.error('Error deleting event:', error)
     }
   }
 
@@ -305,10 +303,10 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   const footer = (
     <div className="flex justify-between items-center w-full">
       <div className="flex">
-        {onDelete && (
-          <Button 
-            variant="danger" 
-            onClick={handleDelete} 
+        {onDeleteRequest && (
+          <Button
+            variant="danger"
+            onClick={handleDelete}
             disabled={loading}
           >
             Supprimer l'event
