@@ -5,14 +5,18 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/molecules/FormField'
 import { EventPropertiesInput } from '@/components/organisms/EventPropertiesInput'
-import type { CreateEventRequest, EventStatus } from '@/types'
+import { DragDropZone, type FileWithProgress } from '@/components/molecules/DragDropZone'
+import { ScreenshotThumbnail } from '@/components/molecules/ScreenshotThumbnail'
+import { uploadMultipleFilesWithProgress } from '@/utils/uploadUtils'
+import { deleteScreenshot } from '@/utils/screenshotUtils'
+import type { CreateEventRequest, EventStatus, Screenshot } from '@/types'
 
 interface CreateEventModalProps {
   isOpen: boolean
   pageId?: string
   productId?: string
   onClose: () => void
-  onSubmit: (data: CreateEventRequest) => Promise<void>
+  onSubmit: (data: CreateEventRequest) => Promise<any>
   loading?: boolean
 }
 
@@ -30,6 +34,8 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     properties: {}
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null)
 
   const eventStatuses: { value: EventStatus; label: string }[] = [
     { value: 'to_implement', label: 'À implémenter' },
@@ -69,20 +75,64 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     return Object.keys(newErrors).length === 0
   }
 
+  // Handle files selection from drag drop (store temporarily)
+  const handleFilesSelected = (files: File[]) => {
+    setPendingFiles(prev => [...prev, ...files])
+  }
+
+  // Remove pending file
+  const handleRemovePendingFile = (index: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // Handle upload with progress tracking (called after event creation)
+  const handleUploadWithProgress = async (
+    eventId: string,
+    filesWithProgress: FileWithProgress[],
+    setProgress: (id: string, progress: number, status?: FileWithProgress['status']) => void
+  ): Promise<any[]> => {
+    try {
+      const results = await uploadMultipleFilesWithProgress(eventId, filesWithProgress, setProgress)
+      return results
+    } catch (error) {
+      console.error('Error uploading files:', error)
+      throw error
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) return
-    
+
     try {
-      await onSubmit({
+      // First, create the event
+      const createdEvent = await onSubmit({
         name: formData.name.trim(),
         status: formData.status,
         properties: Object.keys(formData.properties || {}).length > 0 ? formData.properties : undefined
       })
-      
+
+      // If files are pending and event was created, upload them
+      if (pendingFiles.length > 0 && createdEvent?.id) {
+        const filesWithProgress: FileWithProgress[] = pendingFiles.map(file => ({
+          id: crypto.randomUUID(),
+          file,
+          progress: 0,
+          status: 'pending' as const
+        }))
+
+        // Upload files (errors are handled internally)
+        await handleUploadWithProgress(
+          createdEvent.id,
+          filesWithProgress,
+          () => {} // Progress callback not needed here
+        )
+      }
+
       // Reset form
       setFormData({ name: '', status: 'to_implement', properties: {} })
+      setPendingFiles([])
       setErrors({})
       onClose()
     } catch (error) {
@@ -92,6 +142,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
   const handleClose = () => {
     setFormData({ name: '', status: 'to_implement', properties: {} })
+    setPendingFiles([])
     setErrors({})
     onClose()
   }
@@ -175,6 +226,81 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
           disabled={loading}
           error={errors.properties}
         />
+
+        {/* Screenshots Section */}
+        <FormField
+          label="Screenshots (optionnel)"
+          hint="Ajoutez des captures d'écran ou fichiers. Ils seront uploadés après la création de l'event."
+        >
+          <div className="space-y-4">
+            {/* Simple file input */}
+            <div className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center hover:border-neutral-400 transition-colors">
+              <input
+                type="file"
+                id="file-input"
+                multiple
+                accept="image/*"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    handleFilesSelected(Array.from(e.target.files))
+                  }
+                }}
+                className="hidden"
+                disabled={loading}
+              />
+              <label htmlFor="file-input" className="cursor-pointer">
+                <div className="flex flex-col items-center justify-center">
+                  <svg className="w-12 h-12 text-neutral-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <div className="text-sm font-medium text-neutral-700 mb-1">
+                    Cliquez pour sélectionner des fichiers
+                  </div>
+                  <div className="text-xs text-neutral-500">
+                    Images (JPEG, PNG, GIF, WebP) • Max 5MB
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            {/* Pending files list */}
+            {pendingFiles.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-neutral-600 mb-3">
+                  Fichiers sélectionnés ({pendingFiles.length})
+                </h4>
+                <div className="space-y-2">
+                  {pendingFiles.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg border border-neutral-200"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <div>
+                          <div className="text-sm font-medium text-neutral-900">{file.name}</div>
+                          <div className="text-xs text-neutral-500">{Math.round(file.size / 1024)} KB</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePendingFile(index)}
+                        className="text-neutral-400 hover:text-red-600 transition-colors"
+                        title="Retirer"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </FormField>
       </form>
     </Modal>
   )
