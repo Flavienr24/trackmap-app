@@ -96,42 +96,29 @@ const EventPropertiesInput = forwardRef<EventPropertiesInputRef, EventProperties
 
   // Convert value object to entries when value changes
   useEffect(() => {
-    console.log('[EventPropertiesInput] useEffect triggered', {
-      value,
-      currentPropertyEntries: propertyEntries
-    })
-
     const valueKeys = new Set(Object.keys(value || {}))
     const newEntries: PropertyEntry[] = []
 
-    // First, preserve existing entries in their original order
-    propertyEntries.forEach(existingEntry => {
-      if (existingEntry.key.trim() || existingEntry.value.trim()) {
-        if (valueKeys.has(existingEntry.key) && existingEntry.key.trim()) {
-          // Update with new value from prop but keep order
-          const val = value[existingEntry.key]
-          newEntries.push({
-            key: existingEntry.key,
-            value: typeof val === 'string' ? val : JSON.stringify(val),
-            isValidated: true, // Si c'est dans value, c'est validé
-          })
-          valueKeys.delete(existingEntry.key) // Mark as processed
-        } else {
-          // Keep existing entry as-is (partially filled or cleared)
-          console.log('[EventPropertiesInput] Preserving entry', existingEntry)
-          newEntries.push(existingEntry)
-        }
-      }
-    })
-
-    // Add any new entries from value that weren't in existing entries
+    // Add entries from value prop (validated/saved properties)
     valueKeys.forEach(key => {
       const val = value[key]
       newEntries.push({
         key,
         value: typeof val === 'string' ? val : JSON.stringify(val),
-        isValidated: true, // Si c'est dans value, c'est validé
+        isValidated: true,
       })
+    })
+
+    // Preserve ONLY unvalidated entries (entries being edited but not yet saved)
+    // These are entries that exist in propertyEntries but NOT in value
+    propertyEntries.forEach(existingEntry => {
+      // Only preserve if not validated and has some content
+      if (!existingEntry.isValidated && (existingEntry.key.trim() || existingEntry.value.trim())) {
+        // Make sure this key is not already in newEntries from value
+        if (!valueKeys.has(existingEntry.key)) {
+          newEntries.push(existingEntry)
+        }
+      }
     })
 
     // Add empty entry if none exist
@@ -139,7 +126,6 @@ const EventPropertiesInput = forwardRef<EventPropertiesInputRef, EventProperties
       newEntries.push({ key: '', value: '', isValidated: false })
     }
 
-    console.log('[EventPropertiesInput] Setting new entries', newEntries)
     setPropertyEntries(newEntries)
   }, [value])
 
