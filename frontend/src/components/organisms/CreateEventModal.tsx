@@ -182,6 +182,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
         </FormField>
 
         <EventPropertiesInput
+          key={isOpen ? 'open' : 'closed'}
           productId={productId || ''}
           value={formData.properties || {}}
           onChange={handlePropertiesChange}

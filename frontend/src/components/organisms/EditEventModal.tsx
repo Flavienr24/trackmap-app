@@ -425,6 +425,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
         </FormField>
 
         <EventPropertiesInput
+          key={event?.id || 'new'}
           ref={propertiesInputRef}
           productId={productId || ''}
           value={formData.properties || {}}
