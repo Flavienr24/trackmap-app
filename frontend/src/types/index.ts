@@ -69,8 +69,8 @@ export interface Event {
   test_date?: string
   properties: Record<string, any>
   screenshots?: Screenshot[]
-  created_at: string
-  updated_at: string
+  createdAt: string
+  updatedAt: string
   // Relations
   page?: Page
 }
