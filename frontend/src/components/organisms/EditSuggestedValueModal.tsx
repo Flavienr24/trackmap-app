@@ -148,8 +148,8 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
         // Impact detected - show detailed confirmation
         console.log('Impact detected, showing confirmation modal')
         setImpactData(impact)
-        onClose()
         setShowDeleteConfirmation(true)
+        // Don't close the edit modal yet - the confirmation modal will handle closing
       } else {
         // No impact - simple confirmation is enough
         console.log('No impact, showing simple confirm')
