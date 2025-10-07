@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/molecules/FormField'
 import { CreatePropertyModal } from '@/components/organisms/CreatePropertyModal'
+import { CreateSuggestedValueModal } from '@/components/organisms/CreateSuggestedValueModal'
 import { propertiesApi, suggestedValuesApi } from '@/services/api'
 import type { Property, SuggestedValue, CreatePropertyRequest, CreateSuggestedValueRequest } from '@/types'
 
@@ -47,6 +48,10 @@ const EventPropertiesInput = forwardRef<EventPropertiesInputRef, EventProperties
   const [targetKeyEntryIndex, setTargetKeyEntryIndex] = useState(-1)
   const [showSuggestionsDropdown, setShowSuggestionsDropdown] = useState<number | null>(null)
   const [showKeyDropdown, setShowKeyDropdown] = useState<number | null>(null)
+  const [showCreateValueModal, setShowCreateValueModal] = useState(false)
+  const [createValueLoading, setCreateValueLoading] = useState(false)
+  const [newValueString, setNewValueString] = useState('')
+  const [targetValueEntryIndex, setTargetValueEntryIndex] = useState(-1)
 
   // Load properties and suggested values for the product
   useEffect(() => {
@@ -83,11 +88,11 @@ const EventPropertiesInput = forwardRef<EventPropertiesInputRef, EventProperties
 
   // Close dropdowns when modals open
   useEffect(() => {
-    if (showCreatePropertyModal) {
+    if (showCreatePropertyModal || showCreateValueModal) {
       setShowSuggestionsDropdown(null)
       setShowKeyDropdown(null)
     }
-  }, [showCreatePropertyModal])
+  }, [showCreatePropertyModal, showCreateValueModal])
 
   // Convert value object to entries when value changes
   useEffect(() => {
@@ -411,29 +416,37 @@ const EventPropertiesInput = forwardRef<EventPropertiesInputRef, EventProperties
   }
 
 
-  const handleCreateSuggestedValueFromDropdown = async (value: string, _entryIndex: number) => {
+  const handleCreateSuggestedValueFromDropdown = (value: string, entryIndex: number) => {
+    // Open modal instead of creating directly
+    setNewValueString(value.trim())
+    setTargetValueEntryIndex(entryIndex)
+    setShowCreateValueModal(true)
+    setShowSuggestionsDropdown(null)
+  }
+
+  const handleCreateSuggestedValue = async (data: CreateSuggestedValueRequest) => {
+    setCreateValueLoading(true)
     try {
-      // Create suggested value directly without modal
-      const data: CreateSuggestedValueRequest = {
-        value: value.trim(),
-        is_contextual: value.startsWith('$')
-      }
-      
       const response = await suggestedValuesApi.create(productId, data)
       const newSuggestedValue = response.data
-      
+
       // Update local state
       setSuggestedValues(prev => [...prev, newSuggestedValue])
-      
-      // The value is already in the field, no need to update the entry
-      // Just close the dropdown
-      setShowSuggestionsDropdown(null)
-      
-      console.log('Suggested value created directly:', newSuggestedValue)
+
+      // Update the entry that triggered the creation if needed
+      if (targetValueEntryIndex !== -1) {
+        updateEntry(targetValueEntryIndex, 'value', newSuggestedValue.value)
+      }
+
+      setNewValueString('')
+      setTargetValueEntryIndex(-1)
+
+      console.log('Suggested value created via modal:', newSuggestedValue)
     } catch (error) {
       console.error('Error creating suggested value:', error)
-      // If creation fails, the user can still use the value as-is
-      setShowSuggestionsDropdown(null)
+      throw error
+    } finally {
+      setCreateValueLoading(false)
     }
   }
 
@@ -652,6 +665,18 @@ const EventPropertiesInput = forwardRef<EventPropertiesInputRef, EventProperties
         initialName={newPropertyKey}
       />
 
+      {/* Create Suggested Value Modal */}
+      <CreateSuggestedValueModal
+        isOpen={showCreateValueModal}
+        onClose={() => {
+          setShowCreateValueModal(false)
+          setNewValueString('')
+          setTargetValueEntryIndex(-1)
+        }}
+        onSubmit={handleCreateSuggestedValue}
+        loading={createValueLoading}
+        initialValue={newValueString}
+      />
 
     </div>
   )
