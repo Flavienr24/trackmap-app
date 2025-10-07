@@ -239,7 +239,7 @@ export const updateProperty = async (req: Request, res: Response, next: NextFunc
     // Check if new name conflicts with existing properties
     if (name && name !== existingProperty.name) {
       const conflictingProperty = await prisma.property.findFirst({
-        where: { 
+        where: {
           productId: existingProperty.productId,
           name,
           id: { not: id }
@@ -250,6 +250,91 @@ export const updateProperty = async (req: Request, res: Response, next: NextFunc
         const error: AppError = new Error('Property name already exists for this product');
         error.statusCode = 409;
         return next(error);
+      }
+    }
+
+    // If property name is being changed, sync all events that use this property
+    let affectedEventsCount = 0;
+    if (name && name !== existingProperty.name) {
+      logger.debug('Property name changed, syncing events', {
+        oldName: existingProperty.name,
+        newName: name,
+        productId: existingProperty.productId
+      });
+
+      // Find all events for this product that contain this property
+      const allEvents = await prisma.event.findMany({
+        where: {
+          page: {
+            productId: existingProperty.productId
+          }
+        }
+      });
+
+      // Filter and update events that contain this property key
+      for (const event of allEvents) {
+        if (!event.properties) continue;
+
+        let properties: Record<string, any>;
+
+        // Parse properties JSON
+        if (typeof event.properties === 'string') {
+          try {
+            properties = JSON.parse(event.properties);
+          } catch (error) {
+            logger.warn('Failed to parse event properties JSON during property rename', {
+              eventId: event.id,
+              properties: event.properties
+            });
+            continue;
+          }
+        } else if (typeof event.properties === 'object') {
+          properties = { ...(event.properties as any) };
+        } else {
+          continue;
+        }
+
+        // Check if this event uses the old property name
+        if (Object.prototype.hasOwnProperty.call(properties, existingProperty.name)) {
+          const oldValue = properties[existingProperty.name];
+
+          // Rename the property key while preserving order
+          // Recreate the object with renamed key in original position
+          const updatedProperties: Record<string, any> = {};
+          for (const [key, value] of Object.entries(properties)) {
+            if (key === existingProperty.name) {
+              updatedProperties[name] = oldValue;
+            } else {
+              updatedProperties[key] = value;
+            }
+          }
+          properties = updatedProperties;
+
+          // Update event with renamed property
+          await prisma.event.update({
+            where: { id: event.id },
+            data: { properties: JSON.stringify(properties) }
+          });
+
+          // Create history entry for this change
+          await prisma.eventHistory.create({
+            data: {
+              eventId: event.id,
+              field: 'properties',
+              oldValue: JSON.stringify({ [existingProperty.name]: oldValue }),
+              newValue: JSON.stringify({ [name]: oldValue }),
+              author: 'system' // Property rename cascade
+            }
+          });
+
+          affectedEventsCount++;
+
+          logger.debug('Renamed property in event', {
+            eventId: event.id,
+            oldName: existingProperty.name,
+            newName: name
+          });
+        }
       }
     }
 
@@ -271,15 +356,18 @@ export const updateProperty = async (req: Request, res: Response, next: NextFunc
       }
     });
 
-    logger.info('Property updated successfully', { 
+    logger.info('Property updated successfully', {
       propertyId: id,
       propertyName: property.name,
-      requestId: req.ip 
+      oldName: existingProperty.name,
+      affectedEventsCount,
+      requestId: req.ip
     });
 
     res.json({
       success: true,
-      data: property
+      data: property,
+      affectedEventsCount
     });
   } catch (error) {
     logger.error('Error updating property', { error, propertyId: req.params.id, requestId: req.ip });
