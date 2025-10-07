@@ -52,7 +52,9 @@ const Modal: React.FC<ModalProps> = ({
 
         {footer && (
           <DialogFooter className="flex-shrink-0 bg-muted/30 -mx-6 -mb-6 mt-6 px-6 py-4 rounded-b-lg">
-            {footer}
+            <div className="w-full">
+              {footer}
+            </div>
           </DialogFooter>
         )}
       </DialogContent>

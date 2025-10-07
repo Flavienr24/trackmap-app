@@ -212,6 +212,25 @@ const ProductDetail: React.FC = () => {
     }
   }
 
+  const handleDeleteProduct = async (productToDelete: Product) => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer le produit "${productToDelete.name}" ?`)) {
+      return
+    }
+
+    setEditProductLoading(true)
+    try {
+      await productsApi.delete(productToDelete.id)
+      setShowEditProductModal(false)
+      setProduct(null)
+      setPages([])
+      navigate('/products')
+    } catch (error) {
+      console.error('Error deleting product:', error)
+    } finally {
+      setEditProductLoading(false)
+    }
+  }
+
   // Show loading state while data is being fetched
   if (loading) {
     return (
@@ -417,6 +436,7 @@ const ProductDetail: React.FC = () => {
         product={product}
         onClose={() => setShowEditProductModal(false)}
         onSubmit={handleEditProductSubmit}
+        onDelete={handleDeleteProduct}
         loading={editProductLoading}
       />
     </div>

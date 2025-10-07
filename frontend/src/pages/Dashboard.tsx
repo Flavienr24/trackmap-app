@@ -6,10 +6,10 @@ import { DataTable, type Column, type Action } from '@/components/organisms/Data
 import { CreatePageModal } from '@/components/organisms/CreatePageModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { EditProductModal } from '@/components/organisms/EditProductModal'
-import { pagesApi } from '@/services/api'
+import { pagesApi, productsApi } from '@/services/api'
 import { useProduct } from '@/hooks/useProduct'
 import { doesProductNameMatchSlug } from '@/utils/slug'
-import type { Page, CreatePageRequest, UpdatePageRequest, UpdateProductRequest } from '@/types'
+import type { Page, CreatePageRequest, UpdatePageRequest, UpdateProductRequest, Product } from '@/types'
 
 /**
  * Dashboard Page - Main product overview with stats, pages, and actions
@@ -22,7 +22,8 @@ const Dashboard: React.FC = () => {
     currentProduct, 
     setCurrentProductBySlug, 
     hasSelectedProduct,
-    loadProducts 
+    loadProducts,
+    setCurrentProduct
   } = useProduct()
   
   const [pages, setPages] = useState<Page[]>([])
@@ -156,6 +157,29 @@ const Dashboard: React.FC = () => {
     } catch (error) {
       console.error('Error updating product:', error)
       throw error
+    } finally {
+      setEditProductLoading(false)
+    }
+  }
+
+  const handleDeleteProduct = async (product: Product) => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer le produit "${product.name}" ?`)) {
+      return
+    }
+
+    setEditProductLoading(true)
+    try {
+      await productsApi.delete(product.id)
+      await loadProducts()
+
+      if (currentProduct?.id === product.id) {
+        setCurrentProduct(null)
+      }
+
+      setShowEditProductModal(false)
+      navigate('/products')
+    } catch (error) {
+      console.error('Error deleting product:', error)
     } finally {
       setEditProductLoading(false)
     }
@@ -389,6 +413,7 @@ const Dashboard: React.FC = () => {
         product={currentProduct}
         onClose={() => setShowEditProductModal(false)}
         onSubmit={handleEditProductSubmit}
+        onDelete={handleDeleteProduct}
         loading={editProductLoading}
       />
     </div>

@@ -112,14 +112,12 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
 
   const handleDelete = async () => {
     if (!product || !onDelete) return
-    
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le produit "${product.name}" ?`)) {
-      try {
-        await onDelete(product)
-        onClose()
-      } catch (error) {
-        console.error('Error deleting product:', error)
-      }
+
+    try {
+      await onDelete(product)
+      onClose()
+    } catch (error) {
+      console.error('Error deleting product:', error)
     }
   }
 
