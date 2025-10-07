@@ -32,7 +32,7 @@ export interface Product {
  */
 export interface Page {
   id: string
-  product_id: string
+  productId: string
   name: string
   slug: string
   url?: string
