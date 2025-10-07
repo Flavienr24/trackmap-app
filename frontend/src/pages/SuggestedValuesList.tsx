@@ -146,20 +146,9 @@ const SuggestedValuesList: React.FC = () => {
     {
       key: 'value',
       title: 'Valeur',
-      render: (value, record) => (
-        <div className="flex items-center space-x-3">
-          <div className="font-medium text-neutral-900">
-            {record.isContextual ? (
-              <span className="font-mono text-secondary-foreground">{value}</span>
-            ) : (
-              <span>{value}</span>
-            )}
-          </div>
-          {record.isContextual && (
-            <Badge variant="secondary">
-              Contextuelle
-            </Badge>
-          )}
+      render: (value) => (
+        <div className="font-medium text-neutral-900">
+          {value}
         </div>
       ),
     },
@@ -168,7 +157,10 @@ const SuggestedValuesList: React.FC = () => {
       title: 'Type',
       width: '120px',
       render: (value) => (
-        <Badge variant={value ? 'secondary' : 'default'}>
+        <Badge
+          variant={value ? 'secondary' : 'default'}
+          className={value ? 'bg-purple-100 text-purple-800 hover:bg-purple-100' : ''}
+        >
           {value ? 'Contextuelle' : 'Statique'}
         </Badge>
       ),
@@ -177,11 +169,17 @@ const SuggestedValuesList: React.FC = () => {
       key: 'createdAt',
       title: 'Créée le',
       width: '160px',
+      render: (value) => (
+        <span>{new Date(value).toLocaleDateString('fr-FR')}</span>
+      ),
     },
     {
       key: 'updatedAt',
       title: 'Modifiée le',
       width: '160px',
+      render: (value) => (
+        <span>{new Date(value).toLocaleDateString('fr-FR')}</span>
+      ),
     },
   ]
 

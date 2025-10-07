@@ -348,10 +348,6 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
             <option value="static">Statique</option>
             <option value="contextual">Contextuelle</option>
           </select>
-          <div className="text-sm text-neutral-500 mt-1">
-            <p>• <strong>Statique :</strong> Valeur fixe (ex: "homepage", "checkout")</p>
-            <p>• <strong>Contextuelle :</strong> Valeur variable avec préfixe $ (ex: "$page-name", "$user-id")</p>
-          </div>
         </FormField>
 
         {/* Submit Error */}
