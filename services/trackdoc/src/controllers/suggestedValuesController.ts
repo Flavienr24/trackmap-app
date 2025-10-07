@@ -253,6 +253,77 @@ export const updateSuggestedValue = async (req: Request, res: Response, next: Ne
       finalIsContextual = value.startsWith('$');
     }
 
+    // Update events that use this suggested value (if value is being changed)
+    let affectedEventsCount = 0;
+    if (value && value !== existingSuggestedValue.value) {
+      // Find all events for this product
+      const events = await prisma.event.findMany({
+        where: {
+          page: {
+            productId: existingSuggestedValue.productId
+          }
+        }
+      });
+
+      // Update events that contain the old suggested value
+      for (const event of events) {
+        if (!event.properties) continue;
+
+        let properties: Record<string, any>;
+
+        // Handle both string (SQLite JSON storage) and object (parsed JSON) formats
+        if (typeof event.properties === 'string') {
+          try {
+            properties = JSON.parse(event.properties);
+          } catch (error) {
+            logger.warn('Failed to parse event properties JSON during suggested value update', {
+              eventId: event.id,
+              properties: event.properties
+            });
+            continue; // Skip this event if we can't parse its properties
+          }
+        } else if (typeof event.properties === 'object') {
+          properties = event.properties as Record<string, any>;
+        } else {
+          continue; // Skip if properties is neither string nor object
+        }
+
+        let wasModified = false;
+        const updatedProperties = { ...properties };
+
+        // Replace properties that match the old suggested value
+        for (const [key, propValue] of Object.entries(properties)) {
+          if (propValue === existingSuggestedValue.value) {
+            updatedProperties[key] = value;
+            wasModified = true;
+          } else if (typeof propValue === 'string' && propValue.includes(existingSuggestedValue.value)) {
+            // For contextual values or complex strings, replace the occurrence
+            updatedProperties[key] = propValue.replace(
+              new RegExp(existingSuggestedValue.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+              value
+            );
+            wasModified = true;
+          }
+        }
+
+        if (wasModified) {
+          await prisma.event.update({
+            where: { id: event.id },
+            data: { properties: JSON.stringify(updatedProperties) }
+          });
+          affectedEventsCount++;
+        }
+      }
+
+      logger.info('Updated events with new suggested value', {
+        suggestedValueId: id,
+        oldValue: existingSuggestedValue.value,
+        newValue: value,
+        affectedEventsCount,
+        requestId: req.ip
+      });
+    }
+
     // Update suggested value
     const suggestedValue = await prisma.suggestedValue.update({
       where: { id },
@@ -270,10 +341,11 @@ export const updateSuggestedValue = async (req: Request, res: Response, next: Ne
       }
     });
 
-    logger.info('Suggested value updated successfully', { 
+    logger.info('Suggested value updated successfully', {
       suggestedValueId: id,
       value: suggestedValue.value,
-      requestId: req.ip 
+      affectedEventsCount,
+      requestId: req.ip
     });
 
     res.json({
