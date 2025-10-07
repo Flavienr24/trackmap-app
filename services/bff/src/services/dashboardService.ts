@@ -1,16 +1,17 @@
 // Dashboard Service - Aggregates data for dashboard views
 import { trackdocClient } from './trackdocClient';
 import logger from '../config/logger';
-import { 
-  DashboardData, 
-  Product, 
-  ProductOverview, 
-  PageSummary, 
-  EventSummary, 
+import { safeJsonParse } from '../utils/helpers';
+import {
+  DashboardData,
+  Product,
+  ProductOverview,
+  PageSummary,
+  EventSummary,
   ActivityItem,
   HealthScoreItem,
   IssueItem,
-  EventStatus 
+  EventStatus
 } from '../types';
 
 export class DashboardService {
@@ -32,6 +33,7 @@ export class DashboardService {
         (page.events || []).map((event: any) => ({
           ...event,
           pageId: event.pageId || page.id,
+          properties: safeJsonParse(event.properties, {}),
           page: {
             id: page.id,
             name: page.name,
@@ -90,6 +92,7 @@ export class DashboardService {
         (page.events || []).map((event: any) => ({
           ...event,
           pageId: page.id,
+          properties: safeJsonParse(event.properties, {}),
           page: { id: page.id, name: page.name, productId: product.id }
         }))
       );
