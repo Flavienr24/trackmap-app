@@ -93,11 +93,11 @@ export interface Property {
  */
 export interface SuggestedValue {
   id: string
-  product_id: string
+  productId: string
   value: string
-  is_contextual: boolean
-  created_at: string
-  updated_at: string
+  isContextual: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 /**
@@ -201,7 +201,7 @@ export interface UpdatePropertyRequest extends Partial<CreatePropertyRequest> {}
 
 export interface CreateSuggestedValueRequest {
   value: string
-  is_contextual?: boolean
+  isContextual?: boolean
 }
 
 export interface UpdateSuggestedValueRequest extends Partial<CreateSuggestedValueRequest> {}
@@ -210,7 +210,7 @@ export interface SuggestedValueConflictData {
   existingValue: {
     id: string
     value: string
-    is_contextual: boolean
+    isContextual: boolean
   }
   mergeProposal: {
     keepValue: string
@@ -296,7 +296,7 @@ export interface PropertiesFilter {
 
 export interface SuggestedValuesFilter {
   search?: string
-  is_contextual?: boolean
+  isContextual?: boolean
   sortBy?: 'value' | 'created_at' | 'updated_at'
   sortOrder?: 'asc' | 'desc'
 }
