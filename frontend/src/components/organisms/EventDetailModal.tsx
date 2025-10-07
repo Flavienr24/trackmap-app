@@ -281,11 +281,11 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <h3 className="text-sm font-medium text-neutral-600 mb-2">Créé le</h3>
-                  <p className="text-neutral-900">{formatDate(event.created_at)}</p>
+                  <p className="text-neutral-900">{formatDate(event.createdAt)}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-neutral-600 mb-2">Modifié le</h3>
-                  <p className="text-neutral-900">{formatDate(event.updated_at)}</p>
+                  <p className="text-neutral-900">{formatDate(event.updatedAt)}</p>
                 </div>
               </div>
 
