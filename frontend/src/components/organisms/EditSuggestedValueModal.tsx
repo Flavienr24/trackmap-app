@@ -130,22 +130,31 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
   }
 
   const handleDelete = async () => {
-    if (!suggestedValue || !onDelete) return
-    
+    console.log('handleDelete called', { suggestedValue, hasOnDelete: !!onDelete })
+    if (!suggestedValue || !onDelete) {
+      console.log('Early return: missing suggestedValue or onDelete')
+      return
+    }
+
     setImpactLoading(true)
     try {
+      console.log('Fetching impact analysis for:', suggestedValue.id)
       // Try to get impact analysis
       const response = await suggestedValuesApi.getImpact(suggestedValue.id)
       const impact = response.data
-      
+      console.log('Impact analysis received:', impact)
+
       if (impact.affectedEventsCount > 0) {
         // Impact detected - show detailed confirmation
+        console.log('Impact detected, showing confirmation modal')
         setImpactData(impact)
         onClose()
         setShowDeleteConfirmation(true)
       } else {
         // No impact - simple confirmation is enough
+        console.log('No impact, showing simple confirm')
         if (window.confirm(`Supprimer la valeur "${suggestedValue.value}" ?`)) {
+          console.log('User confirmed deletion')
           await onDelete(suggestedValue)
           onClose()
         }
@@ -154,6 +163,7 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
       console.error('Error getting impact analysis, using simple confirmation:', error)
       // API error - fallback to simple confirmation
       if (window.confirm(`Supprimer la valeur "${suggestedValue.value}" ?`)) {
+        console.log('User confirmed deletion after error')
         try {
           await onDelete(suggestedValue)
           onClose()
