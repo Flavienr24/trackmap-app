@@ -3,9 +3,9 @@ import { useParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
-import { pagesApi, eventsApi } from '@/services/api'
+import { DataTable, type Column } from '@/components/organisms/DataTable'
+import { PropertiesDisplay } from '@/components/molecules/PropertiesDisplay'
+import { pagesApi } from '@/services/api'
 import { useProduct } from '@/hooks/useProduct'
 import { doesProductNameMatchSlug } from '@/utils/slug'
 import type { Page } from '@/types'
@@ -116,20 +116,6 @@ const EventsList: React.FC = () => {
   // Get unique event types for filter
   const eventTypes = Array.from(new Set(events.map(event => event.type)))
 
-  // Handle duplicate event
-  const handleDuplicateEvent = async (event: EventData) => {
-    try {
-      const response = await eventsApi.duplicate(event.id)
-
-      if (response.success) {
-        // Reload data to show the duplicated event
-        await loadData()
-      }
-    } catch (error) {
-      console.error('Error duplicating event:', error)
-      alert('Erreur lors de la duplication de l\'événement')
-    }
-  }
 
   if (!hasSelectedProduct || !currentProduct) {
     return (
@@ -155,6 +141,27 @@ const EventsList: React.FC = () => {
     )
   }
 
+  // Helper to get property count
+  const getPropertyCount = (properties: any): number => {
+    if (!properties) return 0
+    try {
+      const parsed = typeof properties === 'string' ? JSON.parse(properties) : properties
+      return Object.keys(parsed || {}).length
+    } catch (error) {
+      return 0
+    }
+  }
+
+  // Helper to parse properties safely
+  const parseProperties = (properties: any): Record<string, any> => {
+    if (!properties) return {}
+    try {
+      return typeof properties === 'string' ? JSON.parse(properties) : properties
+    } catch (error) {
+      return {}
+    }
+  }
+
   // Table columns
   const columns: Column<EventData>[] = [
     {
@@ -168,31 +175,13 @@ const EventsList: React.FC = () => {
       ),
     },
     {
-      key: 'type',
-      title: 'Type',
-      width: '120px',
-      render: (value) => (
-        <Badge variant="secondary" className="capitalize">
-          {value}
-        </Badge>
-      ),
-    },
-    {
       key: 'properties',
       title: 'Propriétés',
       width: '100px',
       render: (value) => {
-        let propertiesCount = 0
-        if (value) {
-          try {
-            const parsed = typeof value === 'string' ? JSON.parse(value) : value
-            propertiesCount = Object.keys(parsed || {}).length
-          } catch (error) {
-            propertiesCount = 0
-          }
-        }
+        const count = getPropertyCount(value)
         return (
-          <span className="text-slate-600">{propertiesCount}</span>
+          <span className="text-slate-600">{count}</span>
         )
       },
     },
@@ -200,28 +189,26 @@ const EventsList: React.FC = () => {
       key: 'updated_at',
       title: 'Dernière modification',
       width: '160px',
-      render: (value) => (
-        <span className="text-slate-600">
-          {new Date(value).toLocaleDateString('fr-FR')}
-        </span>
-      ),
+      render: (value) => {
+        if (!value) return <span className="text-slate-400">-</span>
+        try {
+          const date = new Date(value)
+          // Check if date is valid
+          if (isNaN(date.getTime())) {
+            return <span className="text-slate-400">-</span>
+          }
+          return (
+            <span className="text-slate-600">
+              {date.toLocaleDateString('fr-FR')}
+            </span>
+          )
+        } catch (error) {
+          return <span className="text-slate-400">-</span>
+        }
+      },
     },
   ]
 
-  // Table actions
-  const actions: Action<EventData>[] = [
-    {
-      label: 'Dupliquer',
-      onClick: handleDuplicateEvent,
-      iconOnly: true,
-      title: 'Dupliquer cet événement',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-        </svg>
-      ),
-    },
-  ]
 
   return (
     <div className="w-full space-y-6">
@@ -336,9 +323,15 @@ const EventsList: React.FC = () => {
           <DataTable
             data={filteredEvents}
             columns={columns}
-            actions={actions}
             loading={loading}
             emptyMessage="Aucun événement trouvé pour ce produit."
+            expandable={{
+              expandedRowRender: (event: EventData) => (
+                <PropertiesDisplay properties={parseProperties(event.properties)} />
+              ),
+              rowExpandable: (event: EventData) => getPropertyCount(event.properties) > 0,
+              showExpandIcon: false,
+            }}
           />
         </CardContent>
       </Card>
