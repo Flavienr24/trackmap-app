@@ -1,15 +1,16 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Modal } from './Modal'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/molecules/FormField'
 import { EventPropertiesInput } from '@/components/organisms/EventPropertiesInput'
 import { DragDropZone, type FileWithProgress } from '@/components/molecules/DragDropZone'
 import { ScreenshotThumbnail } from '@/components/molecules/ScreenshotThumbnail'
+import { EventCombobox, type EventOption } from '@/components/ui/event-combobox'
 import { uploadMultipleFilesWithProgress } from '@/utils/uploadUtils'
 import { deleteScreenshot } from '@/utils/screenshotUtils'
-import type { CreateEventRequest, EventStatus, Screenshot } from '@/types'
+import { pagesApi, eventsApi } from '@/services/api'
+import type { CreateEventRequest, EventStatus, Screenshot, Event } from '@/types'
 
 interface CreateEventModalProps {
   isOpen: boolean
@@ -36,6 +37,57 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null)
+  const [existingEvents, setExistingEvents] = useState<Event[]>([])
+  const [eventOptions, setEventOptions] = useState<EventOption[]>([])
+
+  // Load all existing events for the product
+  useEffect(() => {
+    const loadExistingEvents = async () => {
+      if (!productId || !isOpen) return
+
+      try {
+        const pagesResponse = await pagesApi.getByProduct(productId)
+        const pages = pagesResponse.data
+
+        const allEventsPromises = pages.map(page => eventsApi.getByPage(page.id))
+        const eventsResponses = await Promise.all(allEventsPromises)
+
+        const allEvents = eventsResponses.flatMap(response => response.data)
+        setExistingEvents(allEvents)
+
+        // Build options: existing events + common suggestions
+        const commonEvents = [
+          'page_view',
+          'select_content',
+          'button_click',
+          'form_submit',
+          'purchase',
+          'add_to_cart',
+          'login',
+          'sign_up',
+          'video_play',
+          'download',
+          'search'
+        ]
+
+        // Get unique event names from existing events
+        const existingEventNames = new Set(allEvents.map(e => e.name))
+
+        // Combine existing + common, remove duplicates
+        const allEventNames = new Set([...existingEventNames, ...commonEvents])
+
+        const options: EventOption[] = Array.from(allEventNames).map(name => ({
+          value: name
+        }))
+
+        setEventOptions(options)
+      } catch (error) {
+        console.error('Error loading existing events:', error)
+      }
+    }
+
+    loadExistingEvents()
+  }, [productId, isOpen])
 
   const eventStatuses: { value: EventStatus; label: string }[] = [
     { value: 'to_implement', label: 'À implémenter' },
@@ -147,20 +199,6 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     onClose()
   }
 
-  // Suggest common event names
-  const suggestedEvents = [
-    'page_view',
-    'select_content',
-    'button_click',
-    'form_submit',
-    'purchase',
-    'add_to_cart',
-    'login',
-    'sign_up',
-    'video_play',
-    'download',
-    'search'
-  ]
 
   const footer = (
     <div className="flex justify-end space-x-3">
@@ -188,20 +226,14 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
           error={errors.name}
           hint="Nom de l'événement GA4 (ex: page_view, button_click)"
         >
-          <Input
-            type="text"
+          <EventCombobox
             value={formData.name}
-            onChange={(e) => handleInputChange('name', e.target.value)}
-            placeholder="Ex: page_view, button_click, purchase"
-            className="font-mono"
+            onChange={(value) => handleInputChange('name', value)}
+            options={eventOptions}
+            placeholder="Sélectionner ou saisir un event..."
+            emptyMessage="Aucun event trouvé."
             disabled={loading}
-            list="event-suggestions"
           />
-          <datalist id="event-suggestions">
-            {suggestedEvents.map(event => (
-              <option key={event} value={event} />
-            ))}
-          </datalist>
         </FormField>
 
         <FormField

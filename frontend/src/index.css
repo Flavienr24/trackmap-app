@@ -172,3 +172,10 @@ html {
     @apply bg-background text-foreground;
   }
 }
+
+/* Fix cmdk scrolling */
+[cmdk-list] {
+  max-height: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}

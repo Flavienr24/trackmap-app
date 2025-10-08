@@ -7,6 +7,7 @@ import { FormField } from '@/components/molecules/FormField'
 import { EventPropertiesInput, type EventPropertiesInputRef } from '@/components/organisms/EventPropertiesInput'
 import { DragDropZone, type FileWithProgress } from '@/components/molecules/DragDropZone'
 import { ScreenshotThumbnail } from '@/components/molecules/ScreenshotThumbnail'
+import { EventCombobox, type EventOption } from '@/components/ui/event-combobox'
 import { parseProperties, getStatusLabel } from '@/utils/properties'
 import { uploadMultipleFilesWithProgress } from '@/utils/uploadUtils'
 import { deleteScreenshot } from '@/utils/screenshotUtils'
@@ -44,8 +45,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null)
   const [existingEvents, setExistingEvents] = useState<Event[]>([])
-  const [filteredSuggestions, setFilteredSuggestions] = useState<Event[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [eventOptions, setEventOptions] = useState<EventOption[]>([])
   const propertiesInputRef = useRef<EventPropertiesInputRef>(null)
 
 
@@ -70,20 +70,26 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
       if (!productId || !isOpen) return
 
       try {
-        // First get all pages of the product
         const pagesResponse = await pagesApi.getByProduct(productId)
         const pages = pagesResponse.data
 
-        // Then get all events from all pages
         const allEventsPromises = pages.map(page => eventsApi.getByPage(page.id))
         const eventsResponses = await Promise.all(allEventsPromises)
-        
-        // Flatten all events and exclude the current event being edited
+
         const allEvents = eventsResponses
           .flatMap(response => response.data)
           .filter(existingEvent => existingEvent.id !== event?.id) // Exclude current event
-        
+
         setExistingEvents(allEvents)
+
+        // Build options with unique event names
+        const eventNames = new Set(allEvents.map(e => e.name))
+
+        const options: EventOption[] = Array.from(eventNames).map(name => ({
+          value: name
+        }))
+
+        setEventOptions(options)
       } catch (error) {
         console.error('Error loading existing events:', error)
       }
@@ -95,38 +101,16 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   const handleInputChange = (field: keyof UpdateEventRequest, value: string | EventStatus) => {
     setFormData(prev => {
       const newData = { ...prev, [field]: value }
-      
+
       // Auto-set test_date to today when status changes to validated or error
       if (field === 'status' && (value === 'validated' || value === 'error') && !prev.test_date) {
         const today = new Date().toISOString().split('T')[0] // Format YYYY-MM-DD
         newData.test_date = today
       }
-      
+
       return newData
     })
-    
-    // Handle event name suggestions
-    if (field === 'name' && typeof value === 'string') {
-      const inputValue = value.trim().toLowerCase()
-      
-      if (inputValue.length > 0) {
-        // Filter existing events that match the input
-        const matches = existingEvents.filter(existingEvent => 
-          existingEvent.name.toLowerCase().includes(inputValue) &&
-          existingEvent.name.toLowerCase() !== inputValue // Don't suggest exact matches
-        )
-        
-        if (matches.length > 0) {
-          setFilteredSuggestions(matches)
-          setShowSuggestions(true)
-        } else {
-          setShowSuggestions(false)
-        }
-      } else {
-        setShowSuggestions(false)
-      }
-    }
-    
+
     // Clear error when user starts typing
     if (errors[field]) {
       const newErrors = { ...errors }
@@ -143,25 +127,6 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
       delete newErrors.properties
       setErrors(newErrors)
     }
-  }
-
-  // Handle suggestion selection
-  const handleSuggestionSelect = (eventName: string) => {
-    setFormData(prev => ({ ...prev, name: eventName }))
-    setShowSuggestions(false)
-    
-    // Clear name error if any
-    if (errors.name) {
-      const newErrors = { ...errors }
-      delete newErrors.name
-      setErrors(newErrors)
-    }
-  }
-
-  // Close suggestions when clicking outside
-  const handleInputBlur = () => {
-    // Delay to allow click on suggestion
-    setTimeout(() => setShowSuggestions(false), 150)
   }
 
   // Handle files selection from drag drop
@@ -340,42 +305,14 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
           error={errors.name}
           hint="Nom de l'événement GA4 (ex: page_view, button_click)"
         >
-          <div className="relative">
-            <Input
-              type="text"
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              onBlur={handleInputBlur}
-              placeholder="Nom de l'événement GA4"
-              className="font-mono"
-              disabled={loading}
-            />
-            
-            {/* Custom suggestions dropdown */}
-            {showSuggestions && filteredSuggestions.length > 0 && (
-              <div className="absolute z-50 w-full mt-1 bg-white border border-neutral-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                <div className="py-1">
-                  <div className="px-3 py-2 text-xs font-medium text-neutral-500 bg-neutral-50 border-b border-neutral-100">
-                    Events existants dans ce produit
-                  </div>
-                  {filteredSuggestions.map((suggestion) => (
-                    <button
-                      key={suggestion.id}
-                      type="button"
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-50 cursor-pointer flex items-center justify-between"
-                      onClick={() => handleSuggestionSelect(suggestion.name)}
-                    >
-                      <span className="font-mono text-neutral-900">{suggestion.name}</span>
-                      <span className="text-xs text-neutral-400 truncate ml-2">
-                        {/* Find page name - we'll need to enhance this later */}
-                        ID: {suggestion.id.slice(-6)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <EventCombobox
+            value={formData.name || ''}
+            onChange={(value) => handleInputChange('name', value)}
+            options={eventOptions}
+            placeholder="Sélectionner ou saisir un event..."
+            emptyMessage="Aucun event trouvé."
+            disabled={loading}
+          />
         </FormField>
 
         <FormField
