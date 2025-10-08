@@ -44,7 +44,7 @@ const CommandInput = React.forwardRef<
     <CommandPrimitive.Input
       ref={ref}
       className={cn(
-        "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none ring-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none ring-0 focus:outline-none focus:ring-0 focus:border-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}
@@ -57,13 +57,46 @@ CommandInput.displayName = CommandPrimitive.Input.displayName
 const CommandList = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive.List
-    ref={ref}
-    className={cn("max-h-[300px] overflow-y-auto overflow-x-hidden", className)}
-    {...props}
-  />
-))
+>(({ className, ...props }, ref) => {
+  const listRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      const element = listRef.current
+      if (element) {
+        // Manually scroll the element
+        element.scrollTop += e.deltaY
+
+        // Prevent the event from bubbling to parent
+        e.stopPropagation()
+        if (e.cancelable) {
+          e.preventDefault()
+        }
+      }
+    }
+
+    const element = listRef.current
+    if (element) {
+      element.addEventListener('wheel', handleWheel, { passive: false })
+    }
+
+    return () => {
+      if (element) {
+        element.removeEventListener('wheel', handleWheel)
+      }
+    }
+  }, [])
+
+  React.useImperativeHandle(ref, () => listRef.current!)
+
+  return (
+    <CommandPrimitive.List
+      ref={listRef}
+      className={cn("max-h-[200px] overflow-y-auto overflow-x-hidden", className)}
+      {...props}
+    />
+  )
+})
 
 CommandList.displayName = CommandPrimitive.List.displayName
 
