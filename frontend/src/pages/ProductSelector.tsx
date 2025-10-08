@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,19 +12,29 @@ import type { CreateProductRequest } from '@/types'
  * Product Selector Page
  * Landing page when no product is selected
  * Shows available products and allows creation of new ones
+ * Automatically redirects to the last consulted product if available
  */
 const ProductSelector: React.FC = () => {
   const navigate = useNavigate()
-  const { 
-    products, 
-    setCurrentProduct, 
-    loadProducts, 
-    isLoading 
+  const {
+    products,
+    currentProduct,
+    setCurrentProduct,
+    loadProducts,
+    isLoading
   } = useProduct()
   
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
+
+  // Redirect to last consulted product if available
+  useEffect(() => {
+    if (currentProduct && !isLoading) {
+      const slug = slugifyProductName(currentProduct.name)
+      navigate(`/products/${slug}`, { replace: true })
+    }
+  }, [currentProduct, isLoading, navigate])
 
   // Filter products based on search
   const filteredProducts = products.filter(product => 
