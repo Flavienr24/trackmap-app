@@ -48,3 +48,17 @@ export interface ImportContextResponse {
 
 // Alias for convenience
 export type ImportContext = ImportContextResponse
+
+/**
+ * Parsed Import Data
+ *
+ * Structure returned after parsing and validating bulk import data.
+ * Used to pre-fill the manual event creation form.
+ */
+export interface ParsedImportData {
+  eventName: string
+  properties: Record<string, any>
+  confidence: 'high' | 'medium' | 'low'
+  warnings?: string[]
+  suggestions?: string[]
+}

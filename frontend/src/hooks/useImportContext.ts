@@ -7,7 +7,10 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { importContextApi } from '@/services/api'
-import type { ImportContext } from '@/types/importContext'
+import type { ImportContext, ParsedImportData } from '@/types/importContext'
+
+// Re-export for convenience
+export type { ParsedImportData }
 
 interface UseImportContextOptions {
   limit?: number

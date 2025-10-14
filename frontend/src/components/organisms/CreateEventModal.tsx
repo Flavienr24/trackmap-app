@@ -4,15 +4,13 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { FormField } from '@/components/molecules/FormField'
 import { EventPropertiesInput } from '@/components/organisms/EventPropertiesInput'
-import { DragDropZone, type FileWithProgress } from '@/components/molecules/DragDropZone'
-import { ScreenshotThumbnail } from '@/components/molecules/ScreenshotThumbnail'
+import { type FileWithProgress } from '@/components/molecules/DragDropZone'
 import { EventCombobox, type EventOption } from '@/components/ui/event-combobox'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { BulkEventImporter } from '@/components/organisms/BulkEventImporter'
 import { uploadMultipleFilesWithProgress } from '@/utils/uploadUtils'
-import { deleteScreenshot } from '@/utils/screenshotUtils'
-import { pagesApi, eventsApi } from '@/services/api'
-import type { CreateEventRequest, EventStatus, Screenshot, Event } from '@/types'
+import { useImportContext } from '@/hooks/useImportContext'
+import type { CreateEventRequest, EventStatus } from '@/types'
 import type { ParsedImportData } from '@/types/importContext'
 
 interface CreateEventModalProps {
@@ -39,60 +37,46 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
-  const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null)
-  const [existingEvents, setExistingEvents] = useState<Event[]>([])
   const [eventOptions, setEventOptions] = useState<EventOption[]>([])
   const [activeTab, setActiveTab] = useState<'manual' | 'bulk'>('manual')
-  const [hasManualData, setHasManualData] = useState(false)
 
-  // Load all existing events for the product
+  // Fetch import context using consolidated endpoint
+  const { data: importContext } = useImportContext(productId, { enabled: isOpen })
+
+  // Build event options from import context + common suggestions
   useEffect(() => {
-    const loadExistingEvents = async () => {
-      if (!productId || !isOpen) return
+    if (!importContext) return
 
-      try {
-        const pagesResponse = await pagesApi.getByProduct(productId)
-        const pages = pagesResponse.data
+    const commonEvents = [
+      'page_view',
+      'select_content',
+      'button_click',
+      'form_submit',
+      'purchase',
+      'add_to_cart',
+      'login',
+      'sign_up',
+      'video_play',
+      'download',
+      'search'
+    ]
 
-        const allEventsPromises = pages.map(page => eventsApi.getByPage(page.id))
-        const eventsResponses = await Promise.all(allEventsPromises)
+    // Combine existing event names from context + common suggestions
+    const allEventNames = new Set([...importContext.eventNames, ...commonEvents])
 
-        const allEvents = eventsResponses.flatMap(response => response.data)
-        setExistingEvents(allEvents)
+    const options: EventOption[] = Array.from(allEventNames).map(name => ({
+      value: name
+    }))
 
-        // Build options: existing events + common suggestions
-        const commonEvents = [
-          'page_view',
-          'select_content',
-          'button_click',
-          'form_submit',
-          'purchase',
-          'add_to_cart',
-          'login',
-          'sign_up',
-          'video_play',
-          'download',
-          'search'
-        ]
+    setEventOptions(options)
+  }, [importContext])
 
-        // Get unique event names from existing events
-        const existingEventNames = new Set(allEvents.map(e => e.name))
-
-        // Combine existing + common, remove duplicates
-        const allEventNames = new Set([...existingEventNames, ...commonEvents])
-
-        const options: EventOption[] = Array.from(allEventNames).map(name => ({
-          value: name
-        }))
-
-        setEventOptions(options)
-      } catch (error) {
-        console.error('Error loading existing events:', error)
-      }
-    }
-
-    loadExistingEvents()
-  }, [productId, isOpen])
+  // Compute hasManualData dynamically to avoid false confirmations
+  const hasManualData = !!(
+    formData.name.trim() ||
+    Object.keys(formData.properties || {}).length > 0 ||
+    pendingFiles.length > 0
+  )
 
   const eventStatuses: { value: EventStatus; label: string }[] = [
     { value: 'to_implement', label: 'À implémenter' },
@@ -103,7 +87,6 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
   const handleInputChange = (field: keyof CreateEventRequest, value: string | EventStatus) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    setHasManualData(true)
     // Clear error when user starts typing
     if (errors[field]) {
       const newErrors = { ...errors }
@@ -114,7 +97,6 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
   const handlePropertiesChange = (properties: Record<string, any>) => {
     setFormData(prev => ({ ...prev, properties }))
-    setHasManualData(true)
     // Clear properties error
     if (errors.properties) {
       const newErrors = { ...errors }
@@ -142,7 +124,6 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
       properties: data.properties
     })
     setActiveTab('manual')
-    setHasManualData(true)
   }
 
   const validateForm = (): boolean => {
@@ -200,7 +181,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
           id: crypto.randomUUID(),
           file,
           progress: 0,
-          status: 'pending' as const
+          status: 'uploading' as const
         }))
 
         // Upload files (errors are handled internally)
@@ -226,7 +207,6 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     setPendingFiles([])
     setErrors({})
     setActiveTab('manual')
-    setHasManualData(false)
     onClose()
   }
 

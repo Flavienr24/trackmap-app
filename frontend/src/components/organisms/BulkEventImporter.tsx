@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react'
-import { useImportContext } from '@/hooks/useImportContext'
+import { useImportContext, type ParsedImportData } from '@/hooks/useImportContext'
 import { parseEventData, type EnhancedParseResult, type ParseResult } from '@/utils/eventParser'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -21,14 +21,6 @@ interface BulkEventImporterProps {
   productId: string
   onValidated: (data: ParsedImportData) => void
   onCancel: () => void
-}
-
-export interface ParsedImportData {
-  eventName: string
-  properties: Record<string, any>
-  confidence: 'high' | 'medium' | 'low'
-  warnings?: string[]
-  suggestions?: string[]
 }
 
 /**
@@ -85,8 +77,8 @@ export const BulkEventImporter: React.FC<BulkEventImporterProps> = ({
       eventName: editableEventName,
       properties: editableProperties,
       confidence: parseResult.confidence,
-      warnings: parseResult.warnings,
-      suggestions: parseResult.suggestions
+      warnings: 'warnings' in parseResult ? parseResult.warnings : undefined,
+      suggestions: 'suggestions' in parseResult ? parseResult.suggestions : undefined
     }
 
     onValidated(data)
@@ -236,12 +228,12 @@ value    99.99`}
         )}
 
         {/* Suggestions */}
-        {parseResult.suggestions && parseResult.suggestions.length > 0 && (
+        {'suggestions' in parseResult && parseResult.suggestions && parseResult.suggestions.length > 0 && (
           <Card className="border-blue-300 bg-blue-50">
             <CardContent className="p-4">
               <h4 className="font-semibold text-blue-900 mb-2">Suggestions</h4>
               <ul className="text-sm text-blue-800 space-y-1">
-                {parseResult.suggestions.map((suggestion, i) => (
+                {parseResult.suggestions.map((suggestion: string, i: number) => (
                   <li key={i}>{suggestion}</li>
                 ))}
               </ul>
