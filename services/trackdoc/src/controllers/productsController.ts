@@ -3,6 +3,10 @@ import { Request, Response, NextFunction } from 'express';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
 import { db } from '../config/database';
+import {
+  ImportContextSchema,
+  ImportContextQuerySchema
+} from '../schemas/importContext.schema';
 
 // Use centralized database instance
 const prisma = db;
@@ -366,10 +370,10 @@ export const deleteProduct = async (req: Request, res: Response, next: NextFunct
       where: { id: existingProduct.id }
     });
 
-    logger.info('Product deleted successfully', { 
+    logger.info('Product deleted successfully', {
       productId: existingProduct.id,
       productName: existingProduct.name,
-      requestId: req.ip 
+      requestId: req.ip
     });
 
     res.json({
@@ -378,6 +382,156 @@ export const deleteProduct = async (req: Request, res: Response, next: NextFunct
     });
   } catch (error) {
     logger.error('Error deleting product', { error, productId: req.params.id, requestId: req.ip });
+    next(error);
+  }
+};
+
+/**
+ * Get consolidated import context for event parsing
+ *
+ * Aggregates event names, properties, and suggested values in one optimized call.
+ * Supports pagination to handle large datasets efficiently.
+ *
+ * Query params:
+ * - limit: Max items per category (default 100, max 500)
+ * - offset: Number of items to skip (default 0)
+ *
+ * Returns paginated data with metadata about truncation.
+ */
+export const getImportContext = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id: productId } = req.params;
+
+    // Validate and parse query parameters
+    const queryResult = ImportContextQuerySchema.safeParse(req.query);
+    if (!queryResult.success) {
+      const error: AppError = new Error('Invalid query parameters');
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    const query = queryResult.data || { limit: 100, offset: 0 };
+    const limit = query.limit;
+    const offset = query.offset;
+
+    logger.debug('Fetching import context', {
+      productId,
+      limit,
+      offset,
+      requestId: req.ip
+    });
+
+    // Parallel queries with pagination limits
+    const [events, properties, suggestedValues, counts] = await Promise.all([
+      // Get unique event names (most recent first, limited)
+      prisma.event.findMany({
+        where: {
+          page: { productId }
+        },
+        select: { name: true },
+        distinct: ['name'],
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset
+      }),
+
+      // Get properties with their associated values (paginated)
+      prisma.property.findMany({
+        where: { productId },
+        select: {
+          id: true,
+          name: true,
+          propertyValues: {
+            select: {
+              suggestedValue: {
+                select: { id: true, value: true }
+              }
+            }
+          }
+        },
+        take: limit,
+        skip: offset
+      }),
+
+      // Get all suggested values (paginated)
+      prisma.suggestedValue.findMany({
+        where: { productId },
+        select: { id: true, value: true, isContextual: true },
+        take: limit,
+        skip: offset
+      }),
+
+      // Get total counts for pagination metadata
+      Promise.all([
+        // Count unique event names
+        prisma.event.findMany({
+          where: { page: { productId } },
+          select: { name: true },
+          distinct: ['name']
+        }).then(r => r.length),
+        // Count properties
+        prisma.property.count({ where: { productId } }),
+        // Count suggested values
+        prisma.suggestedValue.count({ where: { productId } })
+      ])
+    ]);
+
+    const [totalEvents, totalProperties, totalSuggestedValues] = counts;
+
+    // Build response with pagination metadata
+    const context = {
+      eventNames: events.map(e => e.name),
+      properties: properties.map(p => ({
+        id: p.id,
+        name: p.name,
+        associatedValues: p.propertyValues.map(pv => ({
+          id: pv.suggestedValue.id,
+          value: pv.suggestedValue.value
+        }))
+      })),
+      suggestedValues: suggestedValues.map(sv => ({
+        id: sv.id,
+        value: sv.value,
+        isContextual: sv.isContextual
+      })),
+      pagination: {
+        limit,
+        offset,
+        totals: {
+          events: totalEvents,
+          properties: totalProperties,
+          suggestedValues: totalSuggestedValues
+        },
+        hasMore: {
+          events: offset + limit < totalEvents,
+          properties: offset + limit < totalProperties,
+          suggestedValues: offset + limit < totalSuggestedValues
+        }
+      }
+    };
+
+    // Validate response against schema
+    const validatedContext = ImportContextSchema.parse(context);
+
+    logger.info('Import context fetched successfully', {
+      productId,
+      eventNamesCount: events.length,
+      propertiesCount: properties.length,
+      suggestedValuesCount: suggestedValues.length,
+      hasMore: context.pagination.hasMore,
+      requestId: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: validatedContext
+    });
+  } catch (error) {
+    logger.error('Error fetching import context', {
+      error,
+      productId: req.params.id,
+      requestId: req.ip
+    });
     next(error);
   }
 };

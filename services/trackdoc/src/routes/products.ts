@@ -6,7 +6,8 @@ import {
   getProductById,
   createProduct,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  getImportContext
 } from '../controllers/productsController';
 import {
   getPagesByProduct,
@@ -67,5 +68,9 @@ router.get('/:id/suggested-values', getSuggestedValuesByProduct);
 
 // POST /api/products/:id/suggested-values - Create a new suggested value for a product
 router.post('/:id/suggested-values', createSuggestedValue);
+
+// Import Context route - consolidated endpoint for bulk event import
+// GET /api/products/:id/import-context - Get aggregated data for event parsing
+router.get('/:id/import-context', getImportContext);
 
 export default router;

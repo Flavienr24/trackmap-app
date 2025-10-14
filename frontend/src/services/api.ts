@@ -38,6 +38,7 @@ import type {
   PropertyImpactData,
   SuggestedValueImpactData,
 } from '@/types'
+import type { ImportContext } from '@/types/importContext'
 
 // Base API configuration
 const API_BASE_URL = '/api'
@@ -374,5 +375,20 @@ export const eventHistoryApi = {
   // Get single history entry
   getById: (id: string): Promise<ApiResponse<EventHistory>> =>
     apiRequest(`/event-history/${id}`),
+}
+
+/**
+ * Import Context API
+ * Consolidated endpoint for bulk event import parsing
+ */
+export const importContextApi = {
+  // Get import context for a product
+  get: (productId: string, options?: { limit?: number; offset?: number }): Promise<ApiResponse<ImportContext>> => {
+    const params = new URLSearchParams()
+    if (options?.limit) params.append('limit', String(options.limit))
+    if (options?.offset) params.append('offset', String(options.offset))
+    const query = params.toString()
+    return apiRequest(`/products/${productId}/import-context${query ? `?${query}` : ''}`)
+  }
 }
 
