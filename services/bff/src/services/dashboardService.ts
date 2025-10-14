@@ -22,11 +22,9 @@ export class DashboardService {
     try {
       logger.info('Fetching dashboard data');
 
-      // Fetch products and pages only (pages already include events)
-      const [products, allPages] = await Promise.all([
-        this.getProducts(),
-        this.getAllPages()
-      ]);
+      // Fetch products first, then pass to getAllPages to avoid duplicate fetch
+      const products = await this.getProducts();
+      const allPages = await this.getAllPages(products);
 
       // Enrich events from pages with full product context to avoid N+1 queries
       const allEvents = allPages.flatMap(page =>
@@ -129,9 +127,8 @@ export class DashboardService {
     return trackdocClient.get<any[]>('/api/products');
   }
 
-  private async getAllPages(): Promise<any[]> {
-    // Get all products first, then fetch their pages
-    const products = await this.getProducts();
+  private async getAllPages(products: any[]): Promise<any[]> {
+    // Fetch pages for all products in parallel
     const pagesPromises = products.map(product =>
       trackdocClient.get<any[]>(`/api/products/${product.id}/pages`)
         .catch(error => {

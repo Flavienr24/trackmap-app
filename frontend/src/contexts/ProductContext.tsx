@@ -6,7 +6,7 @@ interface ProductContextType {
   currentProduct: Product | null
   products: Product[]
   setCurrentProduct: (product: Product | null) => void
-  loadProducts: () => Promise<void>
+  loadProducts: (force?: boolean) => Promise<void>
   isLoading: boolean
   error: string | null
 }
@@ -20,14 +20,21 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isLoaded, setIsLoaded] = useState(false)
 
-  // Load products from API
-  const loadProducts = useCallback(async () => {
+  // Load products from API with deduplication
+  const loadProducts = useCallback(async (force = false) => {
+    // Skip if already loaded unless force=true
+    if (isLoaded && !force) {
+      return;
+    }
+
     setIsLoading(true)
     setError(null)
     try {
       const response = await productsApi.getAll()
       setProducts(response.data)
+      setIsLoaded(true)
     } catch (err) {
       console.error('Error loading products:', err)
       setError('Failed to load products')
@@ -35,7 +42,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [isLoaded])
 
   // Load current product from localStorage on mount
   useEffect(() => {

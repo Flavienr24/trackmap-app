@@ -86,32 +86,41 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
       }
     });
 
-    // Calculate events count separately for light version (single aggregation query)
-    const productsWithCounts = await Promise.all(
-      products.map(async (product) => {
-        const eventsCount = await prisma.event.count({
-          where: {
-            page: {
-              productId: product.id
-            }
-          }
-        });
+    // Calculate events count with single aggregated query (replacing N+1 pattern)
+    const productIds = products.map(p => p.id);
 
-        return {
-          id: product.id,
-          name: product.name,
-          url: product.url,
-          description: product.description,
-          createdAt: product.createdAt,
-          updatedAt: product.updatedAt,
-          pages_count: product._count.pages,
-          properties_count: product._count.properties,
-          suggested_values_count: product._count.suggestedValues,
-          events_count: eventsCount,
-          health_score: eventsCount > 0 ? Math.round((product._count.pages * 20) + (eventsCount * 10)) : 0
-        };
-      })
+    // Single SQL query to get event counts grouped by productId
+    const eventCountsRaw = await prisma.$queryRaw<{ productId: string; count: bigint }[]>`
+      SELECT p.product_id as productId, COUNT(e.id) as count
+      FROM events e
+      JOIN pages p ON e.page_id = p.id
+      WHERE p.product_id IN (${productIds.join(',')})
+      GROUP BY p.product_id
+    `;
+
+    // Map results to a dictionary for O(1) lookup (convert BigInt to Number)
+    const eventCountsMap = new Map(
+      eventCountsRaw.map(row => [row.productId, Number(row.count)])
     );
+
+    // Enrich products with counts
+    const productsWithCounts = products.map(product => {
+      const eventsCount = eventCountsMap.get(product.id) || 0;
+
+      return {
+        id: product.id,
+        name: product.name,
+        url: product.url,
+        description: product.description,
+        createdAt: product.createdAt,
+        updatedAt: product.updatedAt,
+        pages_count: product._count.pages,
+        properties_count: product._count.properties,
+        suggested_values_count: product._count.suggestedValues,
+        events_count: eventsCount,
+        health_score: eventsCount > 0 ? Math.round((product._count.pages * 20) + (eventsCount * 10)) : 0
+      };
+    });
 
     logger.info('Products (light) fetched successfully', {
       count: productsWithCounts.length,

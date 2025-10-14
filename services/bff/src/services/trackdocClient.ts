@@ -47,11 +47,16 @@ class TrackDocApiClient implements TrackDocClient {
     // Response interceptor for logging and error handling
     this.client.interceptors.response.use(
       (response: AxiosResponse) => {
+        // Use content-length header to avoid blocking JSON.stringify on large payloads
+        const dataSize = response.headers['content-length']
+          ? `${response.headers['content-length']} bytes`
+          : 'chunked';
+
         logger.debug('TrackDoc API Response', {
           status: response.status,
           statusText: response.statusText,
           url: response.config.url,
-          dataSize: JSON.stringify(response.data).length
+          dataSize
         });
         return response;
       },

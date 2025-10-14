@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreateProductModal } from '@/components/organisms/CreateProductModal'
-import { productsApi } from '@/services/api'
 import { slugifyProductName } from '@/utils/slug'
+import { useProductContext } from '@/contexts/ProductContext'
 import type { Product, CreateProductRequest } from '@/types'
 
 /**
@@ -15,30 +15,10 @@ import type { Product, CreateProductRequest } from '@/types'
  */
 const ProductsList: React.FC = () => {
   const navigate = useNavigate()
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
+  const { products, loadProducts, isLoading } = useProductContext()
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
-
-  const loadProducts = useCallback(async () => {
-    setLoading(true)
-    try {
-      const response = await productsApi.getAll()
-      setProducts(response.data)
-    } catch (error) {
-      console.error('Error loading products:', error)
-      // Set empty array on error to ensure component still renders
-      setProducts([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  // Load products on component mount
-  useEffect(() => {
-    loadProducts()
-  }, [loadProducts])
 
   const handleCreateProduct = () => {
     setShowCreateModal(true)
@@ -47,9 +27,10 @@ const ProductsList: React.FC = () => {
   const handleCreateSubmit = async (data: CreateProductRequest) => {
     setCreateLoading(true)
     try {
+      const { productsApi } = await import('@/services/api')
       const response = await productsApi.create(data)
       console.log('Product created:', response.data)
-      await loadProducts() // Reload the list
+      await loadProducts(true) // Force reload after create
     } catch (error) {
       console.error('Error creating product:', error)
       throw error
@@ -177,9 +158,9 @@ const ProductsList: React.FC = () => {
             className="w-full"
           />
         </div>
-        <Button 
-          variant="outline" 
-          onClick={loadProducts}
+        <Button
+          variant="outline"
+          onClick={() => loadProducts(true)}
           title="Actualiser la liste"
           className="w-10 h-10 p-0 flex items-center justify-center ml-4"
         >
@@ -194,15 +175,15 @@ const ProductsList: React.FC = () => {
         data={filteredProducts}
         columns={columns}
         actions={actions}
-        loading={loading}
+        loading={isLoading}
         emptyMessage="Aucun produit trouvé. Créez votre premier produit pour commencer."
         onRowClick={handleViewProduct}
       />
 
       {/* Stats Footer */}
-      {!loading && products.length > 0 && (
+      {!isLoading && products.length > 0 && (
         <div className="text-sm text-neutral-500">
-          {filteredProducts.length} produit{filteredProducts.length !== 1 ? 's' : ''} 
+          {filteredProducts.length} produit{filteredProducts.length !== 1 ? 's' : ''}
           {searchQuery && ` (filtré${filteredProducts.length !== 1 ? 's' : ''} sur ${products.length})`}
         </div>
       )}
