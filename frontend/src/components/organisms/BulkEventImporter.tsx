@@ -14,6 +14,8 @@ import { useImportContext } from '@/hooks/useImportContext'
 import { parseEventData, type EnhancedParseResult, type ParseResult } from '@/utils/eventParser'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { EditablePropertiesTable } from '@/components/molecules/EditablePropertiesTable'
 
 interface BulkEventImporterProps {
   productId: string
@@ -41,6 +43,10 @@ export const BulkEventImporter: React.FC<BulkEventImporterProps> = ({
   const [parseResult, setParseResult] = useState<ParseResult | EnhancedParseResult | null>(null)
   const [useFallbackMode, setUseFallbackMode] = useState(false)
 
+  // Editable state for preview mode
+  const [editableEventName, setEditableEventName] = useState('')
+  const [editableProperties, setEditableProperties] = useState<Record<string, any>>({})
+
   // Fetch import context with React Query
   const {
     data: context,
@@ -60,6 +66,12 @@ export const BulkEventImporter: React.FC<BulkEventImporterProps> = ({
       : parseEventData(rawInput, context, productId)
 
     setParseResult(result)
+
+    // Initialize editable state
+    if (result.success) {
+      setEditableEventName(result.eventName || '')
+      setEditableProperties(result.properties || {})
+    }
   }
 
   /**
@@ -68,9 +80,10 @@ export const BulkEventImporter: React.FC<BulkEventImporterProps> = ({
   const handleValidate = () => {
     if (!parseResult || !parseResult.success) return
 
+    // Use edited values
     const data: ParsedImportData = {
-      eventName: parseResult.eventName!,
-      properties: parseResult.properties || {},
+      eventName: editableEventName,
+      properties: editableProperties,
       confidence: parseResult.confidence,
       warnings: parseResult.warnings,
       suggestions: parseResult.suggestions
@@ -236,45 +249,61 @@ value    99.99`}
           </Card>
         )}
 
-        {/* Event name */}
+        {/* Event name (editable) */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
             Nom de l'événement
           </label>
-          <input
-            type="text"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md bg-slate-50"
-            value={parseResult.eventName}
-            disabled
+          <Input
+            value={editableEventName}
+            onChange={(e) => setEditableEventName(e.target.value)}
+            className="font-mono"
           />
         </div>
 
-        {/* Properties preview */}
+        {/* Properties (editable table) */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            Propriétés ({Object.keys(parseResult.properties || {}).length})
+            Propriétés ({Object.keys(editableProperties).length})
           </label>
-          <div className="border border-slate-300 rounded-md overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-100">
-                <tr>
-                  <th className="px-4 py-2 text-left font-medium text-slate-700">Clé</th>
-                  <th className="px-4 py-2 text-left font-medium text-slate-700">Valeur</th>
-                  <th className="px-4 py-2 text-left font-medium text-slate-700">Type</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(parseResult.properties || {}).map(([key, value], i) => (
-                  <tr key={i} className="border-t border-slate-200">
-                    <td className="px-4 py-2 font-mono text-xs">{key}</td>
-                    <td className="px-4 py-2 font-mono text-xs">{JSON.stringify(value)}</td>
-                    <td className="px-4 py-2 text-xs text-slate-600">{typeof value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <EditablePropertiesTable
+            properties={editableProperties}
+            propertiesMatches={'propertiesMatches' in parseResult ? parseResult.propertiesMatches : undefined}
+            productId={productId}
+            onChange={setEditableProperties}
+          />
         </div>
+
+        {/* Summary */}
+        {('propertiesMatches' in parseResult && parseResult.propertiesMatches) && (
+          <Card>
+            <CardContent className="p-4">
+              <h4 className="font-semibold text-slate-900 mb-2">Résumé des actions</h4>
+              <ul className="text-sm text-slate-700 space-y-1">
+                {(() => {
+                  const matches = parseResult.propertiesMatches!
+                  const newProps = Object.values(matches).filter(m => m.isNewKey).length
+                  const newVals = Object.values(matches).filter(m => m.isNewValue).length
+                  const existingProps = Object.values(matches).filter(m => m.keyExists).length
+
+                  return (
+                    <>
+                      {newProps > 0 && (
+                        <li className="text-orange-700">• {newProps} nouvelle(s) propriété(s) sera(ont) créée(s)</li>
+                      )}
+                      {newVals > 0 && (
+                        <li className="text-orange-700">• {newVals} nouvelle(s) valeur(s) sera(ont) ajoutée(s)</li>
+                      )}
+                      {existingProps > 0 && (
+                        <li className="text-green-700">• {existingProps} propriété(s) existante(s) réutilisée(s)</li>
+                      )}
+                    </>
+                  )
+                })()}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end space-x-3">
