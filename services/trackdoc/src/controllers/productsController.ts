@@ -1,5 +1,6 @@
 // Products controller - handles all product-related HTTP requests
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
 import { db } from '../config/database';
@@ -89,19 +90,24 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
     // Calculate events count with single aggregated query (replacing N+1 pattern)
     const productIds = products.map(p => p.id);
 
-    // Single SQL query to get event counts grouped by productId
-    const eventCountsRaw = await prisma.$queryRaw<{ productId: string; count: bigint }[]>`
-      SELECT p.product_id as productId, COUNT(e.id) as count
-      FROM events e
-      JOIN pages p ON e.page_id = p.id
-      WHERE p.product_id IN (${productIds.join(',')})
-      GROUP BY p.product_id
-    `;
+    // Short-circuit if no products to avoid empty IN () clause
+    let eventCountsMap = new Map<string, number>();
 
-    // Map results to a dictionary for O(1) lookup (convert BigInt to Number)
-    const eventCountsMap = new Map(
-      eventCountsRaw.map(row => [row.productId, Number(row.count)])
-    );
+    if (productIds.length > 0) {
+      // Use Prisma.join() to properly parameterize the IN clause
+      const eventCountsRaw = await prisma.$queryRaw<{ productId: string; count: bigint }[]>`
+        SELECT p.product_id as productId, COUNT(e.id) as count
+        FROM events e
+        JOIN pages p ON e.page_id = p.id
+        WHERE p.product_id IN (${Prisma.join(productIds)})
+        GROUP BY p.product_id
+      `;
+
+      // Map results to a dictionary for O(1) lookup (convert BigInt to Number)
+      eventCountsMap = new Map(
+        eventCountsRaw.map(row => [row.productId, Number(row.count)])
+      );
+    }
 
     // Enrich products with counts
     const productsWithCounts = products.map(product => {
