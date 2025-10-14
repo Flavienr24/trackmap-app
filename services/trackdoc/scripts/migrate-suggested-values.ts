@@ -1,35 +1,71 @@
 /**
  * Migration script to synchronize existing event properties with suggested values
  * This ensures all values used in events are available in the suggested values library
+ *
+ * 🚨 SECURITY: This script modifies data in bulk - use with caution
  */
 
 import { PrismaClient } from '@prisma/client';
 import logger from '../src/config/logger';
 
+// 🚨 CRITICAL SECURITY: Environment validation
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const DATABASE_URL = process.env.DATABASE_URL || '';
+
+// Primary protection: Block production environment
+if (NODE_ENV === 'production') {
+  throw new Error(
+    '🚨 CRITICAL: Migration script forbidden in production!\n' +
+    'This script performs bulk data modifications.\n' +
+    `NODE_ENV: ${NODE_ENV}\n` +
+    'Review and adapt for production use case.'
+  );
+}
+
+// Secondary protection: Warn on production-like DATABASE_URL patterns
+if (DATABASE_URL.includes('prod') ||
+    DATABASE_URL.includes('production') ||
+    (DATABASE_URL.includes('postgres') && !DATABASE_URL.includes('localhost'))) {
+  throw new Error(
+    '🚨 CRITICAL: This script modifies data in bulk!\n' +
+    'Detected production-like database URL. Refusing to run.\n' +
+    `DATABASE_URL: ${DATABASE_URL}\n` +
+    `NODE_ENV: ${NODE_ENV}\n\n` +
+    'Safe patterns: localhost, dev.db, test.db\n' +
+    'If this is intentional, set NODE_ENV=development explicitly.'
+  );
+}
+
+logger.info('Environment validation passed', { NODE_ENV, DATABASE_URL });
+
 const prisma = new PrismaClient();
 
 async function migrateSuggestedValues() {
-  logger.info('Starting suggested values migration...');
-  
+  logger.info('Starting suggested values migration with transaction wrapper...');
+
   try {
-    // Get all events with their properties
-    const events = await prisma.event.findMany({
-      include: {
-        page: {
+    // Wrap all data modifications in a single transaction
+    // This ensures atomicity: all changes succeed or all fail together
+    const result = await prisma.$transaction(
+      async (tx) => {
+        // Get all events with their properties
+        const events = await tx.event.findMany({
           include: {
-            product: true
+            page: {
+              include: {
+                product: true
+              }
+            }
           }
-        }
-      }
-    });
+        });
 
-    logger.info(`Found ${events.length} events to process`);
+        logger.info(`Found ${events.length} events to process`);
 
-    const processedValues = new Set<string>();
-    let createdCount = 0;
-    let associationCount = 0;
+        const processedValues = new Set<string>();
+        let createdCount = 0;
+        let associationCount = 0;
 
-    for (const event of events) {
+        for (const event of events) {
       if (!event.properties) continue;
 
       let properties: Record<string, any>;
@@ -58,16 +94,16 @@ async function migrateSuggestedValues() {
         const isContextual = stringValue.startsWith('$');
 
         // Check if suggested value already exists for this product
-        const existingSuggestedValue = await prisma.suggestedValue.findFirst({
-          where: { 
+        const existingSuggestedValue = await tx.suggestedValue.findFirst({
+          where: {
             productId,
-            value: stringValue 
+            value: stringValue
           }
         });
 
         if (!existingSuggestedValue) {
           try {
-            const suggestedValue = await prisma.suggestedValue.create({
+            const suggestedValue = await tx.suggestedValue.create({
               data: {
                 productId,
                 value: stringValue,
@@ -87,24 +123,24 @@ async function migrateSuggestedValues() {
         }
 
         // Associate with property if it exists
-        const property = await prisma.property.findFirst({
-          where: { 
+        const property = await tx.property.findFirst({
+          where: {
             productId,
-            name: propertyName 
+            name: propertyName
           }
         });
 
         if (property) {
-          const suggestedValue = existingSuggestedValue || await prisma.suggestedValue.findFirst({
-            where: { 
+          const suggestedValue = existingSuggestedValue || await tx.suggestedValue.findFirst({
+            where: {
               productId,
-              value: stringValue 
+              value: stringValue
             }
           });
 
           if (suggestedValue) {
             // Check if association already exists
-            const existingAssociation = await prisma.propertyValue.findUnique({
+            const existingAssociation = await tx.propertyValue.findUnique({
               where: {
                 propertyId_suggestedValueId: {
                   propertyId: property.id,
@@ -115,7 +151,7 @@ async function migrateSuggestedValues() {
 
             if (!existingAssociation) {
               try {
-                await prisma.propertyValue.create({
+                await tx.propertyValue.create({
                   data: {
                     propertyId: property.id,
                     suggestedValueId: suggestedValue.id
@@ -137,11 +173,20 @@ async function migrateSuggestedValues() {
       }
     }
 
-    logger.info('Migration completed successfully', {
+    // Return stats for logging outside transaction
+    return {
       eventsProcessed: events.length,
       suggestedValuesCreated: createdCount,
       associationsCreated: associationCount
-    });
+    };
+      },
+      {
+        maxWait: 30000,  // 30s max wait for transaction to start
+        timeout: 120000, // 2min max execution time for transaction
+      }
+    );
+
+    logger.info('Migration completed successfully', result);
 
   } catch (error) {
     logger.error('Migration failed', { error });

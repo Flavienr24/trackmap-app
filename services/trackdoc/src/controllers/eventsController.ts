@@ -43,18 +43,23 @@ const VALID_STATUS = ['TO_IMPLEMENT', 'TO_TEST', 'ERROR', 'VALIDATED'];
 
 /**
  * Auto-create properties in the library when they are used in events
+ * Transaction-safe version - accepts transaction client
  */
-const autoCreateProperties = async (productId: string, properties: Record<string, any>) => {
+const autoCreatePropertiesInTx = async (
+  tx: any,
+  productId: string,
+  properties: Record<string, any>
+) => {
   if (!properties || Object.keys(properties).length === 0) {
     return;
   }
 
   for (const [propertyName, propertyValue] of Object.entries(properties)) {
     // Check if property already exists
-    const existingProperty = await prisma.property.findFirst({
-      where: { 
+    const existingProperty = await tx.property.findFirst({
+      where: {
         productId,
-        name: propertyName 
+        name: propertyName
       }
     });
 
@@ -72,7 +77,7 @@ const autoCreateProperties = async (productId: string, properties: Record<string
       }
 
       // Create property
-      await prisma.property.create({
+      await tx.property.create({
         data: {
           productId,
           name: propertyName,
@@ -81,7 +86,7 @@ const autoCreateProperties = async (productId: string, properties: Record<string
         }
       });
 
-      logger.info('Auto-created property', { 
+      logger.info('Auto-created property', {
         productId,
         propertyName,
         propertyType,
@@ -92,9 +97,22 @@ const autoCreateProperties = async (productId: string, properties: Record<string
 };
 
 /**
- * Auto-create suggested values when they are used in events
+ * Auto-create properties (non-transactional wrapper for backward compatibility)
+ * @deprecated Use autoCreatePropertiesInTx within transactions instead
  */
-const autoCreateSuggestedValues = async (productId: string, properties: Record<string, any>) => {
+const autoCreateProperties = async (productId: string, properties: Record<string, any>) => {
+  return autoCreatePropertiesInTx(prisma, productId, properties);
+};
+
+/**
+ * Auto-create suggested values when they are used in events
+ * Transaction-safe version - accepts transaction client
+ */
+const autoCreateSuggestedValuesInTx = async (
+  tx: any,
+  productId: string,
+  properties: Record<string, any>
+) => {
   if (!properties || Object.keys(properties).length === 0) {
     return;
   }
@@ -102,22 +120,22 @@ const autoCreateSuggestedValues = async (productId: string, properties: Record<s
   for (const [propertyName, propertyValue] of Object.entries(properties)) {
     // Convert property value to string for comparison
     const stringValue = String(propertyValue);
-    
+
     // Auto-detect contextual values (those starting with $)
     const isContextual = stringValue.startsWith('$');
 
     // Check if suggested value already exists for this product
-    const existingSuggestedValue = await prisma.suggestedValue.findFirst({
-      where: { 
+    const existingSuggestedValue = await tx.suggestedValue.findFirst({
+      where: {
         productId,
-        value: stringValue 
+        value: stringValue
       }
     });
 
     if (!existingSuggestedValue) {
       // Try to create suggested value - handle race conditions
       try {
-        const suggestedValue = await prisma.suggestedValue.create({
+        const suggestedValue = await tx.suggestedValue.create({
           data: {
             productId,
             value: stringValue,
@@ -125,7 +143,7 @@ const autoCreateSuggestedValues = async (productId: string, properties: Record<s
           }
         });
 
-        logger.info('Auto-created suggested value', { 
+        logger.info('Auto-created suggested value', {
           productId,
           propertyName,
           suggestedValueId: suggestedValue.id,
@@ -135,7 +153,7 @@ const autoCreateSuggestedValues = async (productId: string, properties: Record<s
       } catch (error: any) {
         // If creation fails due to unique constraint, silently continue
         if (error.code === 'P2002') {
-          logger.debug('Suggested value already exists due to race condition', { 
+          logger.debug('Suggested value already exists due to race condition', {
             productId,
             propertyName,
             value: stringValue
@@ -147,24 +165,24 @@ const autoCreateSuggestedValues = async (productId: string, properties: Record<s
     }
 
     // Associate with property if it exists
-    const property = await prisma.property.findFirst({
-      where: { 
+    const property = await tx.property.findFirst({
+      where: {
         productId,
-        name: propertyName 
+        name: propertyName
       }
     });
 
     if (property) {
-      const suggestedValue = existingSuggestedValue || await prisma.suggestedValue.findFirst({
-        where: { 
+      const suggestedValue = existingSuggestedValue || await tx.suggestedValue.findFirst({
+        where: {
           productId,
-          value: stringValue 
+          value: stringValue
         }
       });
 
       if (suggestedValue) {
         // Check if association already exists
-        const existingAssociation = await prisma.propertyValue.findUnique({
+        const existingAssociation = await tx.propertyValue.findUnique({
           where: {
             propertyId_suggestedValueId: {
               propertyId: property.id,
@@ -175,14 +193,14 @@ const autoCreateSuggestedValues = async (productId: string, properties: Record<s
 
         if (!existingAssociation) {
           try {
-            await prisma.propertyValue.create({
+            await tx.propertyValue.create({
               data: {
                 propertyId: property.id,
                 suggestedValueId: suggestedValue.id
               }
             });
 
-            logger.info('Auto-created property-value association', { 
+            logger.info('Auto-created property-value association', {
               productId,
               propertyId: property.id,
               propertyName,
@@ -192,7 +210,7 @@ const autoCreateSuggestedValues = async (productId: string, properties: Record<s
           } catch (error: any) {
             // If association fails due to unique constraint, silently continue
             if (error.code === 'P2002') {
-              logger.debug('Property-value association already exists due to race condition', { 
+              logger.debug('Property-value association already exists due to race condition', {
                 productId,
                 propertyId: property.id,
                 propertyName,
@@ -207,6 +225,14 @@ const autoCreateSuggestedValues = async (productId: string, properties: Record<s
       }
     }
   }
+};
+
+/**
+ * Auto-create suggested values (non-transactional wrapper for backward compatibility)
+ * @deprecated Use autoCreateSuggestedValuesInTx within transactions instead
+ */
+const autoCreateSuggestedValues = async (productId: string, properties: Record<string, any>) => {
+  return autoCreateSuggestedValuesInTx(prisma, productId, properties);
 };
 
 /**
@@ -341,37 +367,41 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
       return next(error);
     }
 
-    logger.debug('Creating new event', { 
+    logger.debug('Creating new event', {
       pageId,
       name,
       status: status || 'TO_IMPLEMENT',
-      requestId: req.ip 
+      requestId: req.ip
     });
 
-    // Auto-create properties and suggested values if they don't exist
-    if (properties) {
-      await autoCreateProperties(page.productId, properties);
-      await autoCreateSuggestedValues(page.productId, properties);
-    }
-
-    // Create event
-    const event = await prisma.event.create({
-      data: {
-        pageId,
-        name,
-        status: status ? status.toUpperCase() : 'TO_IMPLEMENT',
-        testDate: testDate ? new Date(testDate) : null,
-        properties: properties ? JSON.stringify(properties) : '{}'
-      },
-      include: {
-        page: {
-          include: {
-            product: true,
-          }
-        },
-        comments: true,
-        history: true
+    // Create event with auto-create properties/values in a transaction
+    // This ensures atomicity: all operations succeed or all fail together
+    const event = await prisma.$transaction(async (tx) => {
+      // Auto-create properties and suggested values if they don't exist
+      if (properties) {
+        await autoCreatePropertiesInTx(tx, page.productId, properties);
+        await autoCreateSuggestedValuesInTx(tx, page.productId, properties);
       }
+
+      // Create event
+      return await tx.event.create({
+        data: {
+          pageId,
+          name,
+          status: status ? status.toUpperCase() : 'TO_IMPLEMENT',
+          testDate: testDate ? new Date(testDate) : null,
+          properties: properties ? JSON.stringify(properties) : '{}'
+        },
+        include: {
+          page: {
+            include: {
+              product: true,
+            }
+          },
+          comments: true,
+          history: true
+        }
+      });
     });
 
     // Parse properties and screenshots for response
@@ -494,45 +524,49 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
       return next(error);
     }
 
-    // Create history entry for status changes
-    if (status && status.toUpperCase() !== existingEvent.status) {
-      await prisma.eventHistory.create({
+    // Update event with history and auto-create in a transaction
+    // This ensures atomicity: all operations succeed or all fail together
+    const event = await prisma.$transaction(async (tx) => {
+      // Create history entry for status changes
+      if (status && status.toUpperCase() !== existingEvent.status) {
+        await tx.eventHistory.create({
+          data: {
+            eventId: id,
+            field: 'status',
+            oldValue: existingEvent.status,
+            newValue: status.toUpperCase(),
+            author: 'system' // Could be replaced with authenticated user
+          }
+        });
+      }
+
+      // Auto-create properties and suggested values if they don't exist
+      if (properties !== undefined && existingEvent.page) {
+        await autoCreatePropertiesInTx(tx, existingEvent.page.productId, properties);
+        await autoCreateSuggestedValuesInTx(tx, existingEvent.page.productId, properties);
+      }
+
+      // Update event
+      return await tx.event.update({
+        where: { id },
         data: {
-          eventId: id,
-          field: 'status',
-          oldValue: existingEvent.status,
-          newValue: status.toUpperCase(),
-          author: 'system' // Could be replaced with authenticated user
+          ...(name !== undefined && { name }),
+          ...(status !== undefined && { status: status.toUpperCase() }),
+          ...(testDate !== undefined && { testDate: testDate ? new Date(testDate) : null }),
+          ...(properties !== undefined && { properties: JSON.stringify(properties) })
+        },
+        include: {
+          page: {
+            include: {
+              product: true,
+            }
+          },
+          comments: true,
+          history: {
+            orderBy: { createdAt: 'desc' }
+          }
         }
       });
-    }
-
-    // Auto-create properties and suggested values if they don't exist
-    if (properties !== undefined && existingEvent.page) {
-      await autoCreateProperties(existingEvent.page.productId, properties);
-      await autoCreateSuggestedValues(existingEvent.page.productId, properties);
-    }
-
-    // Update event
-    const event = await prisma.event.update({
-      where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(status !== undefined && { status: status.toUpperCase() }),
-        ...(testDate !== undefined && { testDate: testDate ? new Date(testDate) : null }),
-        ...(properties !== undefined && { properties: JSON.stringify(properties) })
-      },
-      include: {
-        page: {
-          include: {
-            product: true,
-          }
-        },
-        comments: true,
-        history: {
-          orderBy: { createdAt: 'desc' }
-        }
-      }
     });
 
     // Parse properties and screenshots for response
@@ -596,28 +630,32 @@ export const updateEventStatus = async (req: Request, res: Response, next: NextF
       return next(error);
     }
 
-    // Create history entry
-    await prisma.eventHistory.create({
-      data: {
-        eventId: id,
-        field: 'status',
-        oldValue: existingEvent.status,
-        newValue: status.toUpperCase(),
-        author: 'system'
-      }
-    });
-
-    // Update event status
-    const event = await prisma.event.update({
-      where: { id },
-      data: { status: status.toUpperCase() },
-      include: {
-        page: true,
-        comments: true,
-        history: {
-          orderBy: { createdAt: 'desc' }
+    // Update status with history in a transaction
+    // This ensures atomicity: history and update succeed or fail together
+    const event = await prisma.$transaction(async (tx) => {
+      // Create history entry
+      await tx.eventHistory.create({
+        data: {
+          eventId: id,
+          field: 'status',
+          oldValue: existingEvent.status,
+          newValue: status.toUpperCase(),
+          author: 'system'
         }
-      }
+      });
+
+      // Update event status
+      return await tx.event.update({
+        where: { id },
+        data: { status: status.toUpperCase() },
+        include: {
+          page: true,
+          comments: true,
+          history: {
+            orderBy: { createdAt: 'desc' }
+          }
+        }
+      });
     });
 
     logger.info('Event status updated successfully', { 
@@ -994,31 +1032,35 @@ export const duplicateEvent = async (req: Request, res: Response, next: NextFunc
     // Parse properties for auto-creation
     const properties = safeJsonParse(originalEvent.properties, {});
 
-    // Auto-create properties and suggested values if they don't exist
-    if (properties && Object.keys(properties).length > 0) {
-      await autoCreateProperties(originalEvent.page.productId, properties);
-      await autoCreateSuggestedValues(originalEvent.page.productId, properties);
-    }
-
-    // Create duplicated event with "Copy" suffix
-    const duplicatedEvent = await prisma.event.create({
-      data: {
-        pageId: originalEvent.pageId,
-        name: `${originalEvent.name} - Copy`,
-        status: 'TO_IMPLEMENT', // Reset status for duplicated event
-        testDate: null, // Reset test date
-        properties: originalEvent.properties, // Copy properties as-is
-        screenshots: '[]' // Don't copy screenshots
-      },
-      include: {
-        page: {
-          include: {
-            product: true,
-          }
-        },
-        comments: true,
-        history: true
+    // Duplicate event with auto-create in a transaction
+    // This ensures atomicity: all operations succeed or all fail together
+    const duplicatedEvent = await prisma.$transaction(async (tx) => {
+      // Auto-create properties and suggested values if they don't exist
+      if (properties && Object.keys(properties).length > 0) {
+        await autoCreatePropertiesInTx(tx, originalEvent.page.productId, properties);
+        await autoCreateSuggestedValuesInTx(tx, originalEvent.page.productId, properties);
       }
+
+      // Create duplicated event with "Copy" suffix
+      return await tx.event.create({
+        data: {
+          pageId: originalEvent.pageId,
+          name: `${originalEvent.name} - Copy`,
+          status: 'TO_IMPLEMENT', // Reset status for duplicated event
+          testDate: null, // Reset test date
+          properties: originalEvent.properties, // Copy properties as-is
+          screenshots: '[]' // Don't copy screenshots
+        },
+        include: {
+          page: {
+            include: {
+              product: true,
+            }
+          },
+          comments: true,
+          history: true
+        }
+      });
     });
 
     // Parse properties and screenshots for response
