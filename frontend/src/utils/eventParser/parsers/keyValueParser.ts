@@ -5,17 +5,20 @@
  * - key: value
  * - key = value
  * - key | value
+ * - key value (whitespace-separated, key must be single word)
  */
 
 import type { ParseResult } from '../types'
 
 const EVENT_NAME_KEYS_LOWER = ['event', 'name', 'event_name', 'eventname']
 
-// Patterns to match: "key: value", "key = value", "key | value"
+// Patterns to match: "key: value", "key = value", "key | value", "key value"
+// Order matters: explicit separators first, then whitespace fallback
 const PATTERNS = [
   /^(.+?):\s*(.+)$/,     // Colon
   /^(.+?)\s*=\s*(.+)$/,  // Equals
-  /^(.+?)\|\s*(.+)$/     // Pipe
+  /^(.+?)\|\s*(.+)$/,    // Pipe
+  /^(\S+)\s+(.+)$/       // Whitespace (key must be single word without spaces)
 ]
 
 /**

@@ -75,7 +75,7 @@ export function parseEventData(
     success: false,
     errors: [
       'Format non reconnu.',
-      'Formats supportés: JSON, CSV/Excel (tab-separated), ligne par ligne (clé: valeur), Jira (tableau markdown)'
+      'Formats supportés: JSON, CSV/Excel (tab-separated), ligne par ligne (clé: valeur, clé = valeur, clé valeur), Jira (tableau markdown)'
     ],
     confidence: 'low'
   }

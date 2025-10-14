@@ -180,11 +180,74 @@ export const keyValueFixtures: TestFixture[] = [
     description: 'Spacing variations should be handled'
   },
   {
-    name: 'Invalid - no separator',
-    input: 'event purchase\ncurrency EUR',
-    expected: { eventName: '', properties: {} },
-    shouldSucceed: false,
-    description: 'No valid separator found'
+    name: 'Whitespace-separated (simple)',
+    input: 'event page_view\npage_category article\npage_name homepage',
+    expected: {
+      eventName: 'page_view',
+      properties: { page_category: 'article', page_name: 'homepage' }
+    },
+    shouldSucceed: true,
+    description: 'Whitespace-separated format with single-word keys'
+  },
+  {
+    name: 'Whitespace-separated with variables',
+    input: 'event page_view\npage_name $article-title\nenvironment_type $environment\ncountry $country',
+    expected: {
+      eventName: 'page_view',
+      properties: {
+        page_name: '$article-title',
+        environment_type: '$environment',
+        country: '$country'
+      }
+    },
+    shouldSucceed: true,
+    description: 'Values can contain variables like $variable'
+  },
+  {
+    name: 'Whitespace-separated with multi-word values',
+    input: 'event purchase\nproduct_name Apple MacBook Pro\nuser_id 12345',
+    expected: {
+      eventName: 'purchase',
+      properties: {
+        product_name: 'Apple MacBook Pro',
+        user_id: '12345'
+      }
+    },
+    shouldSucceed: true,
+    description: 'Values can contain multiple words (everything after first space)'
+  },
+  {
+    name: 'Whitespace-separated complete example',
+    input: `event page_view
+page_category article
+page_name $article-title
+environment_type $environment
+country $country
+page_id $page-id
+user_id $user-id
+user_loggued $user_loggued
+user_profession $profession
+user_speciality $specialty
+user_preferences $user_preferences
+language $language`,
+    expected: {
+      eventName: 'page_view',
+      properties: {
+        page_category: 'article',
+        page_name: '$article-title',
+        environment_type: '$environment',
+        country: '$country',
+        page_id: '$page-id',
+        user_id: '$user-id',
+        user_loggued: '$user_loggued',
+        user_profession: '$profession',
+        user_speciality: '$specialty',
+        user_preferences: '$user_preferences',
+        language: '$language'
+      }
+    },
+    shouldSucceed: true,
+    description: 'Real-world example with all properties'
   }
 ]
 
