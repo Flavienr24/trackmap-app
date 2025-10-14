@@ -38,7 +38,7 @@ export function tryParseTabular(input: string): ParseResult {
   const lines = input.split('\n').filter(l => l.trim())
 
   // Check if format is tabular (presence of tabs)
-  const hasT abs = lines.some(l => l.includes('\t'))
+  const hasTabs = lines.some(l => l.includes('\t'))
   if (!hasTabs) {
     return {
       success: false,
