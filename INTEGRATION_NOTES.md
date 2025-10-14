@@ -1,6 +1,6 @@
 # Bulk Event Import - Integration Notes
 
-## Status: 80% Complete
+## Status: ✅ 100% Complete - Ready for Testing
 
 ### ✅ What's Done
 
@@ -29,93 +29,58 @@
 - Tabs component (Radix UI based) ✅
 - All necessary subcomponents ✅
 
-### 🔄 What Remains (Phase 4)
+**CreateEventModal Integration (Phase 4)** ✅
+- Two-tab interface (Manual / Import en masse) ✅
+- State preservation between tabs ✅
+- Dynamic confirmation prompt (only when data present) ✅
+- Bulk import validation → manual form pre-fill ✅
+- Consolidated API usage (90% reduction) ✅
+- All TypeScript errors resolved ✅
+- Dead code removed ✅
 
-**CreateEventModal Integration**
+### 📋 Implementation Details (Phase 4)
 
-To complete the integration, modify `frontend/src/components/organisms/CreateEventModal.tsx`:
+The integration in `frontend/src/components/organisms/CreateEventModal.tsx` includes:
 
-1. **Add imports:**
-```typescript
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { BulkEventImporter, type ParsedImportData } from '@/components/organisms/BulkEventImporter'
-```
+**Key changes implemented:**
 
-2. **Add state for tabs:**
-```typescript
-const [importMode, setImportMode] = useState<'manual' | 'bulk'>('manual')
-const [hasManualData, setHasManualData] = useState(false)
-```
+1. **Imports:** Added Tabs components, BulkEventImporter, useImportContext hook, and ParsedImportData type
+2. **API consolidation:** Replaced `pagesApi.getByProduct + eventsApi.getByPage` with single `useImportContext` hook
+3. **Dynamic state:** `hasManualData` computed from formData/pendingFiles (no useState)
+4. **Tab state:** `activeTab` state ('manual' | 'bulk') with confirmation dialog on switch
+5. **Handlers:**
+   - `handleTabChange`: Confirms before switching if manual data present
+   - `handleBulkImportValidated`: Pre-fills manual form from parsed import
+6. **Dead code removed:** Unused imports (DragDropZone, ScreenshotThumbnail, deleteScreenshot) and state (selectedScreenshot, existingEvents)
 
-3. **Wrap form content in Tabs:**
-```typescript
-<Tabs value={importMode} onValueChange={(v) => handleModeSwitch(v as 'manual' | 'bulk')}>
-  <TabsList>
-    <TabsTrigger value="manual">
-      Ajout manuel
-      {hasManualData && <span className="ml-2 text-xs">•</span>}
-    </TabsTrigger>
-    <TabsTrigger value="bulk">Import en lot</TabsTrigger>
-  </TabsList>
-
-  <TabsContent value="manual">
-    {/* Existing form content */}
-  </TabsContent>
-
-  <TabsContent value="bulk">
-    <BulkEventImporter
-      productId={productId!}
-      onValidated={handleBulkImportValidated}
-      onCancel={() => setImportMode('manual')}
-    />
-  </TabsContent>
-</Tabs>
-```
-
-4. **Add handlers:**
-```typescript
-const handleModeSwitch = (newMode: 'manual' | 'bulk') => {
-  // Confirm if switching with unsaved data
-  if (newMode === 'bulk' && hasManualData) {
-    if (!confirm('Vous avez des données en cours. Continuer ?')) return
-  }
-  setImportMode(newMode)
-}
-
-const handleBulkImportValidated = (data: ParsedImportData) => {
-  // Pre-fill manual form with imported data
-  setFormData({
-    name: data.eventName,
-    status: 'to_implement',
-    properties: data.properties
-  })
-  setImportMode('manual') // Switch to manual for review
-}
-```
-
-5. **Track manual data changes:**
-```typescript
-useEffect(() => {
-  setHasManualData(!!(formData.name || Object.keys(formData.properties || {}).length > 0))
-}, [formData])
-```
+**Type safety:**
+- ParsedImportData centralized in `src/types/importContext.ts`
+- Re-exported from `useImportContext.ts` for convenience
+- Type guards added for optional fields (`warnings`, `suggestions`) in BulkEventImporter
 
 ### 🧪 Testing
 
 **Manual testing checklist:**
-1. ✅ Parse JSON format
-2. ✅ Parse Excel copy-paste (tab-separated)
-3. ✅ Parse key:value format
-4. ✅ Parse Jira markdown table
-5. ✅ Test with accents (événement, achat_réussi)
-6. ✅ Test with special characters
-7. ✅ Test duplicate detection (existing event names)
-8. ✅ Test similar matches (fuzzy matching)
-9. ✅ Test learning engine (apply suggestion, verify boost on next use)
-10. ✅ Test fallback mode (disconnect backend)
+1. ⏳ Parse JSON format
+2. ⏳ Parse Excel copy-paste (tab-separated)
+3. ⏳ Parse key:value format
+4. ⏳ Parse Jira markdown table
+5. ⏳ Test with accents (événement, achat_réussi)
+6. ⏳ Test with special characters
+7. ⏳ Test duplicate detection (existing event names)
+8. ⏳ Test similar matches (fuzzy matching)
+9. ⏳ Test learning engine (apply suggestion, verify boost on next use)
+10. ⏳ Test fallback mode (disconnect backend)
 11. ⏳ Test tab switching with confirmation
 12. ⏳ Test pre-fill from bulk import
 13. ⏳ Test full flow: import → edit → submit
+
+**To test:**
+1. Start servers: `npm run dev` (frontend & backend)
+2. Navigate to a product
+3. Click "Ajouter un événement"
+4. Use "Import en masse" tab
+5. Test various input formats
 
 ### 📊 Performance Metrics
 
@@ -168,11 +133,12 @@ useEffect(() => {
 
 ### 🚀 Next Steps
 
-1. Complete CreateEventModal integration (30 min)
-2. Manual testing with real Excel/Jira exports (1 hour)
-3. Fix any edge cases discovered
-4. User acceptance testing
-5. Merge to master
+1. ✅ Complete CreateEventModal integration
+2. ✅ Fix technical feedback issues
+3. ⏳ Manual testing with real Excel/Jira exports (1 hour)
+4. ⏳ Fix any edge cases discovered
+5. ⏳ User acceptance testing
+6. ⏳ Merge to master
 
 ---
 
@@ -181,5 +147,10 @@ useEffect(() => {
 - `cce3d3d` - Phase 1: Parser system
 - `96db164` - Phase 2: BulkEventImporter
 - `5b29e16` - Phase 3: Editable preview
+- `bf186e1` - Phase 4: Modal integration with tabs
+- `2c370c9` - Fix: Technical feedback issues
 
 **Branch:** `feature/bulk-event-import`
+
+**Known Issues:**
+- 3 pre-existing TypeScript errors in other components (CreatePageModal, EventHistorySection, PageDetail) - not related to this feature
