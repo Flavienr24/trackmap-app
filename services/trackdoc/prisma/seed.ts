@@ -1,11 +1,43 @@
 import { PrismaClient } from '@prisma/client'
 
+// 🚨 CRITICAL SECURITY: Prevent seed in production
+// This script DELETES all data before inserting demo data
+const NODE_ENV = process.env.NODE_ENV || 'development'
+
+if (NODE_ENV === 'production') {
+  throw new Error(
+    '🚨 CRITICAL: Seed script forbidden in production!\n' +
+    'This would DELETE all production data.\n' +
+    'Use migrations for production schema changes.\n' +
+    `Current NODE_ENV: ${NODE_ENV}`
+  )
+}
+
+// Warn in staging but allow execution
+if (NODE_ENV === 'staging') {
+  console.warn('⚠️  WARNING: Seeding staging database')
+  console.warn('⚠️  This will DELETE all existing data!')
+}
+
 const prisma = new PrismaClient()
 
 async function main() {
   console.log('🌱 Starting database seed...')
+  console.log(`📍 Environment: ${NODE_ENV}`)
+  console.log(`📍 Database: ${process.env.DATABASE_URL}`)
+
+  // Additional safety check on DATABASE_URL
+  if (process.env.DATABASE_URL?.includes('prod') ||
+      process.env.DATABASE_URL?.includes('production')) {
+    throw new Error(
+      '🚨 CRITICAL: DATABASE_URL appears to be production!\n' +
+      `DATABASE_URL: ${process.env.DATABASE_URL}\n` +
+      'Refusing to seed production database.'
+    )
+  }
 
   // Clean existing data (in reverse dependency order)
+  console.log('🗑️  Cleaning existing data...')
   await prisma.eventHistory.deleteMany()
   await prisma.comment.deleteMany()
   await prisma.event.deleteMany()
