@@ -41,7 +41,10 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [activeTab, setActiveTab] = useState<'manual' | 'bulk'>('manual')
 
   // Fetch import context using consolidated endpoint
-  const { data: importContext } = useImportContext(productId, { enabled: isOpen })
+  // Lazy loading: only fetch when bulk import tab is active to avoid performance hit
+  const { data: importContext } = useImportContext(productId, {
+    enabled: isOpen && activeTab === 'bulk'
+  })
 
   // Build event options from import context + common suggestions
   useEffect(() => {
