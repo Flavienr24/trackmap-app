@@ -7,6 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "pretest": "./scripts/setup-test-db.sh",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -15,7 +16,11 @@
     "db:migrate": "./scripts/safe-migrate.sh",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:backup": "./scripts/backup-db.sh",
+    "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.2",

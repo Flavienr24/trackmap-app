@@ -1,147 +1,183 @@
 import { PrismaClient } from '@prisma/client'
-import { generateSlug, generateUniqueSlug } from '../src/utils/slugs'
 
 const prisma = new PrismaClient()
 
 async function main() {
   console.log('🌱 Starting database seed...')
 
-  // Clean existing data
+  // Clean existing data (in reverse dependency order)
   await prisma.eventHistory.deleteMany()
   await prisma.comment.deleteMany()
-  await prisma.variableValue.deleteMany()
   await prisma.event.deleteMany()
   await prisma.page.deleteMany()
-  await prisma.variable.deleteMany()
+  await prisma.propertyValue.deleteMany()
+  await prisma.property.deleteMany()
   await prisma.suggestedValue.deleteMany()
   await prisma.product.deleteMany()
 
-  // Create MyServier product
-  const product = await prisma.product.create({
+  // Create products
+  const myservier = await prisma.product.create({
     data: {
-      name: 'MyServier',
-      slug: 'myservier',
-      description: 'Content hub for health care professionals'
+      name: 'MySERVIER',
+      url: 'https://myservier.fr',
+      description: 'Plateforme patient MySERVIER'
     }
   })
-  console.log('✅ Created product: MyServier')
+
+  const eservices = await prisma.product.create({
+    data: {
+      name: 'Patient E-Services',
+      url: 'https://patient.e-servier.com',
+      description: 'Portail patient E-Services Servier'
+    }
+  })
+  console.log('✅ Created products: MySERVIER, Patient E-Services')
 
   // Create pages
-  const homePage = await prisma.page.create({
+  const homepage = await prisma.page.create({
     data: {
-      productId: product.id,
+      productId: myservier.id,
       name: 'Homepage',
       slug: 'homepage',
-      url: 'https://myservier.pt/'
+      url: 'https://myservier.fr/'
     }
   })
 
-  const articlesPage = await prisma.page.create({
+  const loginPage = await prisma.page.create({
     data: {
-      productId: product.id,
-      name: 'Articles',
-      slug: 'articles',
-      url: 'https://myservier.pt/article/nova-ferramenta-de-conversao-iecas-e-aras-powered-by-servier-cardiovascular/'
+      productId: myservier.id,
+      name: 'Login',
+      slug: 'login',
+      url: 'https://myservier.fr/login'
     }
   })
-  console.log('✅ Created pages: Homepage, Articles')
 
-  // Create variables
-  const pageNameVar = await prisma.variable.create({
+  const dashboard = await prisma.page.create({
     data: {
-      productId: product.id,
+      productId: eservices.id,
+      name: 'Dashboard',
+      slug: 'dashboard',
+      url: 'https://patient.e-servier.com/dashboard'
+    }
+  })
+  console.log('✅ Created pages: Homepage, Login, Dashboard')
+
+  // Create properties
+  const pageNameProp = await prisma.property.create({
+    data: {
+      productId: myservier.id,
       name: 'page_name',
       type: 'STRING',
       description: 'Nom de la page visitée'
     }
   })
 
-  const pageCategoryVar = await prisma.variable.create({
+  const buttonNameProp = await prisma.property.create({
     data: {
-      productId: product.id,
-      name: 'page_category',
+      productId: myservier.id,
+      name: 'button_name',
       type: 'STRING',
-      description: 'Catégorie de la page'
+      description: 'Nom du bouton cliqué'
     }
   })
-  console.log('✅ Created variables: page_name, page_category')
+  console.log('✅ Created properties: page_name, button_name')
 
   // Create suggested values
-  const homepageValue = await prisma.suggestedValue.create({
+  const homeValue = await prisma.suggestedValue.create({
     data: {
-      productId: product.id,
-      value: 'homepage',
+      productId: myservier.id,
+      value: 'Homepage',
       isContextual: false
     }
   })
 
-  const articlesValue = await prisma.suggestedValue.create({
+  const loginValue = await prisma.suggestedValue.create({
     data: {
-      productId: product.id,
-      value: 'articles',
+      productId: myservier.id,
+      value: 'Login',
       isContextual: false
     }
   })
 
-  const contextualPageValue = await prisma.suggestedValue.create({
+  const contextualValue = await prisma.suggestedValue.create({
     data: {
-      productId: product.id,
+      productId: myservier.id,
       value: '$page-name',
       isContextual: true
     }
   })
-  console.log('✅ Created suggested values: homepage, articles, $page-name')
+  console.log('✅ Created suggested values')
+
+  // Link properties with suggested values
+  await prisma.propertyValue.create({
+    data: {
+      propertyId: pageNameProp.id,
+      suggestedValueId: homeValue.id
+    }
+  })
+
+  await prisma.propertyValue.create({
+    data: {
+      propertyId: buttonNameProp.id,
+      suggestedValueId: loginValue.id
+    }
+  })
+  console.log('✅ Created property associations')
 
   // Create events
-  const pageViewEvent = await prisma.event.create({
+  await prisma.event.create({
     data: {
-      pageId: homePage.id,
+      pageId: homepage.id,
       name: 'page_view',
-      status: 'TO_IMPLEMENT',
-      variables: JSON.stringify({
-        page_name: 'homepage',
-        page_category: 'landing'
-      })
+      status: 'VALIDATED',
+      properties: JSON.stringify({ page_name: 'Homepage' })
     }
   })
 
-  const clickEvent = await prisma.event.create({
+  await prisma.event.create({
     data: {
-      pageId: articlesPage.id,
-      name: 'click',
+      pageId: homepage.id,
+      name: 'cta_click',
       status: 'TO_TEST',
-      variables: JSON.stringify({
-        page_name: 'articles',
-        page_category: 'content'
-      })
-    }
-  })
-  console.log('✅ Created events: page_view, click')
-
-  // Associate variables with suggested values
-  await prisma.variableValue.create({
-    data: {
-      variableId: pageNameVar.id,
-      suggestedValueId: homepageValue.id
+      properties: JSON.stringify({ button_name: 'Login' })
     }
   })
 
-  await prisma.variableValue.create({
+  await prisma.event.create({
     data: {
-      variableId: pageNameVar.id,
-      suggestedValueId: articlesValue.id
+      pageId: loginPage.id,
+      name: 'login_attempt',
+      status: 'TO_IMPLEMENT',
+      properties: JSON.stringify({ page_name: 'Login' })
     }
   })
 
-  await prisma.variableValue.create({
+  await prisma.event.create({
     data: {
-      variableId: pageNameVar.id,
-      suggestedValueId: contextualPageValue.id
+      pageId: dashboard.id,
+      name: 'dashboard_view',
+      status: 'VALIDATED',
+      properties: JSON.stringify({})
     }
   })
-  console.log('✅ Created variable associations')
+
+  await prisma.event.create({
+    data: {
+      pageId: dashboard.id,
+      name: 'appointment_book',
+      status: 'ERROR',
+      properties: JSON.stringify({ action: 'book' })
+    }
+  })
+  console.log('✅ Created 5 events across all pages')
 
   console.log('🎉 Database seeded successfully!')
+  console.log('📊 Summary:')
+  console.log('   - 2 products')
+  console.log('   - 3 pages')
+  console.log('   - 5 events')
+  console.log('   - 2 properties')
+  console.log('   - 3 suggested values')
 }
 
 main()
