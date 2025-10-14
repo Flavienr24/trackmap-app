@@ -12,23 +12,27 @@ import logger from '../src/config/logger';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const DATABASE_URL = process.env.DATABASE_URL || '';
 
-// Block execution on non-dev/test databases
-if (!DATABASE_URL.includes('test.db') && !DATABASE_URL.includes('dev.db')) {
-  throw new Error(
-    '🚨 CRITICAL: This script modifies data in bulk!\n' +
-    'Detected non-development database. Refusing to run.\n' +
-    `DATABASE_URL: ${DATABASE_URL}\n` +
-    `NODE_ENV: ${NODE_ENV}\n\n` +
-    'Safe environments: dev.db, test.db only'
-  );
-}
-
-// Additional check for production environment
+// Primary protection: Block production environment
 if (NODE_ENV === 'production') {
   throw new Error(
     '🚨 CRITICAL: Migration script forbidden in production!\n' +
     'This script performs bulk data modifications.\n' +
+    `NODE_ENV: ${NODE_ENV}\n` +
     'Review and adapt for production use case.'
+  );
+}
+
+// Secondary protection: Warn on production-like DATABASE_URL patterns
+if (DATABASE_URL.includes('prod') ||
+    DATABASE_URL.includes('production') ||
+    (DATABASE_URL.includes('postgres') && !DATABASE_URL.includes('localhost'))) {
+  throw new Error(
+    '🚨 CRITICAL: This script modifies data in bulk!\n' +
+    'Detected production-like database URL. Refusing to run.\n' +
+    `DATABASE_URL: ${DATABASE_URL}\n` +
+    `NODE_ENV: ${NODE_ENV}\n\n` +
+    'Safe patterns: localhost, dev.db, test.db\n' +
+    'If this is intentional, set NODE_ENV=development explicitly.'
   );
 }
 

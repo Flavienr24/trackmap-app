@@ -64,8 +64,13 @@ npx prisma generate
 # Step 4: Verify data integrity (multi-table validation)
 echo "4️⃣ Verifying data integrity..."
 
-# Detect database type from DATABASE_URL
-DB_URL="${DATABASE_URL:-$(grep DATABASE_URL .env | cut -d '=' -f2 | tr -d '"')}"
+# Detect database type from DATABASE_URL (handle missing .env file)
+DB_URL="${DATABASE_URL:-$(grep DATABASE_URL .env 2>/dev/null | cut -d '=' -f2 | tr -d '"' || echo '')}"
+
+if [ -z "$DB_URL" ]; then
+    echo "⚠️  WARNING: DATABASE_URL not found in environment or .env file"
+    echo "   Skipping integrity check"
+else
 
 if [[ "$DB_URL" == *"sqlite"* || "$DB_URL" == file:* ]]; then
     # SQLite integrity check
@@ -110,6 +115,7 @@ else
     echo "⚠️  Unknown database type - skipping integrity check"
     echo "   DATABASE_URL: $DB_URL"
 fi
+fi  # Close the if [ -z "$DB_URL" ] check
 
 # Step 5: Run tests (skip in production)
 if [ "$SKIP_TESTS" = "true" ]; then
@@ -125,7 +131,17 @@ else
     else
         echo "❌ Tests failed after migration!"
         echo "🔄 Rollback procedure:"
-        echo "   1. Restore DB: cp $LATEST_BACKUP $DB_PATH"
+
+        # Provide DB-specific rollback instructions
+        if [[ "$DB_URL" == *"sqlite"* || "$DB_URL" == file:* ]]; then
+            echo "   1. Restore SQLite DB: cp $LATEST_BACKUP $DB_PATH"
+        elif [[ "$DB_URL" == *"postgres"* ]]; then
+            echo "   1. Restore PostgreSQL DB:"
+            echo "      gunzip -c $LATEST_BACKUP | psql \$DATABASE_URL"
+        else
+            echo "   1. Restore DB from: $LATEST_BACKUP"
+        fi
+
         echo "   2. Mark migration as rolled back:"
         echo "      npx prisma migrate resolve --rolled-back \"$MIGRATION_NAME\""
         exit 1
