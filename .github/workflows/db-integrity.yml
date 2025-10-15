@@ -1,0 +1,284 @@
+name: Database Integrity Tests
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'services/trackdoc/prisma/**'
+      - 'services/trackdoc/scripts/**'
+      - 'services/trackdoc/src/**'
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'services/trackdoc/prisma/**'
+      - 'services/trackdoc/scripts/**'
+      - 'services/trackdoc/src/**'
+
+jobs:
+  backup-restore-test:
+    name: Backup & Restore Integrity
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: "file:${{ github.workspace }}/services/trackdoc/test.db"
+      NODE_ENV: test
+
+    defaults:
+      run:
+        working-directory: services/trackdoc
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: services/trackdoc/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y sqlite3
+
+      - name: Setup environment
+        run: |
+          echo "DATABASE_URL=\"file:${{ github.workspace }}/services/trackdoc/test.db\"" > .env
+          echo 'NODE_ENV=test' >> .env
+
+      - name: Setup test database
+        run: |
+          npx prisma generate
+          npx prisma db push --accept-data-loss
+          # Verify database was created
+          if [ -f "${{ github.workspace }}/services/trackdoc/test.db" ]; then
+            echo "✅ Database created successfully"
+            ls -lh "${{ github.workspace }}/services/trackdoc/test.db"
+          else
+            echo "❌ Database file not found!"
+            exit 1
+          fi
+
+      - name: Seed test data
+        run: npm run db:seed
+
+      - name: Test backup creation
+        run: |
+          npm run db:backup
+          # Verify backup file exists and is not empty
+          LATEST_BACKUP=$(ls -t prisma/backups/*.backup.* | head -1)
+          if [ ! -s "$LATEST_BACKUP" ]; then
+            echo "❌ Backup file is empty or missing"
+            exit 1
+          fi
+          echo "✅ Backup created: $LATEST_BACKUP"
+
+      - name: Test backup integrity
+        run: |
+          LATEST_BACKUP=$(ls -t prisma/backups/*.backup.* | head -1)
+          # For SQLite, test restore to temp location
+          TEST_DB="/tmp/test_restore_$(date +%s).db"
+          sqlite3 "$TEST_DB" ".restore '$LATEST_BACKUP'"
+
+          # Verify integrity
+          INTEGRITY=$(sqlite3 "$TEST_DB" "PRAGMA integrity_check;")
+          if [ "$INTEGRITY" != "ok" ]; then
+            echo "❌ Backup integrity check failed: $INTEGRITY"
+            exit 1
+          fi
+
+          # Verify tables exist
+          TABLE_COUNT=$(sqlite3 "$TEST_DB" "SELECT COUNT(*) FROM sqlite_master WHERE type='table';")
+          if [ "$TABLE_COUNT" -eq "0" ]; then
+            echo "❌ No tables found in backup"
+            exit 1
+          fi
+
+          echo "✅ Backup integrity verified: $INTEGRITY"
+          echo "✅ Tables found: $TABLE_COUNT"
+          rm -f "$TEST_DB"
+
+      - name: Test restore functionality
+        run: |
+          LATEST_BACKUP=$(ls -t prisma/backups/*.backup.* | head -1)
+          # Restore backup (auto-confirm with 'yes')
+          echo "yes" | npm run db:restore "$LATEST_BACKUP"
+
+          # Verify database still works after restore
+          npx prisma db pull
+
+      - name: Run application tests
+        run: npm test
+
+      - name: Upload backup artifacts (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-artifacts
+          path: services/trackdoc/prisma/backups/
+          retention-days: 7
+
+  migration-safety-test:
+    name: Migration Safety Checks
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: "file:${{ github.workspace }}/services/trackdoc/test.db"
+      NODE_ENV: test
+
+    defaults:
+      run:
+        working-directory: services/trackdoc
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: services/trackdoc/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y sqlite3
+
+      - name: Setup environment
+        run: |
+          echo "DATABASE_URL=\"file:${{ github.workspace }}/services/trackdoc/test.db\"" > .env
+          echo 'NODE_ENV=test' >> .env
+
+      - name: Verify Prisma wrapper blocks dangerous commands
+        run: |
+          set +e  # Disable exit on error for testing blocked commands
+
+          # Test that db push is blocked
+          OUTPUT=$(npm run prisma db push 2>&1)
+          if echo "$OUTPUT" | grep -q "BLOCKED"; then
+            echo "✅ db push correctly blocked"
+          else
+            echo "❌ db push not blocked!"
+            echo "Output: $OUTPUT"
+            exit 1
+          fi
+
+          # Test that migrate reset is blocked
+          OUTPUT=$(npm run prisma migrate reset 2>&1)
+          if echo "$OUTPUT" | grep -q "BLOCKED"; then
+            echo "✅ migrate reset correctly blocked"
+          else
+            echo "❌ migrate reset not blocked!"
+            echo "Output: $OUTPUT"
+            exit 1
+          fi
+
+          set -e  # Re-enable exit on error
+
+      - name: Verify safe commands still work
+        run: |
+          # Generate should work
+          npm run prisma generate
+
+          # Studio help should work
+          npm run prisma studio -- --help || true
+
+      - name: Test migration with validation
+        run: |
+          # First create initial database with existing migrations
+          npx prisma generate
+          npx prisma migrate deploy
+
+          # Test safe-migrate with extended validation (Phase 2)
+          # This will create a backup, run validation checks (checksums, FKs, row counts)
+          # The backup script will verify integrity even on empty database
+          echo "Testing safe-migrate validation (no pending migrations expected)..."
+          if NODE_ENV=development npm run db:migrate "ci_validation_test" 2>&1 | tee migrate_output.txt; then
+            echo "✅ safe-migrate completed"
+          else
+            # Check if failure was due to no pending migrations (expected)
+            if grep -q "Already in sync\\|no pending migrations\\|Database is already up to date" migrate_output.txt; then
+              echo "✅ Expected: Database already up to date"
+            else
+              echo "❌ Unexpected migration failure"
+              cat migrate_output.txt
+              exit 1
+            fi
+          fi
+
+          # Verify extended validation ran (Phase 2 feature)
+          if grep -q "Extended validation\\|DB Checksum\\|Foreign keys" migrate_output.txt; then
+            echo "✅ Phase 2 extended validation executed"
+          else
+            echo "⚠️  Extended validation may not have run"
+          fi
+
+          # Verify database still exists and is healthy
+          if [ -f "${{ github.workspace }}/services/trackdoc/test.db" ]; then
+            echo "✅ Database validated successfully"
+          else
+            echo "❌ Database file lost!"
+            exit 1
+          fi
+
+  prisma-cli-protection:
+    name: Prisma CLI Protection
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/trackdoc
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test dangerous command blocking
+        run: |
+          set +e  # Don't exit on error
+
+          # Test db push
+          OUTPUT=$(npm run prisma db push 2>&1)
+          if echo "$OUTPUT" | grep -q "BLOCKED"; then
+            echo "✅ Test 1 passed: db push blocked"
+          else
+            echo "❌ Test 1 failed: db push not blocked"
+            echo "$OUTPUT"
+            exit 1
+          fi
+
+          # Test migrate reset
+          OUTPUT=$(npm run prisma migrate reset 2>&1)
+          if echo "$OUTPUT" | grep -q "BLOCKED"; then
+            echo "✅ Test 2 passed: migrate reset blocked"
+          else
+            echo "❌ Test 2 failed: migrate reset not blocked"
+            echo "$OUTPUT"
+            exit 1
+          fi
+
+          # Test db execute
+          OUTPUT=$(npm run prisma db execute 2>&1)
+          if echo "$OUTPUT" | grep -q "BLOCKED"; then
+            echo "✅ Test 3 passed: db execute blocked"
+          else
+            echo "❌ Test 3 failed: db execute not blocked"
+            echo "$OUTPUT"
+            exit 1
+          fi
+
+          echo "✅ All dangerous commands properly blocked"

@@ -117,6 +117,69 @@ else
 fi
 fi  # Close the if [ -z "$DB_URL" ] check
 
+# Step 4.5: Extended validation (Phase 2)
+echo "4.5️⃣ Extended validation (checksums, foreign keys, schema drift)..."
+
+if [ -n "$DB_URL" ]; then
+    if [[ "$DB_URL" == *"sqlite"* || "$DB_URL" == file:* ]]; then
+        DB_PATH=$(echo "$DB_URL" | sed 's/file://g' | sed 's/^"\(.*\)"$/\1/')
+
+        if command -v sqlite3 &> /dev/null && [ -f "$DB_PATH" ]; then
+            # Database checksum (MD5)
+            if command -v md5 &> /dev/null; then
+                DB_CHECKSUM=$(md5 -q "$DB_PATH" 2>/dev/null || echo "unavailable")
+            elif command -v md5sum &> /dev/null; then
+                DB_CHECKSUM=$(md5sum "$DB_PATH" 2>/dev/null | cut -d' ' -f1 || echo "unavailable")
+            else
+                DB_CHECKSUM="unavailable"
+            fi
+            echo "   🔐 DB Checksum: $DB_CHECKSUM"
+
+            # Foreign key validation
+            FK_VIOLATIONS=$(sqlite3 "$DB_PATH" "PRAGMA foreign_key_check;" 2>/dev/null || echo "")
+            if [ -z "$FK_VIOLATIONS" ]; then
+                echo "   ✅ Foreign keys: All valid"
+            else
+                echo "   ⚠️  Foreign key violations detected:"
+                echo "$FK_VIOLATIONS" | head -5
+            fi
+
+            # Row counts by table for drift detection
+            echo "   📊 Row counts:"
+            sqlite3 "$DB_PATH" "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_prisma%';" 2>/dev/null | while read table; do
+                COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM $table;" 2>/dev/null || echo "?")
+                echo "      - $table: $COUNT rows"
+            done
+
+            # Schema version from migrations table
+            MIGRATION_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NOT NULL;" 2>/dev/null || echo "0")
+            echo "   📋 Applied migrations: $MIGRATION_COUNT"
+        fi
+
+    elif [[ "$DB_URL" == *"postgres"* ]]; then
+        if command -v psql &> /dev/null; then
+            # Foreign key validation
+            FK_VIOLATIONS=$(psql "$DB_URL" -t -c "SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_type = 'FOREIGN KEY';" 2>/dev/null | xargs || echo "0")
+            echo "   ✅ Foreign key constraints: $FK_VIOLATIONS defined"
+
+            # Row counts by table
+            echo "   📊 Row counts:"
+            psql "$DB_URL" -t -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename NOT LIKE '_prisma%';" 2>/dev/null | while read table; do
+                if [ -n "$table" ]; then
+                    COUNT=$(psql "$DB_URL" -t -c "SELECT COUNT(*) FROM $table;" 2>/dev/null | xargs || echo "?")
+                    echo "      - $table: $COUNT rows"
+                fi
+            done
+
+            # Schema version
+            MIGRATION_COUNT=$(psql "$DB_URL" -t -c "SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NOT NULL;" 2>/dev/null | xargs || echo "0")
+            echo "   📋 Applied migrations: $MIGRATION_COUNT"
+        fi
+    fi
+else
+    echo "   ⏭️  Skipped (DATABASE_URL not available)"
+fi
+
 # Step 5: Run tests (skip in production)
 if [ "$SKIP_TESTS" = "true" ]; then
     echo "5️⃣ Skipping tests in production (run separately in CI/CD)"
