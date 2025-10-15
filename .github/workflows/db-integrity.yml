@@ -125,21 +125,29 @@ jobs:
 
       - name: Verify Prisma wrapper blocks dangerous commands
         run: |
+          set +e  # Disable exit on error for testing blocked commands
+
           # Test that db push is blocked
-          if npm run prisma db push 2>&1 | grep -q "BLOCKED"; then
+          OUTPUT=$(npm run prisma db push 2>&1)
+          if echo "$OUTPUT" | grep -q "BLOCKED"; then
             echo "✅ db push correctly blocked"
           else
             echo "❌ db push not blocked!"
+            echo "Output: $OUTPUT"
             exit 1
           fi
 
           # Test that migrate reset is blocked
-          if npm run prisma migrate reset 2>&1 | grep -q "BLOCKED"; then
+          OUTPUT=$(npm run prisma migrate reset 2>&1)
+          if echo "$OUTPUT" | grep -q "BLOCKED"; then
             echo "✅ migrate reset correctly blocked"
           else
             echo "❌ migrate reset not blocked!"
+            echo "Output: $OUTPUT"
             exit 1
           fi
+
+          set -e  # Re-enable exit on error
 
       - name: Verify safe commands still work
         run: |
