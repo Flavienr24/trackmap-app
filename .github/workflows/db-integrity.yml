@@ -19,6 +19,10 @@ jobs:
     name: Backup & Restore Integrity
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: "file:./prisma/test.db"
+      NODE_ENV: test
+
     defaults:
       run:
         working-directory: services/trackdoc
@@ -114,6 +118,10 @@ jobs:
   migration-safety-test:
     name: Migration Safety Checks
     runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: "file:./prisma/test.db"
+      NODE_ENV: test
 
     defaults:
       run:
