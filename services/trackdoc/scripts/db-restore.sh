@@ -93,7 +93,18 @@ if [[ "$BACKUP_FILE" == *.enc ]]; then
     fi
 
     echo "🔓 Decrypting..."
-    DECRYPTED="/tmp/decrypted_$(date +%s).db"
+
+    # Preserve original extension (remove .enc, keep .sql.gz or .db)
+    ORIGINAL_EXT="${BACKUP_FILE%.enc}"
+    ORIGINAL_EXT="${ORIGINAL_EXT##*.}"
+    DECRYPTED="/tmp/decrypted_$(date +%s).$ORIGINAL_EXT"
+
+    # Handle .sql.gz.enc case (PostgreSQL backups)
+    if [[ "$BACKUP_FILE" == *.sql.gz.enc ]]; then
+        DECRYPTED="/tmp/decrypted_$(date +%s).sql.gz"
+    elif [[ "$BACKUP_FILE" == *.gz.enc ]]; then
+        DECRYPTED="/tmp/decrypted_$(date +%s).gz"
+    fi
 
     if ! openssl enc -aes-256-cbc -d -pbkdf2 -in "$BACKUP_FILE" -out "$DECRYPTED" -k "$BACKUP_ENCRYPTION_KEY"; then
         echo "❌ Decryption failed!"
@@ -103,7 +114,7 @@ if [[ "$BACKUP_FILE" == *.enc ]]; then
     fi
 
     BACKUP_FILE="$DECRYPTED"
-    echo "✅ Decrypted to temporary file"
+    echo "✅ Decrypted to temporary file: $(basename "$DECRYPTED")"
 fi
 
 # Detect database type
