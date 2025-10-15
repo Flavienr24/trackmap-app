@@ -90,8 +90,8 @@ async function migrateSuggestedValues() {
         if (processedValues.has(valueKey)) continue;
         processedValues.add(valueKey);
 
-        // Auto-detect contextual values (those starting with $)
-        const isContextual = stringValue.startsWith('$');
+        // Auto-detect contextual values (those containing $ anywhere in the string)
+        const isContextual = stringValue.includes('$');
 
         // Check if suggested value already exists for this product
         const existingSuggestedValue = await tx.suggestedValue.findFirst({

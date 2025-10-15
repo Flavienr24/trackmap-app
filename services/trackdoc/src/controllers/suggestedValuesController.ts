@@ -103,8 +103,8 @@ export const createSuggestedValue = async (req: Request, res: Response, next: Ne
       return next(error);
     }
 
-    // Auto-detect contextual values (those starting with $)
-    const isContextualValue = isContextual !== undefined ? isContextual : value.startsWith('$');
+    // Auto-detect contextual values (those containing $ anywhere in the string)
+    const isContextualValue = isContextual !== undefined ? isContextual : value.includes('$');
 
     logger.debug('Creating new suggested value', { 
       productId: product.id,
@@ -247,10 +247,10 @@ export const updateSuggestedValue = async (req: Request, res: Response, next: Ne
       }
     }
 
-    // Auto-detect contextual values if value is being updated
+    // Auto-detect contextual values if value is being updated (check for $ anywhere in the string)
     let finalIsContextual = isContextual;
     if (value && isContextual === undefined) {
-      finalIsContextual = value.startsWith('$');
+      finalIsContextual = value.includes('$');
     }
 
     // Update events that use this suggested value (if value is being changed)

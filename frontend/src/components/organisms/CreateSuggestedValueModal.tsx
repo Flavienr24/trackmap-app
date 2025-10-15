@@ -22,7 +22,7 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<CreateSuggestedValueRequest>({
     value: initialValue,
-    isContextual: initialValue.startsWith('$'),
+    isContextual: initialValue.includes('$'),
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [manualTypeSelection, setManualTypeSelection] = useState<boolean>(false)
@@ -32,7 +32,7 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
     if (initialValue) {
       setFormData({
         value: initialValue,
-        isContextual: initialValue.startsWith('$'),
+        isContextual: initialValue.includes('$'),
       })
       setManualTypeSelection(false) // Reset manual selection flag
     }
@@ -77,22 +77,18 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
   }
 
   const handleValueChange = (value: string) => {
-    // If not manually selected, auto-detect based on $
+    // If not manually selected, auto-detect based on $ anywhere in the string
     if (!manualTypeSelection) {
-      const isContextual = value.startsWith('$')
+      const isContextual = value.includes('$')
       setFormData({
         value,
         isContextual: isContextual
       })
     } else {
-      // If manual selection and contextual, ensure $ prefix
-      let finalValue = value
-      if (formData.isContextual && !value.startsWith('$')) {
-        finalValue = '$' + value
-      }
+      // If manual selection is active, keep the user's choice
       setFormData({
         ...formData,
-        value: finalValue
+        value: value
       })
     }
   }
@@ -100,18 +96,10 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
   const handleTypeChange = (isContextual: boolean) => {
     setManualTypeSelection(true)
 
-    let newValue = formData.value
-
-    if (isContextual && !newValue.startsWith('$')) {
-      // Add $ prefix when switching to contextual
-      newValue = '$' + newValue
-    } else if (!isContextual && newValue.startsWith('$')) {
-      // Remove $ prefix when switching to static
-      newValue = newValue.substring(1)
-    }
-
+    // Keep the value as-is when manually changing type
+    // No automatic prefix manipulation since $ can be anywhere in the string
     setFormData({
-      value: newValue,
+      value: formData.value,
       isContextual: isContextual
     })
   }
