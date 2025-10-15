@@ -77,19 +77,26 @@ async function apiRequest<T>(
     const response = await fetch(url, config)
     
     if (!response.ok) {
-      // Try to parse JSON error response first, fallback to text
-      let errorData
+      // Try to parse error response (read body only once)
+      let errorMessage = 'Unknown error'
       try {
-        errorData = await response.json()
-      } catch {
-        errorData = { message: await response.text() }
+        const contentType = response.headers.get('content-type')
+        if (contentType?.includes('application/json')) {
+          const errorData = await response.json()
+          errorMessage = errorData.message || errorMessage
+        } else {
+          errorMessage = await response.text()
+        }
+      } catch (parseError) {
+        // If parsing fails, use status text
+        errorMessage = response.statusText || errorMessage
       }
-      
+
       // Create enhanced error with response data
-      const error = new Error(`API Error: ${response.status} - ${errorData.message || 'Unknown error'}`)
+      const error = new Error(`API Error: ${response.status} - ${errorMessage}`)
       ;(error as any).response = {
         status: response.status,
-        data: errorData
+        message: errorMessage
       }
       throw error
     }
