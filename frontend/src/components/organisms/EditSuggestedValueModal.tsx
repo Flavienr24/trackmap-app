@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { MergeConfirmationModal } from '@/components/organisms/MergeConfirmationModal'
 import { suggestedValuesApi } from '@/services/api'
 import type { SuggestedValue, UpdateSuggestedValueRequest, SuggestedValueConflictData, SuggestedValueImpactData } from '@/types'
+import { isContextualValue } from '@/utils/contextualValue'
 
 interface EditSuggestedValueModalProps {
   isOpen: boolean
@@ -65,6 +66,11 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
 
     if (!formData.value?.trim()) {
       newErrors.value = 'La valeur est requise'
+    }
+
+    // Validate that contextual values actually contain a variable pattern
+    if (formData.isContextual && !isContextualValue(formData.value || '')) {
+      newErrors.value = 'Une valeur contextuelle doit contenir une variable (ex: $page-name, category:$name)'
     }
 
     setErrors(newErrors)
@@ -184,22 +190,18 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
   }
 
   const handleValueChange = (value: string) => {
-    // If not manually selected, auto-detect based on $
+    // If not manually selected, auto-detect based on variable pattern
     if (!manualTypeSelection) {
-      const isContextual = value.startsWith('$')
+      const detected = isContextualValue(value)
       setFormData({
         value,
-        isContextual: isContextual
+        isContextual: detected
       })
     } else {
-      // If manual selection and contextual, ensure $ prefix
-      let finalValue = value
-      if (formData.isContextual && !value.startsWith('$')) {
-        finalValue = '$' + value
-      }
+      // If manual selection is active, keep the user's choice
       setFormData({
         ...formData,
-        value: finalValue
+        value: value
       })
     }
   }
@@ -207,18 +209,10 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
   const handleTypeChange = (isContextual: boolean) => {
     setManualTypeSelection(true)
 
-    let newValue = formData.value || ''
-
-    if (isContextual && !newValue.startsWith('$')) {
-      // Add $ prefix when switching to contextual
-      newValue = '$' + newValue
-    } else if (!isContextual && newValue.startsWith('$')) {
-      // Remove $ prefix when switching to static
-      newValue = newValue.substring(1)
-    }
-
+    // Keep the value as-is when manually changing type
+    // No automatic prefix manipulation since $ can be anywhere in the string
     setFormData({
-      value: newValue,
+      value: formData.value || '',
       isContextual: isContextual
     })
   }

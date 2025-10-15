@@ -13,14 +13,12 @@ export const PropertiesDisplay: React.FC<PropertiesDisplayProps> = ({
   properties,
   className,
 }) => {
-  // Function to determine if a value is contextual (starts with $ or contains dynamic variables)
+  // Function to determine if a value is contextual (contains variable patterns)
   const isContextualValue = (value: any): boolean => {
     const stringValue = String(value)
-    return stringValue.startsWith('$') || 
-           stringValue.includes('{{') || 
-           stringValue.includes('${') ||
-           /\{\{.*\}\}/.test(stringValue) ||
-           /\$\{.*\}/.test(stringValue)
+    // Check for $variable patterns or {{ }} template patterns
+    return /\$[a-zA-Z_]/.test(stringValue) ||
+           /\{\{.*\}\}/.test(stringValue)
   }
 
   const propertyEntries = Object.entries(properties)

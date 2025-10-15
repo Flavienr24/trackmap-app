@@ -4,6 +4,7 @@ import { Request, Response, NextFunction } from 'express';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
 import { db } from '../config/database';
+import { isContextualValue } from '../utils/helpers';
 
 // Use centralized database instance
 const prisma = db;
@@ -103,14 +104,14 @@ export const createSuggestedValue = async (req: Request, res: Response, next: Ne
       return next(error);
     }
 
-    // Auto-detect contextual values (those starting with $)
-    const isContextualValue = isContextual !== undefined ? isContextual : value.startsWith('$');
+    // Auto-detect contextual values using pattern matching (prevents false positives like "$19")
+    const detectedContextual = isContextual !== undefined ? isContextual : isContextualValue(value);
 
-    logger.debug('Creating new suggested value', { 
+    logger.debug('Creating new suggested value', {
       productId: product.id,
       value,
-      isContextual: isContextualValue,
-      requestId: req.ip 
+      isContextual: detectedContextual,
+      requestId: req.ip
     });
 
     // Create suggested value
@@ -118,7 +119,7 @@ export const createSuggestedValue = async (req: Request, res: Response, next: Ne
       data: {
         productId: product.id,
         value,
-        isContextual: isContextualValue
+        isContextual: detectedContextual
       },
       include: {
         propertyValues: {
@@ -247,10 +248,10 @@ export const updateSuggestedValue = async (req: Request, res: Response, next: Ne
       }
     }
 
-    // Auto-detect contextual values if value is being updated
+    // Auto-detect contextual values if value is being updated (using pattern matching)
     let finalIsContextual = isContextual;
     if (value && isContextual === undefined) {
-      finalIsContextual = value.startsWith('$');
+      finalIsContextual = isContextualValue(value);
     }
 
     // Update events that use this suggested value (if value is being changed)

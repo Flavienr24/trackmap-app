@@ -121,8 +121,8 @@ const autoCreateSuggestedValuesInTx = async (
     // Convert property value to string for comparison
     const stringValue = String(propertyValue);
 
-    // Auto-detect contextual values (those starting with $)
-    const isContextual = stringValue.startsWith('$');
+    // Auto-detect contextual values using pattern matching (supports $var, {{var}}, ${var})
+    const isContextual = /\$[a-zA-Z_]|\{\{.*\}\}|\$\{.*\}/.test(stringValue);
 
     // Check if suggested value already exists for this product
     const existingSuggestedValue = await tx.suggestedValue.findFirst({
