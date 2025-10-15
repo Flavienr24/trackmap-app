@@ -16,6 +16,8 @@
     "db:migrate": "./scripts/safe-migrate.sh",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:backup": "./scripts/backup-db.sh",
+    "db:backup:upload": "./scripts/backup-upload.sh",
+    "db:restore": "./scripts/db-restore.sh",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio"
   },

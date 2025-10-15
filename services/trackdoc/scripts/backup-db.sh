@@ -13,7 +13,7 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 mkdir -p "$BACKUP_DIR"
 
 # Detect DATABASE_URL (from env or .env file)
-DB_URL="${DATABASE_URL:-$(grep DATABASE_URL .env 2>/dev/null | cut -d '=' -f2 | tr -d '"' | tr -d "'")}"
+DB_URL="${DATABASE_URL:-$(grep DATABASE_URL .env 2>/dev/null | cut -d '=' -f2- | tr -d '"' | tr -d "'")}"
 
 if [ -z "$DB_URL" ]; then
     echo "❌ DATABASE_URL not found in environment or .env file"

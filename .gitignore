@@ -81,7 +81,8 @@ test.db
 **/prisma/backups/
 
 # Prisma
-services/trackdoc/prisma/migrations/
+# Note: Migrations are now tracked for schema reproducibility (Phase 1)
+# services/trackdoc/prisma/migrations/
 
 # Frontend specific
 frontend/dist/
