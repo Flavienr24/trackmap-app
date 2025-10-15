@@ -1,0 +1,216 @@
+name: Database Integrity Tests
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'services/trackdoc/prisma/**'
+      - 'services/trackdoc/scripts/**'
+      - 'services/trackdoc/src/**'
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'services/trackdoc/prisma/**'
+      - 'services/trackdoc/scripts/**'
+      - 'services/trackdoc/src/**'
+
+jobs:
+  backup-restore-test:
+    name: Backup & Restore Integrity
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/trackdoc
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: services/trackdoc/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup test database
+        run: |
+          npx prisma generate
+          npx prisma db push --accept-data-loss
+
+      - name: Seed test data
+        run: npm run db:seed
+
+      - name: Test backup creation
+        run: |
+          npm run db:backup
+          # Verify backup file exists and is not empty
+          LATEST_BACKUP=$(ls -t prisma/backups/*.backup.* | head -1)
+          if [ ! -s "$LATEST_BACKUP" ]; then
+            echo "❌ Backup file is empty or missing"
+            exit 1
+          fi
+          echo "✅ Backup created: $LATEST_BACKUP"
+
+      - name: Test backup integrity
+        run: |
+          LATEST_BACKUP=$(ls -t prisma/backups/*.backup.* | head -1)
+          # For SQLite, test restore to temp location
+          TEST_DB="/tmp/test_restore_$(date +%s).db"
+          sqlite3 "$TEST_DB" ".restore '$LATEST_BACKUP'"
+
+          # Verify integrity
+          INTEGRITY=$(sqlite3 "$TEST_DB" "PRAGMA integrity_check;")
+          if [ "$INTEGRITY" != "ok" ]; then
+            echo "❌ Backup integrity check failed: $INTEGRITY"
+            exit 1
+          fi
+
+          # Verify tables exist
+          TABLE_COUNT=$(sqlite3 "$TEST_DB" "SELECT COUNT(*) FROM sqlite_master WHERE type='table';")
+          if [ "$TABLE_COUNT" -eq "0" ]; then
+            echo "❌ No tables found in backup"
+            exit 1
+          fi
+
+          echo "✅ Backup integrity verified: $INTEGRITY"
+          echo "✅ Tables found: $TABLE_COUNT"
+          rm -f "$TEST_DB"
+
+      - name: Test restore functionality
+        run: |
+          LATEST_BACKUP=$(ls -t prisma/backups/*.backup.* | head -1)
+          # Restore backup (auto-confirm with 'yes')
+          echo "yes" | npm run db:restore "$LATEST_BACKUP"
+
+          # Verify database still works after restore
+          npx prisma db pull
+
+      - name: Run application tests
+        run: npm test
+
+      - name: Upload backup artifacts (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-artifacts
+          path: services/trackdoc/prisma/backups/
+          retention-days: 7
+
+  migration-safety-test:
+    name: Migration Safety Checks
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/trackdoc
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: services/trackdoc/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify Prisma wrapper blocks dangerous commands
+        run: |
+          # Test that db push is blocked
+          if npm run prisma db push 2>&1 | grep -q "BLOCKED"; then
+            echo "✅ db push correctly blocked"
+          else
+            echo "❌ db push not blocked!"
+            exit 1
+          fi
+
+          # Test that migrate reset is blocked
+          if npm run prisma migrate reset 2>&1 | grep -q "BLOCKED"; then
+            echo "✅ migrate reset correctly blocked"
+          else
+            echo "❌ migrate reset not blocked!"
+            exit 1
+          fi
+
+      - name: Verify safe commands still work
+        run: |
+          # Generate should work
+          npm run prisma generate
+
+          # Studio help should work
+          npm run prisma studio -- --help || true
+
+      - name: Test migration with validation
+        run: |
+          # Setup database
+          npx prisma generate
+          npx prisma db push --accept-data-loss
+
+          # Run safe-migrate (will use migrate deploy in CI)
+          # This tests the extended validation logic
+          NODE_ENV=development npm run db:migrate "ci_test_migration"
+
+  prisma-cli-protection:
+    name: Prisma CLI Protection
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/trackdoc
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test dangerous command blocking
+        run: |
+          set +e  # Don't exit on error
+
+          # Test db push
+          OUTPUT=$(npm run prisma db push 2>&1)
+          if echo "$OUTPUT" | grep -q "BLOCKED"; then
+            echo "✅ Test 1 passed: db push blocked"
+          else
+            echo "❌ Test 1 failed: db push not blocked"
+            echo "$OUTPUT"
+            exit 1
+          fi
+
+          # Test migrate reset
+          OUTPUT=$(npm run prisma migrate reset 2>&1)
+          if echo "$OUTPUT" | grep -q "BLOCKED"; then
+            echo "✅ Test 2 passed: migrate reset blocked"
+          else
+            echo "❌ Test 2 failed: migrate reset not blocked"
+            echo "$OUTPUT"
+            exit 1
+          fi
+
+          # Test db execute
+          OUTPUT=$(npm run prisma db execute 2>&1)
+          if echo "$OUTPUT" | grep -q "BLOCKED"; then
+            echo "✅ Test 3 passed: db execute blocked"
+          else
+            echo "❌ Test 3 failed: db execute not blocked"
+            echo "$OUTPUT"
+            exit 1
+          fi
+
+          echo "✅ All dangerous commands properly blocked"
