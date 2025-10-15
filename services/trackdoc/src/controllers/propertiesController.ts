@@ -498,45 +498,54 @@ export const deleteProperty = async (req: Request, res: Response, next: NextFunc
     // Filter events that contain this property key
     const affectedEvents = allEvents.filter(event => {
       if (!event.properties) return false;
-      
-      let properties: Record<string, any>;
-      
-      // Handle both string (SQLite JSON storage) and object (parsed JSON) formats
+
+      let parsedProperties: unknown;
+
       if (typeof event.properties === 'string') {
         try {
-          properties = JSON.parse(event.properties);
+          parsedProperties = JSON.parse(event.properties);
         } catch (error) {
           logger.warn('Failed to parse event properties JSON', { eventId: event.id, properties: event.properties });
           return false;
         }
-      } else if (typeof event.properties === 'object') {
-        properties = event.properties as Record<string, any>;
       } else {
+        parsedProperties = event.properties;
+      }
+
+      if (!parsedProperties || typeof parsedProperties !== 'object' || Array.isArray(parsedProperties)) {
         return false;
       }
-      
+
+      const properties = parsedProperties as Record<string, any>;
+
       return Object.prototype.hasOwnProperty.call(properties, existingProperty.name);
     });
 
     // Clean up properties field in affected events
     for (const event of affectedEvents) {
-      let properties: Record<string, any>;
-      
-      // Parse properties if they're stored as string
+      let parsedProperties: unknown;
+
       if (typeof event.properties === 'string') {
         try {
-          properties = JSON.parse(event.properties);
+          parsedProperties = JSON.parse(event.properties);
         } catch (error) {
           logger.warn('Failed to parse event properties JSON during cleanup', { eventId: event.id, properties: event.properties });
           continue; // Skip this event if we can't parse its properties
         }
       } else {
-        properties = { ...(event.properties as any) };
+        parsedProperties = event.properties;
       }
-      
+
+      if (!parsedProperties || typeof parsedProperties !== 'object' || Array.isArray(parsedProperties)) {
+        logger.warn('Skipping property cleanup for event with non-object properties', { eventId: event.id, properties: parsedProperties });
+        continue;
+      }
+
+      const properties = { ...(parsedProperties as Record<string, any>) };
+
       // Remove the deleted property
       delete properties[existingProperty.name];
-      
+
       await prisma.event.update({
         where: { id: event.id },
         data: { properties: JSON.stringify(properties) }
