@@ -152,10 +152,19 @@ const Dashboard: React.FC = () => {
     setShowEditProductModal(true)
   }
 
-  const handleEditProductSubmit = async (_productId: string, _data: UpdateProductRequest) => {
+  const handleEditProductSubmit = async (productId: string, data: UpdateProductRequest) => {
     setEditProductLoading(true)
     try {
-      await loadProducts() // Refresh products list
+      // Update product via API
+      const response = await productsApi.update(productId, data)
+
+      // Update current product in context if it's the one being edited
+      if (currentProduct?.id === productId) {
+        setCurrentProduct(response.data)
+      }
+
+      // Refresh products list to ensure consistency
+      await loadProducts(true) // Force reload
     } catch (error) {
       console.error('Error updating product:', error)
       throw error
@@ -172,7 +181,7 @@ const Dashboard: React.FC = () => {
     setEditProductLoading(true)
     try {
       await productsApi.delete(product.id)
-      await loadProducts()
+      await loadProducts(true) // Force reload after delete
 
       if (currentProduct?.id === product.id) {
         setCurrentProduct(null)
