@@ -80,7 +80,8 @@ export const AppSidebar: React.FC = () => {
   }
 
   const handleSeeAllProducts = () => {
-    navigate('/')
+    setCurrentProduct(null) // Clear current product to allow ProductSelector to display
+    navigate('/products')
   }
 
   const handleAddNewProduct = () => {
