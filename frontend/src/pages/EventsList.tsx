@@ -3,12 +3,14 @@ import { useParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { DataTable, type Column } from '@/components/organisms/DataTable'
+import { Tooltip } from '@/components/atoms/Tooltip'
+import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { PropertiesDisplay } from '@/components/molecules/PropertiesDisplay'
-import { pagesApi } from '@/services/api'
+import { EditEventModal } from '@/components/organisms/EditEventModal'
+import { pagesApi, eventsApi } from '@/services/api'
 import { useProduct } from '@/hooks/useProduct'
 import { doesProductNameMatchSlug } from '@/utils/slug'
-import type { Page } from '@/types'
+import type { Page, Event, UpdateEventRequest } from '@/types'
 
 // Type for flattened event data
 interface EventData {
@@ -36,6 +38,10 @@ const EventsList: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState<string>('')
+  const [editEvent, setEditEvent] = useState<Event | null>(null)
+  const [editEventLoading, setEditEventLoading] = useState(false)
+  const [fetchingEditEvent, setFetchingEditEvent] = useState(false)
+  const [deleteEventLoading, setDeleteEventLoading] = useState(false)
 
   // Load data
   const loadData = useCallback(async () => {
@@ -162,6 +168,71 @@ const EventsList: React.FC = () => {
     }
   }
 
+  const handleOpenEditEvent = async (eventData: EventData) => {
+    if (fetchingEditEvent) return
+
+    setFetchingEditEvent(true)
+    try {
+      const response = await eventsApi.getById(eventData.id)
+      setEditEvent(response.data)
+    } catch (error) {
+      console.error('Error loading event details:', error)
+    } finally {
+      setFetchingEditEvent(false)
+    }
+  }
+
+  const handleEditEventSubmit = async (eventId: string, data: UpdateEventRequest) => {
+    setEditEventLoading(true)
+    try {
+      const response = await eventsApi.update(eventId, data)
+      const updatedEvent = response.data as Event & { updated_at?: string; created_at?: string; type?: string }
+
+      setEvents(prevEvents => prevEvents.map(eventItem => {
+        if (eventItem.id !== eventId) {
+          return eventItem
+        }
+
+        return {
+          ...eventItem,
+          name: updatedEvent.name,
+          type: updatedEvent.type || eventItem.type,
+          properties: updatedEvent.properties,
+          updated_at: updatedEvent.updated_at || (updatedEvent as any).updatedAt || eventItem.updated_at,
+          created_at: updatedEvent.created_at || (updatedEvent as any).createdAt || eventItem.created_at,
+        }
+      }))
+    } catch (error) {
+      console.error('Error updating event:', error)
+      throw error
+    } finally {
+      setEditEventLoading(false)
+    }
+  }
+
+  const handleDeleteEvent = async (eventToDelete: Event) => {
+    if (deleteEventLoading) return
+
+    setDeleteEventLoading(true)
+    try {
+      await eventsApi.delete(eventToDelete.id)
+
+      setEvents(prevEvents => prevEvents.filter(eventItem => eventItem.id !== eventToDelete.id))
+      setFilteredEvents(prevEvents => prevEvents.filter(eventItem => eventItem.id !== eventToDelete.id))
+      setEditEvent(null)
+    } catch (error) {
+      console.error('Error deleting event:', error)
+      throw error
+    } finally {
+      setDeleteEventLoading(false)
+    }
+  }
+
+  const handleEditModalClose = () => {
+    if (editEventLoading || deleteEventLoading) return
+    setEditEvent(null)
+  }
+
   // Table columns
   const columns: Column<EventData>[] = [
     {
@@ -206,6 +277,21 @@ const EventsList: React.FC = () => {
           return <span className="text-slate-400">-</span>
         }
       },
+    },
+  ]
+
+  const actions: Action<EventData>[] = [
+    {
+      label: 'Modifier',
+      onClick: handleOpenEditEvent,
+      iconOnly: true,
+      icon: (
+        <Tooltip content="Modifier">
+          <svg className="w-4 h-4 text-neutral-900 hover:text-neutral-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+        </Tooltip>
+      ),
     },
   ]
 
@@ -323,6 +409,7 @@ const EventsList: React.FC = () => {
           <DataTable
             data={filteredEvents}
             columns={columns}
+            actions={actions}
             loading={loading}
             emptyMessage="Aucun événement trouvé pour ce produit."
             expandable={{
@@ -335,6 +422,16 @@ const EventsList: React.FC = () => {
           />
         </CardContent>
       </Card>
+
+      <EditEventModal
+        isOpen={!!editEvent}
+        event={editEvent}
+        onClose={handleEditModalClose}
+        onSubmit={handleEditEventSubmit}
+        onDeleteRequest={handleDeleteEvent}
+        loading={editEventLoading || deleteEventLoading}
+        productId={currentProduct.id}
+      />
 
       {/* Stats Footer */}
       {filteredEvents.length > 0 && (
