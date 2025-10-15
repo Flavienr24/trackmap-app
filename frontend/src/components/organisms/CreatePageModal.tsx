@@ -67,7 +67,7 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
     try {
       await onSubmit({
         name: formData.name.trim(),
-        url: formData.url.trim()
+        url: formData.url?.trim() ?? ''
       })
 
       // Reset form and close modal

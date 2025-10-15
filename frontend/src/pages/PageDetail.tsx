@@ -123,7 +123,7 @@ const PageDetail: React.FC = () => {
     try {
       const response = await eventsApi.update(eventId, data)
       console.log('Event updated:', response.data)
-      if (page?.id) {
+      if (response.data && page?.id) {
         await loadEvents(page.id) // Reload the list
       }
     } catch (error) {
@@ -180,7 +180,7 @@ const PageDetail: React.FC = () => {
     try {
       const response = await eventsApi.duplicate(event.id)
 
-      if (response.success && page?.id) {
+      if (response.data && page?.id) {
         // Reload events to show the duplicated event
         await loadEvents(page.id)
       }
