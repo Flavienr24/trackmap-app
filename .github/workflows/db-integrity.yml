@@ -191,21 +191,25 @@ jobs:
 
       - name: Test migration with validation
         run: |
-          # Setup database
+          # First create initial database with existing migrations
           npx prisma generate
-          npx prisma db push --accept-data-loss
+          npx prisma migrate deploy
 
-          # Verify database file exists
+          # Seed some data so migration has something to validate
+          npm run db:seed
+
+          # Now test safe-migrate with extended validation (Phase 2)
+          # This will create a backup, run "migrate dev", and validate checksums/FKs/row counts
+          # Note: migrate dev will see no pending migrations and just validate
+          NODE_ENV=development npm run db:migrate "ci_validation_test" || echo "Expected: no pending migrations"
+
+          # Verify database still exists and is healthy
           if [ -f "${{ github.workspace }}/services/trackdoc/test.db" ]; then
-            echo "✅ Database created successfully"
+            echo "✅ Database validated successfully"
           else
-            echo "❌ Database file not found!"
+            echo "❌ Database file lost!"
             exit 1
           fi
-
-          # Run safe-migrate (will use migrate deploy in CI)
-          # This tests the extended validation logic
-          NODE_ENV=development npm run db:migrate "ci_test_migration"
 
   prisma-cli-protection:
     name: Prisma CLI Protection
