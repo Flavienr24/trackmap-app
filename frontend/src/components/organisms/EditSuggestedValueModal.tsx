@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { MergeConfirmationModal } from '@/components/organisms/MergeConfirmationModal'
 import { suggestedValuesApi } from '@/services/api'
 import type { SuggestedValue, UpdateSuggestedValueRequest, SuggestedValueConflictData, SuggestedValueImpactData } from '@/types'
+import { isContextualValue } from '@/utils/contextualValue'
 
 interface EditSuggestedValueModalProps {
   isOpen: boolean
@@ -65,6 +66,11 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
 
     if (!formData.value?.trim()) {
       newErrors.value = 'La valeur est requise'
+    }
+
+    // Validate that contextual values actually contain a variable pattern
+    if (formData.isContextual && !isContextualValue(formData.value || '')) {
+      newErrors.value = 'Une valeur contextuelle doit contenir une variable (ex: $page-name, category:$name)'
     }
 
     setErrors(newErrors)
@@ -184,12 +190,12 @@ const EditSuggestedValueModal: React.FC<EditSuggestedValueModalProps> = ({
   }
 
   const handleValueChange = (value: string) => {
-    // If not manually selected, auto-detect based on $ anywhere in the string
+    // If not manually selected, auto-detect based on variable pattern
     if (!manualTypeSelection) {
-      const isContextual = value.includes('$')
+      const detected = isContextualValue(value)
       setFormData({
         value,
-        isContextual: isContextual
+        isContextual: detected
       })
     } else {
       // If manual selection is active, keep the user's choice

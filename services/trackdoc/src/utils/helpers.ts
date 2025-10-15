@@ -121,3 +121,25 @@ export const safeDbOperation = async <T>(
   // This should never happen, but TypeScript requires it
   throw new Error('Database operation failed with unknown error');
 };
+
+/**
+ * Detects if a value is contextual/dynamic based on variable patterns
+ * A value is contextual if it contains a variable pattern like $variable_name
+ * This prevents false positives from legitimate $ symbols (currency, prices, etc.)
+ *
+ * @param value - String value to check
+ * @returns true if the value contains a variable pattern ($letter or $_)
+ *
+ * @example
+ * isContextualValue('$page-name') // true - starts with $letter
+ * isContextualValue('category:$name') // true - contains $letter
+ * isContextualValue('user_$id') // true - contains $_letter
+ * isContextualValue('Promo $19') // false - $ followed by digit
+ * isContextualValue('Price: $0') // false - $ followed by digit
+ * isContextualValue('homepage') // false - no $ at all
+ */
+export const isContextualValue = (value: string): boolean => {
+  // Regex pattern: $ followed by a letter or underscore, then any alphanumeric/_/- characters
+  // This matches: $page-name, $user_id, $_temp, but NOT $19, $0, $123
+  return /\$[a-zA-Z_]/.test(value);
+};

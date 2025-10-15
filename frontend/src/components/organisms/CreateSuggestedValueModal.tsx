@@ -4,6 +4,7 @@ import { FormField } from '@/components/molecules/FormField'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import type { CreateSuggestedValueRequest } from '@/types'
+import { isContextualValue } from '@/utils/contextualValue'
 
 interface CreateSuggestedValueModalProps {
   isOpen: boolean
@@ -22,7 +23,7 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<CreateSuggestedValueRequest>({
     value: initialValue,
-    isContextual: initialValue.includes('$'),
+    isContextual: isContextualValue(initialValue),
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [manualTypeSelection, setManualTypeSelection] = useState<boolean>(false)
@@ -32,7 +33,7 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
     if (initialValue) {
       setFormData({
         value: initialValue,
-        isContextual: initialValue.includes('$'),
+        isContextual: isContextualValue(initialValue),
       })
       setManualTypeSelection(false) // Reset manual selection flag
     }
@@ -51,6 +52,11 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
 
     if (!formData.value.trim()) {
       newErrors.value = 'La valeur est requise'
+    }
+
+    // Validate that contextual values actually contain a variable pattern
+    if (formData.isContextual && !isContextualValue(formData.value)) {
+      newErrors.value = 'Une valeur contextuelle doit contenir une variable (ex: $page-name, category:$name)'
     }
 
     setErrors(newErrors)
@@ -77,12 +83,12 @@ const CreateSuggestedValueModal: React.FC<CreateSuggestedValueModalProps> = ({
   }
 
   const handleValueChange = (value: string) => {
-    // If not manually selected, auto-detect based on $ anywhere in the string
+    // If not manually selected, auto-detect based on variable pattern
     if (!manualTypeSelection) {
-      const isContextual = value.includes('$')
+      const detected = isContextualValue(value)
       setFormData({
         value,
-        isContextual: isContextual
+        isContextual: detected
       })
     } else {
       // If manual selection is active, keep the user's choice
