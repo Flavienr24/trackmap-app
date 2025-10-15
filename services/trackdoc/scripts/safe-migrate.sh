@@ -65,7 +65,7 @@ npx prisma generate
 echo "4️⃣ Verifying data integrity..."
 
 # Detect database type from DATABASE_URL (handle missing .env file)
-DB_URL="${DATABASE_URL:-$(grep DATABASE_URL .env 2>/dev/null | cut -d '=' -f2 | tr -d '"' || echo '')}"
+DB_URL="${DATABASE_URL:-$(grep DATABASE_URL .env 2>/dev/null | cut -d '=' -f2- | tr -d '"' || echo '')}"
 
 if [ -z "$DB_URL" ]; then
     echo "⚠️  WARNING: DATABASE_URL not found in environment or .env file"
