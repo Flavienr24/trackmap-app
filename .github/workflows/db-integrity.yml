@@ -195,13 +195,29 @@ jobs:
           npx prisma generate
           npx prisma migrate deploy
 
-          # Seed some data so migration has something to validate
-          npm run db:seed
+          # Test safe-migrate with extended validation (Phase 2)
+          # This will create a backup, run validation checks (checksums, FKs, row counts)
+          # The backup script will verify integrity even on empty database
+          echo "Testing safe-migrate validation (no pending migrations expected)..."
+          if NODE_ENV=development npm run db:migrate "ci_validation_test" 2>&1 | tee migrate_output.txt; then
+            echo "✅ safe-migrate completed"
+          else
+            # Check if failure was due to no pending migrations (expected)
+            if grep -q "Already in sync\\|no pending migrations\\|Database is already up to date" migrate_output.txt; then
+              echo "✅ Expected: Database already up to date"
+            else
+              echo "❌ Unexpected migration failure"
+              cat migrate_output.txt
+              exit 1
+            fi
+          fi
 
-          # Now test safe-migrate with extended validation (Phase 2)
-          # This will create a backup, run "migrate dev", and validate checksums/FKs/row counts
-          # Note: migrate dev will see no pending migrations and just validate
-          NODE_ENV=development npm run db:migrate "ci_validation_test" || echo "Expected: no pending migrations"
+          # Verify extended validation ran (Phase 2 feature)
+          if grep -q "Extended validation\\|DB Checksum\\|Foreign keys" migrate_output.txt; then
+            echo "✅ Phase 2 extended validation executed"
+          else
+            echo "⚠️  Extended validation may not have run"
+          fi
 
           # Verify database still exists and is healthy
           if [ -f "${{ github.workspace }}/services/trackdoc/test.db" ]; then
