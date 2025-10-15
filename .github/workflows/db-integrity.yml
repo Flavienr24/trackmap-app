@@ -37,6 +37,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y sqlite3
+
       - name: Setup environment
         run: |
           echo 'DATABASE_URL="file:./prisma/test.db"' > .env
@@ -46,6 +49,8 @@ jobs:
         run: |
           npx prisma generate
           npx prisma db push --accept-data-loss
+          # Verify database was created
+          ls -la prisma/
 
       - name: Seed test data
         run: npm run db:seed
@@ -128,6 +133,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y sqlite3
+
       - name: Setup environment
         run: |
           echo 'DATABASE_URL="file:./prisma/test.db"' > .env
@@ -172,6 +180,8 @@ jobs:
           # Setup database
           npx prisma generate
           npx prisma db push --accept-data-loss
+          # Verify database was created
+          ls -la prisma/
 
           # Run safe-migrate (will use migrate deploy in CI)
           # This tests the extended validation logic
