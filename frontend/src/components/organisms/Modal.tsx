@@ -13,8 +13,9 @@ interface ModalProps {
   title: string
   children: React.ReactNode
   footer?: React.ReactNode
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'custom'
   fixedHeight?: boolean
+  contentClassName?: string
 }
 
 const Modal: React.FC<ModalProps> = ({ 
@@ -24,20 +25,22 @@ const Modal: React.FC<ModalProps> = ({
   children, 
   footer,
   size = 'md',
-  fixedHeight = false
+  fixedHeight = false,
+  contentClassName,
 }) => {
   const sizeClasses = {
     sm: 'max-w-sm',
     md: 'max-w-md', 
     lg: 'max-w-lg',
     xl: 'max-w-xl',
-    '2xl': 'max-w-2xl'
+    '2xl': 'max-w-2xl',
+    custom: 'max-w-none'
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
       <DialogContent 
-        className={`${sizeClasses[size]} ${fixedHeight ? 'h-[80vh] flex flex-col' : ''}`}
+        className={`${sizeClasses[size]} ${fixedHeight ? 'h-[80vh] flex flex-col' : ''} ${contentClassName ?? ''}`}
         onPointerDownOutside={onClose}
       >
         <DialogHeader className="flex-shrink-0">

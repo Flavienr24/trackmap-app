@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { BackLink } from '@/components/atoms/BackLink'
@@ -7,6 +7,7 @@ import { CreatePageModal } from '@/components/organisms/CreatePageModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { EditProductModal } from '@/components/organisms/EditProductModal'
 import { productsApi, pagesApi } from '@/services/api'
+import { useProduct } from '@/hooks/useProduct'
 import { doesProductNameMatchSlug } from '@/utils/slug'
 import type { Product, Page, CreatePageRequest, UpdatePageRequest, UpdateProductRequest } from '@/types'
 
@@ -18,6 +19,7 @@ const ProductDetail: React.FC = () => {
   const { productName } = useParams<{ productName: string }>()
   const navigate = useNavigate()
   
+  const { products, loadProducts, isLoading: productsLoading } = useProduct()
   const [product, setProduct] = useState<Product | null>(null)
   const [pages, setPages] = useState<Page[]>([])
   const [loading, setLoading] = useState(true)
@@ -27,51 +29,64 @@ const ProductDetail: React.FC = () => {
   const [editPageLoading, setEditPageLoading] = useState(false)
   const [showEditProductModal, setShowEditProductModal] = useState(false)
   const [editProductLoading, setEditProductLoading] = useState(false)
+  const isMountedRef = useRef(true)
 
-  // Find product by matching slug against product name
-  const findProductBySlug = useCallback(async (productSlug: string) => {
-    try {
-      // Get all products and find the one that matches the slug
-      const allProductsResponse = await productsApi.getAll()
-      const targetProduct = allProductsResponse.data.find(product => 
-        doesProductNameMatchSlug(product.name, productSlug)
-      )
-      return targetProduct
-    } catch (error) {
-      console.error('Error finding product by slug:', error)
-      return null
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
     }
   }, [])
 
-  const loadProduct = useCallback(async (productSlug: string) => {
-    try {
-      const product = await findProductBySlug(productSlug)
-      if (!product) {
-        console.error('Product not found for slug:', productSlug)
-        navigate('/products', { replace: true })
-        return
-      }
-      setProduct(product)
-      // Extract pages with events from product data
-      setPages(product.pages || [])
-    } catch (error) {
-      console.error('Error loading product:', error)
+  // Ensure products are loaded (no-op if already available)
+  useEffect(() => {
+    if (!products.length) {
+      loadProducts()
+    }
+  }, [products.length, loadProducts])
+
+  // Resolve product based on slug using cached products
+  useEffect(() => {
+    if (!productName) return
+
+    const target = products.find(p => doesProductNameMatchSlug(p.name, productName)) || null
+
+    if (target && (!product || product.id !== target.id)) {
+      setProduct(target)
+    } else if (!productsLoading && products.length > 0 && !target) {
+      console.error('Product not found for slug:', productName)
       navigate('/products', { replace: true })
     }
-  }, [navigate, findProductBySlug])
+  }, [products, productsLoading, productName, navigate, product])
 
-  const loadPages = useCallback(async (productSlug: string) => {
-    try {
-      const product = await findProductBySlug(productSlug)
-      if (!product) return
-      const response = await pagesApi.getByProduct(product.id)
-      setPages(response.data)
-    } catch (error) {
-      console.error('Error loading pages:', error)
+  const reloadProductData = useCallback(async (productId: string, options: { showSpinner?: boolean } = {}) => {
+    const { showSpinner = true } = options
+
+    if (!isMountedRef.current) return
+
+    if (showSpinner) {
+      setLoading(true)
     }
-  }, [findProductBySlug])
 
+    try {
+      const [productResponse, pagesResponse] = await Promise.all([
+        productsApi.getById(productId),
+        pagesApi.getByProduct(productId)
+      ])
 
+      if (!isMountedRef.current) return
+
+      setProduct(productResponse.data)
+      setPages(pagesResponse.data)
+    } catch (error) {
+      if (isMountedRef.current) {
+        console.error('Error loading product details:', error)
+      }
+    } finally {
+      if (isMountedRef.current && showSpinner) {
+        setLoading(false)
+      }
+    }
+  }, [])
 
   // Calculate unique properties used across all events
   const getUsedPropertiesCount = useCallback(() => {
@@ -97,35 +112,27 @@ const ProductDetail: React.FC = () => {
     return usedProperties.size
   }, [pages])
   
-  const loadData = useCallback(async (productSlug: string) => {
-    setLoading(true)
-    try {
-      await Promise.all([
-        loadProduct(productSlug),
-        loadPages(productSlug)
-      ])
-    } finally {
-      setLoading(false)
-    }
-  }, [loadProduct, loadPages])
+  const currentProductId = product?.id
 
   useEffect(() => {
-    if (productName) {
-      loadData(productName)
+    if (!currentProductId) {
+      return
     }
-  }, [productName, loadData])
 
-  // Reload data when component gains focus to ensure fresh event counts
+    reloadProductData(currentProductId)
+  }, [currentProductId, reloadProductData])
+
   useEffect(() => {
+    if (!currentProductId) {
+      return
+    }
+
     const handleFocusOrVisibility = () => {
-      if (!document.hidden && productName) {
-        // Reload product data to get fresh event counts and pages with events
-        loadProduct(productName)
-        loadPages(productName)
+      if (!document.hidden) {
+        reloadProductData(currentProductId, { showSpinner: false })
       }
     }
 
-    // Listen to focus and visibility changes
     window.addEventListener('focus', handleFocusOrVisibility)
     document.addEventListener('visibilitychange', handleFocusOrVisibility)
 
@@ -133,7 +140,7 @@ const ProductDetail: React.FC = () => {
       window.removeEventListener('focus', handleFocusOrVisibility)
       document.removeEventListener('visibilitychange', handleFocusOrVisibility)
     }
-  }, [productName, loadProduct, loadPages])
+  }, [currentProductId, reloadProductData])
 
   const handleCreatePage = () => {
     setShowCreatePageModal(true)
@@ -164,12 +171,12 @@ const ProductDetail: React.FC = () => {
   }
 
   const handleEditPageSubmit = async (pageId: string, data: UpdatePageRequest) => {
-    if (!productName) return
+    if (!product) return
     setEditPageLoading(true)
     try {
       const response = await pagesApi.update(pageId, data)
       console.log('Page updated:', response.data)
-      await loadPages(productName) // Reload the list
+      await reloadProductData(product.id, { showSpinner: false })
     } catch (error) {
       console.error('Error updating page:', error)
       throw error
@@ -179,10 +186,10 @@ const ProductDetail: React.FC = () => {
   }
 
   const handleDeletePage = async (page: Page) => {
-    if (!productName) return
+    if (!product) return
     try {
       await pagesApi.delete(page.id)
-      await loadPages(productName)
+      await reloadProductData(product.id, { showSpinner: false })
     } catch (error) {
       console.error('Error deleting page:', error)
     }
@@ -202,9 +209,10 @@ const ProductDetail: React.FC = () => {
     try {
       const response = await productsApi.update(productId, data)
       console.log('Product updated:', response.data)
-      if (productName) {
-        await loadProduct(productName) // Reload the product data
-      }
+      await Promise.all([
+        reloadProductData(productId, { showSpinner: false }),
+        loadProducts(true)
+      ])
     } catch (error) {
       console.error('Error updating product:', error)
       throw error
@@ -224,6 +232,7 @@ const ProductDetail: React.FC = () => {
       setShowEditProductModal(false)
       setProduct(null)
       setPages([])
+       await loadProducts(true)
       navigate('/products')
     } catch (error) {
       console.error('Error deleting product:', error)

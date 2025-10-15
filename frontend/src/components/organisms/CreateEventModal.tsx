@@ -231,7 +231,9 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
       onClose={handleClose}
       title="Ajouter un nouvel event"
       footer={footer}
-      size="lg"
+      size="custom"
+      fixedHeight
+      contentClassName="w-[750px] max-w-[95vw]"
     >
       <Tabs value={activeTab} onValueChange={(value) => handleTabChange(value as 'manual' | 'bulk')}>
         <TabsList className="grid w-full grid-cols-2 mb-6">

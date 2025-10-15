@@ -7,7 +7,8 @@ import { BackLink } from '@/components/atoms/BackLink'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreatePropertyModal } from '@/components/organisms/CreatePropertyModal'
 import { EditPropertyModal } from '@/components/organisms/EditPropertyModal'
-import { propertiesApi, productsApi } from '@/services/api'
+import { propertiesApi } from '@/services/api'
+import { useProduct } from '@/hooks/useProduct'
 import { doesProductNameMatchSlug } from '@/utils/slug'
 import type { Property, Product, CreatePropertyRequest, UpdatePropertyRequest } from '@/types'
 
@@ -19,6 +20,7 @@ import type { Property, Product, CreatePropertyRequest, UpdatePropertyRequest } 
 const PropertiesList: React.FC = () => {
   const { productName } = useParams<{ productName: string }>()
   const navigate = useNavigate()
+  const { products, loadProducts, isLoading: productsLoading } = useProduct()
   const [properties, setProperties] = useState<Property[]>([])
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
@@ -33,37 +35,6 @@ const PropertiesList: React.FC = () => {
     return <Navigate to="/products" replace />
   }
 
-  const findProductBySlug = useCallback(async (productSlug: string) => {
-    try {
-      // Get all products and find the one that matches the slug
-      const allProductsResponse = await productsApi.getAll()
-      const targetProduct = allProductsResponse.data.find(product => 
-        doesProductNameMatchSlug(product.name, productSlug)
-      )
-      return targetProduct
-    } catch (error) {
-      console.error('Error finding product by slug:', error)
-      return null
-    }
-  }, [])
-
-  const loadProduct = useCallback(async () => {
-    try {
-      const product = await findProductBySlug(productName!)
-      if (!product) {
-        console.error('Product not found for slug:', productName)
-        navigate('/products', { replace: true })
-        return null
-      }
-      setProduct(product)
-      return product
-    } catch (error) {
-      console.error('Error loading product:', error)
-      navigate('/products', { replace: true })
-      return null
-    }
-  }, [productName, navigate, findProductBySlug])
-
   const loadProperties = useCallback(async (productId: string) => {
     try {
       // Load properties from library
@@ -74,23 +45,52 @@ const PropertiesList: React.FC = () => {
     }
   }, [])
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    try {
-      // Load product first, then properties (which depends on product data)
-      const productData = await loadProduct()
-      if (productData) {
-        await loadProperties(productData.id)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [loadProduct, loadProperties])
-
-  // Load data on component mount
+  // Ensure products are loaded (will no-op if already loaded)
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    if (!products.length) {
+      loadProducts()
+    }
+  }, [products.length, loadProducts])
+
+  // Resolve product from slug using already loaded products
+  useEffect(() => {
+    if (!productName) return
+
+    const target = products.find(p => doesProductNameMatchSlug(p.name, productName)) || null
+
+    if (target) {
+      setProduct(target)
+    } else if (!productsLoading && products.length > 0) {
+      console.error('Product not found for slug:', productName)
+      navigate('/products', { replace: true })
+    }
+  }, [products, productsLoading, productName, navigate])
+
+  // Load properties once the product has been resolved
+  useEffect(() => {
+    let isActive = true
+
+    if (!product) {
+      return
+    }
+
+    const fetchProperties = async () => {
+      setLoading(true)
+      try {
+        await loadProperties(product.id)
+      } finally {
+        if (isActive) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchProperties()
+
+    return () => {
+      isActive = false
+    }
+  }, [product, loadProperties])
 
   const handleCreateProperty = () => {
     setShowCreateModal(true)
