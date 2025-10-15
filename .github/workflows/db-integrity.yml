@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DATABASE_URL: "file:./test.db"
+      DATABASE_URL: "file:${{ github.workspace }}/services/trackdoc/test.db"
       NODE_ENV: test
 
     defaults:
@@ -46,7 +46,7 @@ jobs:
 
       - name: Setup environment
         run: |
-          echo 'DATABASE_URL="file:./test.db"' > .env
+          echo "DATABASE_URL=\"file:${{ github.workspace }}/services/trackdoc/test.db\"" > .env
           echo 'NODE_ENV=test' >> .env
 
       - name: Setup test database
@@ -54,11 +54,11 @@ jobs:
           npx prisma generate
           npx prisma db push --accept-data-loss
           # Verify database was created
-          ls -la .
-          if [ -f "test.db" ]; then
-            echo "✅ Database created: test.db"
+          if [ -f "${{ github.workspace }}/services/trackdoc/test.db" ]; then
+            echo "✅ Database created successfully"
+            ls -lh "${{ github.workspace }}/services/trackdoc/test.db"
           else
-            echo "❌ Database not found!"
+            echo "❌ Database file not found!"
             exit 1
           fi
 
@@ -67,14 +67,6 @@ jobs:
 
       - name: Test backup creation
         run: |
-          # Verify database file exists before backup
-          if [ ! -f "test.db" ]; then
-            echo "❌ Database file not found before backup!"
-            ls -la .
-            exit 1
-          fi
-          echo "✅ Database file exists: $(ls -lh test.db)"
-
           npm run db:backup
           # Verify backup file exists and is not empty
           LATEST_BACKUP=$(ls -t prisma/backups/*.backup.* | head -1)
@@ -134,7 +126,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DATABASE_URL: "file:./test.db"
+      DATABASE_URL: "file:${{ github.workspace }}/services/trackdoc/test.db"
       NODE_ENV: test
 
     defaults:
@@ -160,7 +152,7 @@ jobs:
 
       - name: Setup environment
         run: |
-          echo 'DATABASE_URL="file:./test.db"' > .env
+          echo "DATABASE_URL=\"file:${{ github.workspace }}/services/trackdoc/test.db\"" > .env
           echo 'NODE_ENV=test' >> .env
 
       - name: Verify Prisma wrapper blocks dangerous commands
@@ -204,12 +196,12 @@ jobs:
           npx prisma db push --accept-data-loss
 
           # Verify database file exists
-          if [ ! -f "test.db" ]; then
-            echo "❌ Database file not found after db push!"
-            ls -la .
+          if [ -f "${{ github.workspace }}/services/trackdoc/test.db" ]; then
+            echo "✅ Database created successfully"
+          else
+            echo "❌ Database file not found!"
             exit 1
           fi
-          echo "✅ Database file exists: $(ls -lh test.db)"
 
           # Run safe-migrate (will use migrate deploy in CI)
           # This tests the extended validation logic
