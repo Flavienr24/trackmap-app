@@ -24,26 +24,100 @@ interface Divergence {
 
 async function detectDivergences() {
   console.log('🔍 Détection des divergences potentielles d\'events...\n');
-  console.log('=' . repeat(60) + '\n');
+  console.log('='.repeat(60) + '\n');
 
   try {
-    // Detect events with same name but different property structures
-    // Using raw SQL for complex aggregation
-    const divergences = await prisma.$queryRaw<Divergence[]>`
-      SELECT
-        p.name as product_name,
-        e.name as event_name,
-        COUNT(DISTINCT e.properties) as unique_property_sets,
-        GROUP_CONCAT(pg.name) as pages,
-        MIN(e.created_at) as first_occurrence,
-        MAX(e.updated_at) as last_update
-      FROM events e
-      JOIN pages pg ON e.page_id = pg.id
-      JOIN products p ON pg.product_id = p.id
-      GROUP BY p.id, e.name
-      HAVING unique_property_sets > 1
-      ORDER BY unique_property_sets DESC, p.name, e.name
-    `;
+    // Fetch all events with their pages and products using Prisma
+    // Approach: Pull data via Prisma, consolidate in TypeScript
+    // Benefits: Compatible SQLite/PostgreSQL, maintainable, readable
+    // Note: Explicit select to avoid fetching eventDefinitionId (not yet in DB)
+    const events = await prisma.event.findMany({
+      select: {
+        id: true,
+        name: true,
+        properties: true,
+        createdAt: true,
+        updatedAt: true,
+        page: {
+          select: {
+            id: true,
+            name: true,
+            productId: true,
+            product: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Group events by (productId, eventName)
+    const eventGroups = new Map<string, {
+      productName: string;
+      eventName: string;
+      propertySets: Set<string>;
+      pages: string[];
+      firstOccurrence: Date;
+      lastUpdate: Date;
+    }>();
+
+    for (const event of events) {
+      const key = `${event.page.productId}::${event.name}`;
+
+      if (!eventGroups.has(key)) {
+        eventGroups.set(key, {
+          productName: event.page.product.name,
+          eventName: event.name,
+          propertySets: new Set(),
+          pages: [],
+          firstOccurrence: event.createdAt,
+          lastUpdate: event.updatedAt
+        });
+      }
+
+      const group = eventGroups.get(key)!;
+
+      // Track unique property structures
+      group.propertySets.add(event.properties);
+
+      // Track pages
+      if (!group.pages.includes(event.page.name)) {
+        group.pages.push(event.page.name);
+      }
+
+      // Track date ranges
+      if (event.createdAt < group.firstOccurrence) {
+        group.firstOccurrence = event.createdAt;
+      }
+      if (event.updatedAt > group.lastUpdate) {
+        group.lastUpdate = event.updatedAt;
+      }
+    }
+
+    // Filter groups with divergences (> 1 unique property set)
+    const divergences = Array.from(eventGroups.values())
+      .filter(group => group.propertySets.size > 1)
+      .map(group => ({
+        product_name: group.productName,
+        event_name: group.eventName,
+        unique_property_sets: group.propertySets.size,
+        pages: group.pages.join(','),
+        first_occurrence: group.firstOccurrence.getTime().toString(),
+        last_update: group.lastUpdate.getTime().toString()
+      }))
+      .sort((a, b) => {
+        // Sort by unique_property_sets DESC, then product_name, then event_name
+        if (b.unique_property_sets !== a.unique_property_sets) {
+          return b.unique_property_sets - a.unique_property_sets;
+        }
+        if (a.product_name !== b.product_name) {
+          return a.product_name.localeCompare(b.product_name);
+        }
+        return a.event_name.localeCompare(b.event_name);
+      });
 
     if (divergences.length === 0) {
       console.log('✅ Aucune divergence détectée.');
