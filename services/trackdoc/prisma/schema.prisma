@@ -23,9 +23,10 @@ model Product {
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   // Related entities
-  pages           Page[]           // Product pages
-  properties      Property[]       // Shared property definitions
-  suggestedValues SuggestedValue[] // Shared suggested values
+  pages            Page[]            // Product pages
+  properties       Property[]        // Shared property definitions
+  suggestedValues  SuggestedValue[]  // Shared suggested values
+  eventDefinitions EventDefinition[] // Canonical event definitions
 
   @@map("products")
 }
@@ -51,25 +52,68 @@ model Page {
   @@map("pages")
 }
 
-// Event model - represents GA4 tracking events on pages
-// Tracks implementation status and contains variable definitions
-model Event {
-  id        String      @id @default(cuid())
-  pageId    String      @map("page_id") // Foreign key to Page
-  name      String      // Event name (e.g., "purchase", "page_view")
-  status    String @default("TO_IMPLEMENT") // Implementation status
-  testDate  DateTime?   @map("test_date") // Date when event was tested
-  properties String     // Event properties as JSON string
-  screenshots String?   // Screenshot file paths as JSON array - can be null, empty array, or contain multiple paths
-  createdAt DateTime    @default(now()) @map("created_at")
-  updatedAt DateTime    @updatedAt @map("updated_at")
+// EventDefinition model - canonical definition of an event at Product level
+// Stores the semantic meaning of an event (name, description, interaction type)
+model EventDefinition {
+  id                  String    @id @default(cuid())
+  productId           String    @map("product_id") // Foreign key to Product
+  name                String    // Event name (e.g., "button_click")
+  description         String    // Description of what the event tracks
+  userInteractionType String    @map("user_interaction_type") // Type: "click", "page_load", etc.
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   // Relationships
-  page      Page        @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  comments  Comment[]   // Comments about this event
-  history   EventHistory[] // Change history for this event
+  product             Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  events              Event[]   // Event instances using this definition
+  history             EventDefinitionHistory[] // Change history
+
+  @@unique([productId, name]) // One unique event name per product
+  @@index([productId])
+  @@map("event_definitions")
+}
+
+// EventDefinitionHistory model - tracks changes to event definitions
+// Particularly important for tracking event renaming
+model EventDefinitionHistory {
+  id                  String    @id @default(cuid())
+  eventDefinitionId   String    @map("event_definition_id") // Foreign key to EventDefinition
+  field               String    // Field name that was changed
+  oldValue            String?   @map("old_value") // Previous value
+  newValue            String?   @map("new_value") // New value
+  author              String?   // Optional author of the change
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  // Relationships
+  eventDefinition     EventDefinition @relation(fields: [eventDefinitionId], references: [id], onDelete: Cascade)
+
+  @@index([eventDefinitionId])
+  @@map("event_definition_history")
+}
+
+// Event model - represents GA4 tracking events on pages
+// Now represents an "instance" of an EventDefinition on a specific page
+// Tracks implementation status and contains page-specific properties
+model Event {
+  id                String      @id @default(cuid())
+  pageId            String      @map("page_id") // Foreign key to Page
+  eventDefinitionId String?     @map("event_definition_id") // Foreign key to EventDefinition (nullable in Pass 1)
+  name              String      // Event name (shadow column, kept for backward compatibility)
+  status            String      @default("TO_IMPLEMENT") // Implementation status
+  testDate          DateTime?   @map("test_date") // Date when event was tested
+  properties        String      // Event properties as JSON string (page-specific)
+  screenshots       String?     // Screenshot file paths as JSON array
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  // Relationships
+  page              Page        @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  eventDefinition   EventDefinition? @relation(fields: [eventDefinitionId], references: [id]) // New relationship
+  comments          Comment[]   // Comments about this event
+  history           EventHistory[] // Change history for this event
 
   @@index([pageId])
+  @@index([eventDefinitionId]) // New index
   @@index([status])
   @@index([updatedAt])
   @@map("events")
