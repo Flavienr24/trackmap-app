@@ -16,6 +16,7 @@ import eventsRoutes from './routes/events';
 import propertiesRoutes from './routes/properties';
 import suggestedValuesRoutes from './routes/suggestedValues';
 import commentsRoutes from './routes/comments';
+import eventDefinitionsRoutes from './routes/eventDefinitions';
 
 // Load environment variables from .env file
 dotenv.config();

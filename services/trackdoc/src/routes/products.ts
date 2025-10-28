@@ -23,6 +23,10 @@ import {
   getSuggestedValuesByProduct,
   createSuggestedValue
 } from '../controllers/suggestedValuesController';
+import {
+  getEventDefinitionsByProduct,
+  createEventDefinition
+} from '../controllers/eventDefinitionsController';
 
 const router = Router();
 
@@ -68,6 +72,13 @@ router.get('/:id/suggested-values', getSuggestedValuesByProduct);
 
 // POST /api/products/:id/suggested-values - Create a new suggested value for a product
 router.post('/:id/suggested-values', createSuggestedValue);
+
+// EventDefinition routes nested under products
+// GET /api/products/:productId/event-definitions - Get all event definitions for a product
+router.get('/:productId/event-definitions', getEventDefinitionsByProduct);
+
+// POST /api/products/:productId/event-definitions - Create a new event definition for a product
+router.post('/:productId/event-definitions', createEventDefinition);
 
 // Import Context route - consolidated endpoint for bulk event import
 // GET /api/products/:id/import-context - Get aggregated data for event parsing
