@@ -361,7 +361,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
           hint={pagesLoading ? 'Chargement des pages…' : 'Choisissez la page sur laquelle implémenter cet événement'}
         >
           <Select
-            disabled={pagesLoading || loading}
+            disabled={pagesLoading || loading || availablePages.length === 0}
             value={selectedPageId}
             onValueChange={(value) => {
               setSelectedPageId(value)
@@ -373,18 +373,20 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
             }}
           >
             <SelectTrigger>
-              <SelectValue placeholder={pagesLoading ? 'Chargement…' : 'Sélectionner une page'} />
+              <SelectValue placeholder={pagesLoading ? 'Chargement…' : availablePages.length === 0 ? 'Aucune page disponible' : 'Sélectionner une page'} />
             </SelectTrigger>
             <SelectContent>
               {availablePages.length === 0 ? (
-                <SelectItem value="" disabled>
+                <div className="px-2 py-6 text-center text-sm text-muted-foreground">
                   Aucune page disponible
-                </SelectItem>
-              ) : availablePages.map(page => (
-                <SelectItem key={page.id} value={page.id}>
-                  {page.name}
-                </SelectItem>
-              ))}
+                </div>
+              ) : (
+                availablePages.map(page => (
+                  <SelectItem key={page.id} value={page.id}>
+                    {page.name}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </FormField>
