@@ -74,11 +74,11 @@ export const getAllEventDefinitions = async (req: Request, res: Response, next: 
 
 /**
  * Get EventDefinitions for a specific product
- * GET /api/products/:productId/event-definitions?include_stats=true
+ * GET /api/products/:id/event-definitions?include_stats=true
  */
 export const getEventDefinitionsByProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { productId } = req.params;
+    const { id: productId } = req.params;
     const { include_stats } = req.query;
 
     logger.debug('Fetching event definitions for product', {
@@ -153,7 +153,7 @@ export const getEventDefinitionsByProduct = async (req: Request, res: Response, 
   } catch (error) {
     logger.error('Error fetching product event definitions', {
       error,
-      productId: req.params.productId,
+      productId: req.params.id,
       requestId: req.ip
     });
     next(error);
@@ -223,11 +223,11 @@ export const getEventDefinitionById = async (req: Request, res: Response, next: 
 
 /**
  * Create a new EventDefinition for a product
- * POST /api/products/:productId/event-definitions
+ * POST /api/products/:id/event-definitions
  */
 export const createEventDefinition = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { productId } = req.params;
+    const { id: productId } = req.params;
     const { name, description, userInteractionType } = req.body;
 
     // Validate required fields

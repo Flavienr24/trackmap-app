@@ -178,7 +178,7 @@ function DataTable<T extends Record<string, any>>({
       <div className={cn('overflow-visible rounded-lg border border-neutral-200')}>
         <div>
         <table className="min-w-full divide-y divide-neutral-200">
-          <thead className="bg-neutral-50">
+          <thead>
             <tr>
               {showExpandIcons && (
                 <th className="px-6 py-3 w-8"></th>

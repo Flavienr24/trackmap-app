@@ -242,7 +242,7 @@ const EventsList: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-3xl font-bold">
-            Glossaire des événements — {currentProduct.name}
+            Events list
           </CardTitle>
           <CardDescription>
             Vision centralisée des événements suivis, leur description canonique et les interactions couvertes.

@@ -36,15 +36,6 @@ router.get('/', getAllProducts);
 // POST /api/products - Create a new product with validation
 router.post('/', createProduct);
 
-// GET /api/products/:id - Retrieve a specific product by ID
-router.get('/:id', getProductById);
-
-// PUT /api/products/:id - Update an existing product
-router.put('/:id', updateProduct);
-
-// DELETE /api/products/:id - Delete a product and all related data
-router.delete('/:id', deleteProduct);
-
 
 // Page routes nested under products
 // GET /api/products/:id/pages - Get all pages for a product (with optional filters)
@@ -74,14 +65,24 @@ router.get('/:id/suggested-values', getSuggestedValuesByProduct);
 router.post('/:id/suggested-values', createSuggestedValue);
 
 // EventDefinition routes nested under products
-// GET /api/products/:productId/event-definitions - Get all event definitions for a product
-router.get('/:productId/event-definitions', getEventDefinitionsByProduct);
+// GET /api/products/:id/event-definitions - Get all event definitions for a product
+router.get('/:id/event-definitions', getEventDefinitionsByProduct);
 
-// POST /api/products/:productId/event-definitions - Create a new event definition for a product
-router.post('/:productId/event-definitions', createEventDefinition);
+// POST /api/products/:id/event-definitions - Create a new event definition for a product
+router.post('/:id/event-definitions', createEventDefinition);
 
 // Import Context route - consolidated endpoint for bulk event import
 // GET /api/products/:id/import-context - Get aggregated data for event parsing
 router.get('/:id/import-context', getImportContext);
+
+// Product-specific routes must come AFTER nested resource routes to avoid path conflicts
+// GET /api/products/:id - Retrieve a specific product by ID
+router.get('/:id', getProductById);
+
+// PUT /api/products/:id - Update an existing product
+router.put('/:id', updateProduct);
+
+// DELETE /api/products/:id - Delete a product and all related data
+router.delete('/:id', deleteProduct);
 
 export default router;
