@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -49,6 +49,18 @@ const EMPTY_STATE = (
   </div>
 )
 
+const computeEventDefinitionStats = (items: EventDefinition[]): EventDefinitionStats => {
+  const totalDefinitions = items.length
+  const totalEvents = items.reduce((acc, def) => acc + (def._count?.events ?? 0), 0)
+  const average = totalDefinitions > 0 ? totalEvents / totalDefinitions : 0
+
+  return {
+    totalDefinitions,
+    totalEvents,
+    avgEventsPerDefinition: average
+  }
+}
+
 const EventsList: React.FC = () => {
   const { productName } = useParams<{ productName: string }>()
   const { currentProduct, setCurrentProductBySlug, hasSelectedProduct } = useProduct()
@@ -56,13 +68,14 @@ const EventsList: React.FC = () => {
 
   const [definitions, setDefinitions] = useState<EventDefinition[]>([])
   const [filteredDefinitions, setFilteredDefinitions] = useState<EventDefinition[]>([])
-  const [stats, setStats] = useState<EventDefinitionStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [interactionFilter, setInteractionFilter] = useState<string>('all')
   const [error, setError] = useState<string | null>(null)
   const [showCreateEventModal, setShowCreateEventModal] = useState(false)
   const [createEventLoading, setCreateEventLoading] = useState(false)
+  const fetchPromiseRef = useRef<Promise<void> | null>(null)
+  const lastLoadedProductIdRef = useRef<string | null>(null)
 
   // Sync product based on slug
   useEffect(() => {
@@ -74,30 +87,57 @@ const EventsList: React.FC = () => {
     }
   }, [productName, currentProduct, setCurrentProductBySlug])
 
-  const loadDefinitions = useCallback(async () => {
+  const loadDefinitions = useCallback(async (force = false) => {
     if (!currentProduct) return
-    setLoading(true)
-    setError(null)
 
-    try {
-      const response = await eventDefinitionsApi.getByProduct(currentProduct.id, { includeStats: true })
-      const typedResponse = response as typeof response & { count?: number; stats?: EventDefinitionStats }
+    const productId = currentProduct.id
 
-      setDefinitions(typedResponse.data)
-      setFilteredDefinitions(typedResponse.data)
-      setStats(typedResponse.stats ?? null)
-    } catch (err) {
-      console.error('Error loading event definitions:', err)
-      setError('Impossible de charger les événements. Veuillez réessayer plus tard.')
-    } finally {
-      setLoading(false)
+    if (fetchPromiseRef.current) {
+      if (!force && lastLoadedProductIdRef.current === productId) {
+        return fetchPromiseRef.current
+      }
+      if (!force) {
+        return fetchPromiseRef.current
+      }
+      await fetchPromiseRef.current
     }
+
+    if (!force && lastLoadedProductIdRef.current === productId) {
+      return
+    }
+
+    const fetchPromise = (async () => {
+      setLoading(true)
+      setError(null)
+
+      try {
+        const response = await eventDefinitionsApi.getByProduct(productId)
+        setDefinitions(response.data)
+        lastLoadedProductIdRef.current = productId
+      } catch (err) {
+        console.error('Error loading event definitions:', err)
+        setError('Impossible de charger les événements. Veuillez réessayer plus tard.')
+        setDefinitions([])
+        setFilteredDefinitions([])
+      } finally {
+        setLoading(false)
+        fetchPromiseRef.current = null
+      }
+    })()
+
+    fetchPromiseRef.current = fetchPromise
+    return fetchPromise
   }, [currentProduct])
 
   useEffect(() => {
-    if (currentProduct) {
-      loadDefinitions()
+    if (!currentProduct) return
+
+    if (lastLoadedProductIdRef.current !== currentProduct.id) {
+      setDefinitions([])
+      setFilteredDefinitions([])
     }
+
+    loadDefinitions()
   }, [currentProduct, loadDefinitions])
 
   // Compute filter options and apply filters
@@ -129,6 +169,8 @@ const EventsList: React.FC = () => {
     setFilteredDefinitions(filtered)
   }, [definitions, searchQuery, interactionFilter])
 
+  const stats = useMemo(() => computeEventDefinitionStats(definitions), [definitions])
+
   const glossaryRows: EventDefinitionRow[] = useMemo(() => {
     return filteredDefinitions.map((definition) => ({
       id: definition.id,
@@ -140,10 +182,6 @@ const EventsList: React.FC = () => {
       createdAt: definition.createdAt,
     }))
   }, [filteredDefinitions])
-
-  const totalUsageCount = useMemo(() => {
-    return definitions.reduce((acc, def) => acc + (def._count?.events ?? 0), 0)
-  }, [definitions])
 
   const columns: Column<EventDefinitionRow>[] = [
     {
@@ -211,7 +249,7 @@ const EventsList: React.FC = () => {
     setCreateEventLoading(true)
     try {
       const response = await eventsApi.create(pageId, data)
-      await loadDefinitions()
+      await loadDefinitions(true)
       return response.data
     } catch (err) {
       console.error('Error creating event from glossary:', err)
@@ -242,7 +280,7 @@ const EventsList: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-3xl font-bold">
-            Events list
+            Glossaire des événements — {currentProduct.name}
           </CardTitle>
           <CardDescription>
             Vision centralisée des événements suivis, leur description canonique et les interactions couvertes.
@@ -253,14 +291,14 @@ const EventsList: React.FC = () => {
             <Card className="border-dashed bg-muted/20">
               <CardContent className="p-4">
                 <div className="text-xs uppercase text-muted-foreground">Événements référencés</div>
-                <div className="text-2xl font-semibold text-slate-900 mt-2">{definitions.length}</div>
+                <div className="text-2xl font-semibold text-slate-900 mt-2">{stats.totalDefinitions}</div>
                 <p className="text-xs text-muted-foreground mt-1">Définitions actives dans le produit</p>
               </CardContent>
             </Card>
             <Card className="border-dashed bg-muted/20">
               <CardContent className="p-4">
                 <div className="text-xs uppercase text-muted-foreground">Occurrences totales</div>
-                <div className="text-2xl font-semibold text-slate-900 mt-2">{totalUsageCount}</div>
+                <div className="text-2xl font-semibold text-slate-900 mt-2">{stats.totalEvents}</div>
                 <p className="text-xs text-muted-foreground mt-1">Nombre d&apos;implémentations sur les pages</p>
               </CardContent>
             </Card>
@@ -275,7 +313,7 @@ const EventsList: React.FC = () => {
               <CardContent className="p-4">
                 <div className="text-xs uppercase text-muted-foreground">Moyenne par événement</div>
                 <div className="text-2xl font-semibold text-slate-900 mt-2">
-                  {(stats?.avgEventsPerDefinition ?? (definitions.length ? totalUsageCount / definitions.length : 0)).toFixed(1)}
+                  {stats.avgEventsPerDefinition.toFixed(1)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Occurrences moyennes par définition</p>
               </CardContent>

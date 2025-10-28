@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { productsApi } from '@/services/api'
 import type { Product } from '@/types'
 
@@ -21,27 +21,43 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
+  const loadPromiseRef = useRef<Promise<void> | null>(null)
 
   // Load products from API with deduplication
   const loadProducts = useCallback(async (force = false) => {
-    // Skip if already loaded unless force=true
-    if (isLoaded && !force) {
-      return;
+    // Avoid duplicate fetches in StrictMode/dev by reusing in-flight promise
+    if (loadPromiseRef.current) {
+      if (!force) {
+        return loadPromiseRef.current
+      }
+      // Wait for the current fetch before forcing a refresh
+      await loadPromiseRef.current
     }
 
-    setIsLoading(true)
-    setError(null)
-    try {
-      const response = await productsApi.getAll()
-      setProducts(response.data)
-      setIsLoaded(true)
-    } catch (err) {
-      console.error('Error loading products:', err)
-      setError('Failed to load products')
-      setProducts([])
-    } finally {
-      setIsLoading(false)
+    // Skip if already loaded unless force=true
+    if (isLoaded && !force) {
+      return
     }
+
+    const fetchPromise = (async () => {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const response = await productsApi.getAll()
+        setProducts(response.data)
+        setIsLoaded(true)
+      } catch (err) {
+        console.error('Error loading products:', err)
+        setError('Failed to load products')
+        setProducts([])
+      } finally {
+        setIsLoading(false)
+        loadPromiseRef.current = null
+      }
+    })()
+
+    loadPromiseRef.current = fetchPromise
+    return fetchPromise
   }, [isLoaded])
 
   // Load current product from localStorage on mount

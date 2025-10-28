@@ -38,18 +38,13 @@ export const getPagesByProduct = async (req: Request, res: Response, next: NextF
       return next(error);
     }
 
-    // Fetch pages with optimized event data (only essential fields)
+    // Fetch pages with event counts only (optimized - don't load all event data)
     const pages = await prisma.page.findMany({
       where: { productId: product.id },
       include: {
-        events: {
+        _count: {
           select: {
-            id: true,
-            name: true,
-            status: true,
-            createdAt: true,
-            updatedAt: true,
-            properties: true
+            events: true
           }
         }
       },
@@ -61,7 +56,7 @@ export const getPagesByProduct = async (req: Request, res: Response, next: NextF
     // Filter pages that have events if requested
     let filteredPages = pages;
     if (has_events === 'true') {
-      filteredPages = pages.filter((page: any) => page.events.length > 0);
+      filteredPages = pages.filter((page: any) => page._count.events > 0);
     }
 
     logger.info('Pages fetched successfully', { 
@@ -264,7 +259,7 @@ export const getPageBySlug = async (req: Request, res: Response, next: NextFunct
       return next(error);
     }
 
-    // Then find the page by product ID and page slug with optimized event data
+    // Then find the page by product ID and page slug (without events - frontend loads them separately)
     const page = await prisma.page.findFirst({
       where: {
         productId: product.id,
@@ -272,15 +267,9 @@ export const getPageBySlug = async (req: Request, res: Response, next: NextFunct
       },
       include: {
         product: true,
-        events: {
+        _count: {
           select: {
-            id: true,
-            name: true,
-            status: true,
-            testDate: true,
-            createdAt: true,
-            updatedAt: true,
-            properties: true
+            events: true
           }
         }
       }
