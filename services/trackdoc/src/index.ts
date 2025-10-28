@@ -119,6 +119,7 @@ app.get('/api/health', async (req, res) => {
 app.use('/api/products', authenticate, productsRoutes);
 app.use('/api/pages', authenticate, pagesRoutes);
 app.use('/api/events', authenticate, eventsRoutes);
+app.use('/api/event-definitions', authenticate, eventDefinitionsRoutes);
 app.use('/api/properties', authenticate, propertiesRoutes);
 app.use('/api/suggested-values', authenticate, suggestedValuesRoutes);
 app.use('/api/comments', authenticate, commentsRoutes);

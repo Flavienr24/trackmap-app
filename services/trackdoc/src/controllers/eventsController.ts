@@ -40,6 +40,97 @@ const cleanupTempFiles = async (files: Express.Multer.File[]): Promise<void> => 
 
 // Valid event status values
 const VALID_STATUS = ['TO_IMPLEMENT', 'TO_TEST', 'ERROR', 'VALIDATED'];
+const VALID_INTERACTION_TYPES = ['click', 'page_load', 'interaction', 'form_submit', 'scroll', 'other'];
+const DEFAULT_INTERACTION_TYPE = 'interaction';
+
+interface ResolveEventDefinitionOptions {
+  description?: string;
+  userInteractionType?: string;
+  author?: string;
+}
+
+/**
+ * Resolve (find or create) an EventDefinition within a transaction
+ */
+const resolveEventDefinitionInTx = async (
+  tx: any,
+  productId: string,
+  rawName: string,
+  options: ResolveEventDefinitionOptions = {}
+) => {
+  const trimmedName = rawName?.trim();
+
+  if (!trimmedName) {
+    const error: AppError = new Error('Event definition name cannot be empty');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Attempt to find existing definition
+  const existingDefinition = await tx.eventDefinition.findFirst({
+    where: {
+      productId,
+      name: trimmedName
+    }
+  });
+
+  if (existingDefinition) {
+    return existingDefinition;
+  }
+
+  // Determine interaction type
+  const interactionType = options.userInteractionType && VALID_INTERACTION_TYPES.includes(options.userInteractionType)
+    ? options.userInteractionType
+    : DEFAULT_INTERACTION_TYPE;
+
+  // Create new definition
+  let definition;
+  try {
+    definition = await tx.eventDefinition.create({
+      data: {
+        productId,
+        name: trimmedName,
+        description: options.description?.trim() || '',
+        userInteractionType: interactionType
+      }
+    });
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      // Definition created concurrently, fetch existing one
+      const concurrentDefinition = await tx.eventDefinition.findFirst({
+        where: {
+          productId,
+          name: trimmedName
+        }
+      });
+
+      if (concurrentDefinition) {
+        return concurrentDefinition;
+      }
+    }
+
+    throw error;
+  }
+
+  // Record history entry for auditability
+  await tx.eventDefinitionHistory.create({
+    data: {
+      eventDefinitionId: definition.id,
+      field: 'created',
+      oldValue: null,
+      newValue: 'Auto-created from event creation',
+      author: options.author || 'system'
+    }
+  });
+
+  logger.info('Auto-created event definition from event usage', {
+    productId,
+    eventDefinitionId: definition.id,
+    name: trimmedName
+  });
+
+  return definition;
+};
 
 /**
  * Auto-create properties in the library when they are used in events
@@ -297,6 +388,7 @@ export const getEventsByPage = async (req: Request, res: Response, next: NextFun
             product: true,
           }
         },
+        eventDefinition: true,
         comments: {
           orderBy: { createdAt: 'desc' }
         },
@@ -340,7 +432,7 @@ export const getEventsByPage = async (req: Request, res: Response, next: NextFun
 export const createEvent = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id: pageId } = req.params;
-    const { name, status, testDate, properties } = req.body;
+    const { name, status, testDate, properties, description, userInteractionType } = req.body;
 
     // Validate required fields
     if (!name) {
@@ -352,6 +444,15 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
     // Validate status if provided
     if (status && !VALID_STATUS.includes(status.toUpperCase())) {
       const error: AppError = new Error(`Invalid status. Must be one of: ${VALID_STATUS.join(', ')}`);
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    // Validate interaction type if provided
+    if (userInteractionType && !VALID_INTERACTION_TYPES.includes(userInteractionType)) {
+      const error: AppError = new Error(
+        `Invalid userInteractionType. Must be one of: ${VALID_INTERACTION_TYPES.join(', ')}`
+      );
       error.statusCode = 400;
       return next(error);
     }
@@ -383,11 +484,19 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
         await autoCreateSuggestedValuesInTx(tx, page.productId, properties);
       }
 
+      // Resolve EventDefinition for this usage
+      const eventDefinition = await resolveEventDefinitionInTx(tx, page.productId, name, {
+        description,
+        userInteractionType,
+        author: 'system'
+      });
+
       // Create event
       return await tx.event.create({
         data: {
           pageId,
-          name,
+          eventDefinitionId: eventDefinition.id,
+          name: eventDefinition.name,
           status: status ? status.toUpperCase() : 'TO_IMPLEMENT',
           testDate: testDate ? new Date(testDate) : null,
           properties: properties ? JSON.stringify(properties) : '{}'
@@ -398,6 +507,7 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
               product: true,
             }
           },
+          eventDefinition: true,
           comments: true,
           history: true
         }
@@ -414,6 +524,7 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
     logger.info('Event created successfully', { 
       eventId: event.id,
       eventName: event.name,
+      eventDefinitionId: event.eventDefinitionId,
       pageId,
       requestId: req.ip 
     });
@@ -446,6 +557,7 @@ export const getEventById = async (req: Request, res: Response, next: NextFuncti
             product: true,
           }
         },
+        eventDefinition: true,
         comments: {
           orderBy: { createdAt: 'desc' }
         },
@@ -514,7 +626,8 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
           include: {
             product: true
           }
-        }
+        },
+        eventDefinition: true
       }
     });
 
@@ -540,6 +653,45 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
         });
       }
 
+      // Resolve or attach event definition as needed
+      let resolvedDefinition = existingEvent.eventDefinition;
+      if (name !== undefined) {
+        resolvedDefinition = await resolveEventDefinitionInTx(tx, existingEvent.page.productId, name, {
+          author: 'system'
+        });
+      } else if (!existingEvent.eventDefinitionId) {
+        resolvedDefinition = await resolveEventDefinitionInTx(tx, existingEvent.page.productId, existingEvent.name, {
+          author: 'system'
+        });
+      }
+
+      // History entries for name / definition changes
+      if (resolvedDefinition) {
+        if (existingEvent.eventDefinitionId !== resolvedDefinition.id) {
+          await tx.eventHistory.create({
+            data: {
+              eventId: id,
+              field: 'event_definition_id',
+              oldValue: existingEvent.eventDefinitionId || null,
+              newValue: resolvedDefinition.id,
+              author: 'system'
+            }
+          });
+        }
+
+        if (existingEvent.name !== resolvedDefinition.name) {
+          await tx.eventHistory.create({
+            data: {
+              eventId: id,
+              field: 'name',
+              oldValue: existingEvent.name,
+              newValue: resolvedDefinition.name,
+              author: 'system'
+            }
+          });
+        }
+      }
+
       // Auto-create properties and suggested values if they don't exist
       if (properties !== undefined && existingEvent.page) {
         await autoCreatePropertiesInTx(tx, existingEvent.page.productId, properties);
@@ -550,7 +702,7 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
       return await tx.event.update({
         where: { id },
         data: {
-          ...(name !== undefined && { name }),
+          ...(resolvedDefinition && { eventDefinitionId: resolvedDefinition.id, name: resolvedDefinition.name }),
           ...(status !== undefined && { status: status.toUpperCase() }),
           ...(testDate !== undefined && { testDate: testDate ? new Date(testDate) : null }),
           ...(properties !== undefined && { properties: JSON.stringify(properties) })
@@ -561,6 +713,7 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
               product: true,
             }
           },
+          eventDefinition: true,
           comments: true,
           history: {
             orderBy: { createdAt: 'desc' }
@@ -579,6 +732,7 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
     logger.info('Event updated successfully', { 
       eventId: id,
       eventName: event.name,
+      eventDefinitionId: event.eventDefinitionId,
       requestId: req.ip 
     });
 
@@ -650,6 +804,7 @@ export const updateEventStatus = async (req: Request, res: Response, next: NextF
         data: { status: status.toUpperCase() },
         include: {
           page: true,
+          eventDefinition: true,
           comments: true,
           history: {
             orderBy: { createdAt: 'desc' }
@@ -1019,7 +1174,8 @@ export const duplicateEvent = async (req: Request, res: Response, next: NextFunc
           include: {
             product: true
           }
-        }
+        },
+        eventDefinition: true
       }
     });
 
@@ -1041,11 +1197,17 @@ export const duplicateEvent = async (req: Request, res: Response, next: NextFunc
         await autoCreateSuggestedValuesInTx(tx, originalEvent.page.productId, properties);
       }
 
-      // Create duplicated event with "Copy" suffix
+      // Ensure canonical definition exists
+      const definition = await resolveEventDefinitionInTx(tx, originalEvent.page.productId, originalEvent.name, {
+        author: 'system'
+      });
+
+      // Create duplicated event (linked to the same definition, reset status/properties as needed)
       return await tx.event.create({
         data: {
           pageId: originalEvent.pageId,
-          name: `${originalEvent.name} - Copy`,
+          eventDefinitionId: definition.id,
+          name: definition.name,
           status: 'TO_IMPLEMENT', // Reset status for duplicated event
           testDate: null, // Reset test date
           properties: originalEvent.properties, // Copy properties as-is
@@ -1057,6 +1219,7 @@ export const duplicateEvent = async (req: Request, res: Response, next: NextFunc
               product: true,
             }
           },
+          eventDefinition: true,
           comments: true,
           history: true
         }
