@@ -223,17 +223,28 @@ async function verifyShadowColumn() {
 }
 
 /**
- * Verify indexes exist
+ * Detect database provider from DATABASE_URL
+ */
+function detectDatabaseProvider(): 'sqlite' | 'postgresql' | 'unknown' {
+  const databaseUrl = process.env.DATABASE_URL || '';
+
+  if (databaseUrl.startsWith('file:') || databaseUrl.includes('sqlite')) {
+    return 'sqlite';
+  } else if (databaseUrl.startsWith('postgres://') || databaseUrl.startsWith('postgresql://')) {
+    return 'postgresql';
+  }
+
+  return 'unknown';
+}
+
+/**
+ * Verify indexes exist (compatible SQLite + PostgreSQL)
  */
 async function verifyIndexes() {
   console.log('\n📇 Vérification des indexes...\n');
 
   try {
-    // SQLite specific index verification
-    const indexes = await prisma.$queryRaw<Array<{name: string}>>`
-      SELECT name FROM sqlite_master WHERE type='index' AND tbl_name IN ('events', 'event_definitions', 'event_definition_history')
-    `;
-
+    const provider = detectDatabaseProvider();
     const requiredIndexes = [
       'events_page_id_idx',
       'events_event_definition_id_idx',
@@ -244,22 +255,45 @@ async function verifyIndexes() {
       'event_definition_history_event_definition_id_idx'
     ];
 
-    const existingIndexNames = indexes.map(idx => idx.name);
+    let existingIndexNames: string[] = [];
+
+    if (provider === 'sqlite') {
+      // SQLite: query sqlite_master
+      const indexes = await prisma.$queryRaw<Array<{name: string}>>`
+        SELECT name FROM sqlite_master
+        WHERE type='index'
+        AND tbl_name IN ('events', 'event_definitions', 'event_definition_history')
+      `;
+      existingIndexNames = indexes.map(idx => idx.name);
+
+    } else if (provider === 'postgresql') {
+      // PostgreSQL: query pg_indexes
+      const indexes = await prisma.$queryRaw<Array<{indexname: string}>>`
+        SELECT indexname FROM pg_indexes
+        WHERE tablename IN ('events', 'event_definitions', 'event_definition_history')
+      `;
+      existingIndexNames = indexes.map(idx => idx.indexname);
+
+    } else {
+      addResult('Indexes', 'WARN', 'Provider inconnu - vérification des indexes ignorée', { provider });
+      return;
+    }
+
     const missingIndexes = requiredIndexes.filter(idx => !existingIndexNames.includes(idx));
 
     if (missingIndexes.length === 0) {
       addResult(
         'Indexes',
         'PASS',
-        'Tous les indexes requis sont créés',
-        { count: requiredIndexes.length }
+        `Tous les indexes requis sont créés (${provider})`,
+        { count: requiredIndexes.length, provider }
       );
     } else {
       addResult(
         'Indexes',
         'FAIL',
         `${missingIndexes.length} indexes manquants`,
-        { missing: missingIndexes }
+        { missing: missingIndexes, provider }
       );
     }
 
