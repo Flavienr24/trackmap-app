@@ -187,7 +187,7 @@ const EventsList: React.FC = () => {
     {
       key: 'name',
       title: 'Événement',
-      width: '200px',
+      width: '160px',
       render: (_value, record) => (
         <span className="font-medium text-slate-900 truncate block">{record.name}</span>
       ),
@@ -196,7 +196,7 @@ const EventsList: React.FC = () => {
       key: 'description',
       title: 'Description',
       render: (_value, record) => (
-        <p className={cn('text-sm text-slate-600 line-clamp-2 w-full', !record.description && 'italic text-slate-400')}>
+        <p className={cn('text-sm text-slate-600 line-clamp-3 w-full', !record.description && 'italic text-slate-400')}>
           {record.description || 'Description à définir'}
         </p>
       ),
