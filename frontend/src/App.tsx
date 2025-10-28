@@ -10,6 +10,7 @@ const PageDetail = lazy(() => import('./pages/PageDetail'))
 const PropertiesList = lazy(() => import('./pages/PropertiesList'))
 const SuggestedValuesList = lazy(() => import('./pages/SuggestedValuesList'))
 const EventsList = lazy(() => import('./pages/EventsList'))
+const EventDetail = lazy(() => import('./pages/EventDetail'))
 
 // Loading fallback component
 const PageLoader = () => (
@@ -33,6 +34,7 @@ function App() {
             <Route path="/products/:productName/pages" element={<PagesList />} />
             <Route path="/products/:productName/pages/:pageSlug" element={<PageDetail />} />
             <Route path="/products/:productName/events" element={<EventsList />} />
+            <Route path="/products/:productName/events/:eventName" element={<EventDetail />} />
             <Route path="/products/:productName/properties" element={<PropertiesList />} />
             <Route path="/products/:productName/suggested-values" element={<SuggestedValuesList />} />
           </Routes>

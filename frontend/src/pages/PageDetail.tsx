@@ -89,14 +89,15 @@ const PageDetail: React.FC = () => {
     setShowCreateEventModal(true)
   }
 
-  const handleCreateEventSubmit = async (data: CreateEventRequest) => {
-    if (!page?.id) return
-    
+  const handleCreateEventSubmit = async ({ pageId: targetPageId, data }: { pageId: string; data: CreateEventRequest }) => {
+    const effectivePageId = targetPageId || page?.id
+    if (!effectivePageId) return
+
     setCreateEventLoading(true)
     try {
-      const response = await eventsApi.create(page.id, data)
+      const response = await eventsApi.create(effectivePageId, data)
       console.log('Event created:', response.data)
-      await loadEvents(page.id) // Reload the list
+      await loadEvents(effectivePageId) // Reload the list
     } catch (error) {
       console.error('Error creating event:', error)
       throw error

@@ -7,11 +7,13 @@ import type {
   Product,
   Page,
   Event,
+  EventDefinition,
   Property,
   SuggestedValue,
   PropertyValue,
   Comment,
   EventHistory,
+  EventDefinitionHistory,
   ApiResponse,
   CreateProductRequest,
   UpdateProductRequest,
@@ -19,6 +21,8 @@ import type {
   UpdatePageRequest,
   CreateEventRequest,
   UpdateEventRequest,
+  CreateEventDefinitionRequest,
+  UpdateEventDefinitionRequest,
   CreatePropertyRequest,
   UpdatePropertyRequest,
   CreateSuggestedValueRequest,
@@ -30,6 +34,7 @@ import type {
   ProductsFilter,
   PagesFilter,
   EventsFilter,
+  EventDefinitionsFilter,
   PropertiesFilter,
   SuggestedValuesFilter,
   CommentsFilter,
@@ -233,6 +238,60 @@ export const eventsApi = {
 }
 
 /**
+ * Event Definitions API
+ */
+export const eventDefinitionsApi = {
+  // Get all event definitions (optionally filtered)
+  getAll: (filters?: EventDefinitionsFilter & { productId?: string }): Promise<ApiResponse<EventDefinition[]>> => {
+    const params = new URLSearchParams()
+    if (filters?.productId) params.append('productId', filters.productId)
+    if (filters?.search) params.append('search', filters.search)
+    if (filters?.includeStats) params.append('include_stats', 'true')
+
+    const query = params.toString()
+    return apiRequest(`/event-definitions${query ? `?${query}` : ''}`)
+  },
+
+  // Get event definitions for a specific product
+  getByProduct: (productId: string, filters?: EventDefinitionsFilter): Promise<ApiResponse<EventDefinition[]>> => {
+    const params = new URLSearchParams()
+    if (filters?.search) params.append('search', filters.search)
+    if (filters?.includeStats) params.append('include_stats', 'true')
+
+    const query = params.toString()
+    return apiRequest(`/products/${productId}/event-definitions${query ? `?${query}` : ''}`)
+  },
+
+  // Get single event definition
+  getById: (id: string): Promise<ApiResponse<EventDefinition>> =>
+    apiRequest(`/event-definitions/${id}`),
+
+  // Create event definition
+  create: (productId: string, data: CreateEventDefinitionRequest): Promise<ApiResponse<EventDefinition>> =>
+    apiRequest(`/products/${productId}/event-definitions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // Update event definition
+  update: (id: string, data: UpdateEventDefinitionRequest): Promise<ApiResponse<EventDefinition>> =>
+    apiRequest(`/event-definitions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  // Delete event definition
+  delete: (id: string): Promise<ApiResponse<void>> =>
+    apiRequest(`/event-definitions/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // Get event definition history
+  getHistory: (id: string): Promise<ApiResponse<EventDefinitionHistory[]>> =>
+    apiRequest(`/event-definitions/${id}/history`),
+}
+
+/**
  * Properties API
  */
 export const propertiesApi = {
@@ -398,4 +457,3 @@ export const importContextApi = {
     return apiRequest(`/products/${productId}/import-context${query ? `?${query}` : ''}`)
   }
 }
-

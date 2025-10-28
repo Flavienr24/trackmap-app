@@ -1,127 +1,229 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Tooltip } from '@/components/atoms/Tooltip'
-import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
-import { PropertiesDisplay } from '@/components/molecules/PropertiesDisplay'
-import { EditEventModal } from '@/components/organisms/EditEventModal'
-import { pagesApi, eventsApi } from '@/services/api'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+import { DataTable, type Column } from '@/components/organisms/DataTable'
+import { CreateEventModal } from '@/components/organisms/CreateEventModal'
+import { eventDefinitionsApi, eventsApi } from '@/services/api'
 import { useProduct } from '@/hooks/useProduct'
 import { doesProductNameMatchSlug } from '@/utils/slug'
-import type { Page, Event, UpdateEventRequest } from '@/types'
+import type { CreateEventRequest, EventDefinition, EventDefinitionStats } from '@/types'
+import { cn } from '@/lib/utils'
+import { Plus } from 'lucide-react'
 
-// Type for flattened event data
-interface EventData {
+interface EventDefinitionRow {
   id: string
   name: string
-  type: string
-  pageName: string
-  pageId: string
-  properties: any
-  created_at: string
-  updated_at: string
+  description: string
+  userInteractionType: string
+  usageCount: number
+  updatedAt: string
+  createdAt: string
 }
 
-/**
- * Events List Page
- * Shows all events across all pages for the selected product
- */
+const INTERACTION_LABELS: Record<string, string> = {
+  click: 'Clic',
+  page_load: 'Chargement page',
+  interaction: 'Interaction',
+  form_submit: 'Formulaire',
+  scroll: 'Scroll',
+  other: 'Autre'
+}
+
+const EMPTY_STATE = (
+  <div className="flex flex-col items-center justify-center py-16 text-center">
+    <div className="text-6xl mb-4">📚</div>
+    <h3 className="text-xl font-semibold text-slate-900">Aucun événement référencé</h3>
+    <p className="text-slate-600 mt-2 max-w-md">
+      Commencez par créer une définition d&apos;événement pour documenter les interactions clés de votre produit.
+    </p>
+  </div>
+)
+
 const EventsList: React.FC = () => {
   const { productName } = useParams<{ productName: string }>()
   const { currentProduct, setCurrentProductBySlug, hasSelectedProduct } = useProduct()
-  
-  const [pages, setPages] = useState<Page[]>([])
-  const [events, setEvents] = useState<EventData[]>([])
-  const [filteredEvents, setFilteredEvents] = useState<EventData[]>([])
+  const navigate = useNavigate()
+
+  const [definitions, setDefinitions] = useState<EventDefinition[]>([])
+  const [filteredDefinitions, setFilteredDefinitions] = useState<EventDefinition[]>([])
+  const [stats, setStats] = useState<EventDefinitionStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedType, setSelectedType] = useState<string>('')
-  const [editEvent, setEditEvent] = useState<Event | null>(null)
-  const [editEventLoading, setEditEventLoading] = useState(false)
-  const [fetchingEditEvent, setFetchingEditEvent] = useState(false)
-  const [deleteEventLoading, setDeleteEventLoading] = useState(false)
+  const [interactionFilter, setInteractionFilter] = useState<string>('all')
+  const [error, setError] = useState<string | null>(null)
+  const [showCreateEventModal, setShowCreateEventModal] = useState(false)
+  const [createEventLoading, setCreateEventLoading] = useState(false)
 
-  // Load data
-  const loadData = useCallback(async () => {
+  // Sync product based on slug
+  useEffect(() => {
+    if (!productName) return
+
+    const productMatchesSlug = currentProduct && doesProductNameMatchSlug(currentProduct.name, productName)
+    if (!productMatchesSlug) {
+      setCurrentProductBySlug(productName)
+    }
+  }, [productName, currentProduct, setCurrentProductBySlug])
+
+  const loadDefinitions = useCallback(async () => {
     if (!currentProduct) return
-    
     setLoading(true)
+    setError(null)
+
     try {
-      const response = await pagesApi.getByProduct(currentProduct.id)
-      const pagesData = response.data
-      setPages(pagesData)
-      
-      // Flatten all events from all pages
-      const allEvents: EventData[] = []
-      pagesData.forEach((page: any) => {
-        if (page.events) {
-          page.events.forEach((event: any) => {
-            allEvents.push({
-              id: event.id,
-              name: event.name,
-              type: event.type || 'Unknown',
-              pageName: page.name,
-              pageId: page.id,
-              properties: event.properties,
-              created_at: event.created_at,
-              updated_at: event.updated_at,
-            })
-          })
-        }
-      })
-      
-      setEvents(allEvents)
-      setFilteredEvents(allEvents)
-    } catch (error) {
-      console.error('Error loading events:', error)
+      const response = await eventDefinitionsApi.getByProduct(currentProduct.id, { includeStats: true })
+      const typedResponse = response as typeof response & { count?: number; stats?: EventDefinitionStats }
+
+      setDefinitions(typedResponse.data)
+      setFilteredDefinitions(typedResponse.data)
+      setStats(typedResponse.stats ?? null)
+    } catch (err) {
+      console.error('Error loading event definitions:', err)
+      setError('Impossible de charger les événements. Veuillez réessayer plus tard.')
     } finally {
       setLoading(false)
     }
   }, [currentProduct])
 
-  // Initialize product and load data
-  useEffect(() => {
-    if (productName) {
-      // Always sync current product with URL slug to ensure consistency
-      const productMatchesSlug = currentProduct &&
-        doesProductNameMatchSlug(currentProduct.name, productName)
-
-      if (!productMatchesSlug) {
-        setCurrentProductBySlug(productName)
-      }
-    }
-  }, [productName, currentProduct, setCurrentProductBySlug])
-
   useEffect(() => {
     if (currentProduct) {
-      loadData()
+      loadDefinitions()
     }
-  }, [currentProduct, loadData])
+  }, [currentProduct, loadDefinitions])
 
-  // Filter events based on search and type
+  // Compute filter options and apply filters
+  const interactionOptions = useMemo(() => {
+    const set = new Set<string>()
+    definitions.forEach(def => {
+      if (def.userInteractionType) {
+        set.add(def.userInteractionType)
+      }
+    })
+    return Array.from(set).sort()
+  }, [definitions])
+
   useEffect(() => {
-    let filtered = events
+    let filtered = definitions
 
     if (searchQuery) {
-      filtered = filtered.filter(event =>
-        event.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.pageName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.type.toLowerCase().includes(searchQuery.toLowerCase())
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(def =>
+        def.name.toLowerCase().includes(query) ||
+        def.description?.toLowerCase().includes(query)
       )
     }
 
-    if (selectedType) {
-      filtered = filtered.filter(event => event.type === selectedType)
+    if (interactionFilter !== 'all') {
+      filtered = filtered.filter(def => def.userInteractionType === interactionFilter)
     }
 
-    setFilteredEvents(filtered)
-  }, [events, searchQuery, selectedType])
+    setFilteredDefinitions(filtered)
+  }, [definitions, searchQuery, interactionFilter])
 
-  // Get unique event types for filter
-  const eventTypes = Array.from(new Set(events.map(event => event.type)))
+  const glossaryRows: EventDefinitionRow[] = useMemo(() => {
+    return filteredDefinitions.map((definition) => ({
+      id: definition.id,
+      name: definition.name,
+      description: definition.description,
+      userInteractionType: definition.userInteractionType || 'interaction',
+      usageCount: definition._count?.events ?? 0,
+      updatedAt: definition.updatedAt,
+      createdAt: definition.createdAt,
+    }))
+  }, [filteredDefinitions])
 
+  const totalUsageCount = useMemo(() => {
+    return definitions.reduce((acc, def) => acc + (def._count?.events ?? 0), 0)
+  }, [definitions])
+
+  const columns: Column<EventDefinitionRow>[] = [
+    {
+      key: 'name',
+      title: 'Événement',
+      render: (_value, record) => (
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <span className="font-medium text-slate-900">{record.name}</span>
+            <Badge variant="outline" className="text-xs font-normal">
+              {record.usageCount} utilisation{record.usageCount > 1 ? 's' : ''}
+            </Badge>
+          </div>
+          <p className={cn('text-sm text-slate-600', !record.description && 'italic text-slate-400')}>
+            {record.description || 'Description à définir'}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: 'userInteractionType',
+      title: 'Interaction',
+      width: '160px',
+      render: (value: string) => (
+        <Badge variant="secondary" className="capitalize">
+          {INTERACTION_LABELS[value] || value}
+        </Badge>
+      ),
+    },
+    {
+      key: 'updatedAt',
+      title: 'Dernière mise à jour',
+      width: '160px',
+      render: (value: string) => {
+        if (!value) return <span className="text-slate-400">-</span>
+        const date = new Date(value)
+        if (Number.isNaN(date.getTime())) {
+          return <span className="text-slate-400">-</span>
+        }
+        return <span className="text-slate-600">{date.toLocaleDateString('fr-FR')}</span>
+      }
+    }
+  ]
+
+  const handleRowClick = (record: EventDefinitionRow) => {
+    if (!productName) return
+    const encodedName = encodeURIComponent(record.name)
+    navigate(`/products/${productName}/events/${encodedName}`, {
+      state: {
+        eventDefinitionId: record.id
+      }
+    })
+  }
+
+  const resetFilters = () => {
+    setSearchQuery('')
+    setInteractionFilter('all')
+  }
+
+  const handleOpenCreateEvent = () => {
+    setShowCreateEventModal(true)
+  }
+
+  const handleCreateEventSubmit = async ({ pageId, data }: { pageId: string; data: CreateEventRequest }) => {
+    setCreateEventLoading(true)
+    try {
+      const response = await eventsApi.create(pageId, data)
+      await loadDefinitions()
+      return response.data
+    } catch (err) {
+      console.error('Error creating event from glossary:', err)
+      throw err
+    } finally {
+      setCreateEventLoading(false)
+    }
+  }
+
+  const handleCreateModalClose = () => {
+    setShowCreateEventModal(false)
+  }
 
   if (!hasSelectedProduct || !currentProduct) {
     return (
@@ -135,311 +237,123 @@ const EventsList: React.FC = () => {
     )
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="text-center">
-          <div className="text-6xl mb-4">⏳</div>
-          <h2 className="text-xl font-semibold text-slate-900">Chargement...</h2>
-          <p className="text-slate-600 mt-2">Récupération des événements</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Helper to get property count
-  const getPropertyCount = (properties: any): number => {
-    if (!properties) return 0
-    try {
-      const parsed = typeof properties === 'string' ? JSON.parse(properties) : properties
-      return Object.keys(parsed || {}).length
-    } catch (error) {
-      return 0
-    }
-  }
-
-  // Helper to parse properties safely
-  const parseProperties = (properties: any): Record<string, any> => {
-    if (!properties) return {}
-    try {
-      return typeof properties === 'string' ? JSON.parse(properties) : properties
-    } catch (error) {
-      return {}
-    }
-  }
-
-  const handleOpenEditEvent = async (eventData: EventData) => {
-    if (fetchingEditEvent) return
-
-    setFetchingEditEvent(true)
-    try {
-      const response = await eventsApi.getById(eventData.id)
-      setEditEvent(response.data)
-    } catch (error) {
-      console.error('Error loading event details:', error)
-    } finally {
-      setFetchingEditEvent(false)
-    }
-  }
-
-  const handleEditEventSubmit = async (eventId: string, data: UpdateEventRequest) => {
-    setEditEventLoading(true)
-    try {
-      const response = await eventsApi.update(eventId, data)
-      const updatedEvent = response.data as Event & { updated_at?: string; created_at?: string; type?: string }
-
-      setEvents(prevEvents => prevEvents.map(eventItem => {
-        if (eventItem.id !== eventId) {
-          return eventItem
-        }
-
-        return {
-          ...eventItem,
-          name: updatedEvent.name,
-          type: updatedEvent.type || eventItem.type,
-          properties: updatedEvent.properties,
-          updated_at: updatedEvent.updated_at || (updatedEvent as any).updatedAt || eventItem.updated_at,
-          created_at: updatedEvent.created_at || (updatedEvent as any).createdAt || eventItem.created_at,
-        }
-      }))
-    } catch (error) {
-      console.error('Error updating event:', error)
-      throw error
-    } finally {
-      setEditEventLoading(false)
-    }
-  }
-
-  const handleDeleteEvent = async (eventToDelete: Event) => {
-    if (deleteEventLoading) return
-
-    setDeleteEventLoading(true)
-    try {
-      await eventsApi.delete(eventToDelete.id)
-
-      setEvents(prevEvents => prevEvents.filter(eventItem => eventItem.id !== eventToDelete.id))
-      setFilteredEvents(prevEvents => prevEvents.filter(eventItem => eventItem.id !== eventToDelete.id))
-      setEditEvent(null)
-    } catch (error) {
-      console.error('Error deleting event:', error)
-      throw error
-    } finally {
-      setDeleteEventLoading(false)
-    }
-  }
-
-  const handleEditModalClose = () => {
-    if (editEventLoading || deleteEventLoading) return
-    setEditEvent(null)
-  }
-
-  // Table columns
-  const columns: Column<EventData>[] = [
-    {
-      key: 'name',
-      title: 'Nom de l\'événement',
-      render: (value, record) => (
-        <div>
-          <div className="font-medium text-slate-900">{value}</div>
-          <div className="text-sm text-slate-600">{record.pageName}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'properties',
-      title: 'Propriétés',
-      width: '100px',
-      render: (value) => {
-        const count = getPropertyCount(value)
-        return (
-          <span className="text-slate-600">{count}</span>
-        )
-      },
-    },
-    {
-      key: 'updated_at',
-      title: 'Dernière modification',
-      width: '160px',
-      render: (value) => {
-        if (!value) return <span className="text-slate-400">-</span>
-        try {
-          const date = new Date(value)
-          // Check if date is valid
-          if (isNaN(date.getTime())) {
-            return <span className="text-slate-400">-</span>
-          }
-          return (
-            <span className="text-slate-600">
-              {date.toLocaleDateString('fr-FR')}
-            </span>
-          )
-        } catch (error) {
-          return <span className="text-slate-400">-</span>
-        }
-      },
-    },
-  ]
-
-  const actions: Action<EventData>[] = [
-    {
-      label: 'Modifier',
-      onClick: handleOpenEditEvent,
-      iconOnly: true,
-      icon: (
-        <Tooltip content="Modifier">
-          <svg className="w-4 h-4 text-neutral-900 hover:text-neutral-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </Tooltip>
-      ),
-    },
-  ]
-
-
   return (
     <div className="w-full space-y-6">
-      {/* Header */}
       <Card>
         <CardHeader>
           <CardTitle className="text-3xl font-bold">
-            Événements - {currentProduct.name}
+            Glossaire des événements — {currentProduct.name}
           </CardTitle>
-          <CardDescription className="text-lg">
-            Tous les événements de tracking configurés pour ce produit
+          <CardDescription>
+            Vision centralisée des événements suivis, leur description canonique et les interactions couvertes.
           </CardDescription>
         </CardHeader>
-        
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="bg-slate-50">
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card className="border-dashed bg-muted/20">
               <CardContent className="p-4">
-                <div className="text-2xl font-bold text-slate-900">
-                  {events.length}
-                </div>
-                <div className="text-sm text-slate-600">Total événements</div>
+                <div className="text-xs uppercase text-muted-foreground">Événements référencés</div>
+                <div className="text-2xl font-semibold text-slate-900 mt-2">{definitions.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Définitions actives dans le produit</p>
               </CardContent>
             </Card>
-            
-            <Card className="bg-slate-50">
+            <Card className="border-dashed bg-muted/20">
               <CardContent className="p-4">
-                <div className="text-2xl font-bold text-slate-900">
-                  {eventTypes.length}
-                </div>
-                <div className="text-sm text-slate-600">Types d'événements</div>
+                <div className="text-xs uppercase text-muted-foreground">Occurrences totales</div>
+                <div className="text-2xl font-semibold text-slate-900 mt-2">{totalUsageCount}</div>
+                <p className="text-xs text-muted-foreground mt-1">Nombre d&apos;implémentations sur les pages</p>
               </CardContent>
             </Card>
-            
-            <Card className="bg-slate-50">
+            <Card className="border-dashed bg-muted/20">
               <CardContent className="p-4">
-                <div className="text-2xl font-bold text-slate-900">
-                  {pages.length}
-                </div>
-                <div className="text-sm text-slate-600">Pages concernées</div>
+                <div className="text-xs uppercase text-muted-foreground">Types d&apos;interaction</div>
+                <div className="text-2xl font-semibold text-slate-900 mt-2">{interactionOptions.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Couverture des interactions utilisateur</p>
               </CardContent>
             </Card>
-            
-            <Card className="bg-slate-50">
+            <Card className="border-dashed bg-muted/20">
               <CardContent className="p-4">
-                <div className="text-2xl font-bold text-slate-900">
-                  {Array.from(new Set(events.flatMap(event => {
-                    try {
-                      const props = typeof event.properties === 'string' 
-                        ? JSON.parse(event.properties) 
-                        : event.properties
-                      return Object.keys(props || {})
-                    } catch {
-                      return []
-                    }
-                  }))).length}
+                <div className="text-xs uppercase text-muted-foreground">Moyenne par événement</div>
+                <div className="text-2xl font-semibold text-slate-900 mt-2">
+                  {(stats?.avgEventsPerDefinition ?? (definitions.length ? totalUsageCount / definitions.length : 0)).toFixed(1)}
                 </div>
-                <div className="text-sm text-slate-600">Propriétés uniques</div>
+                <p className="text-xs text-muted-foreground mt-1">Occurrences moyennes par définition</p>
               </CardContent>
             </Card>
           </div>
         </CardContent>
       </Card>
 
-      {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
+        <CardContent className="pt-6 space-y-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-1 items-center gap-3">
               <Input
-                placeholder="Rechercher un événement..."
+                placeholder="Rechercher par nom ou description…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                className="md:max-w-sm"
               />
+              <div className="flex items-center gap-2">
+                <Select value={interactionFilter} onValueChange={setInteractionFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Interaction" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes les interactions</SelectItem>
+                    {interactionOptions.map((interaction) => (
+                      <SelectItem key={interaction} value={interaction}>
+                        {INTERACTION_LABELS[interaction] || interaction}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {(searchQuery || interactionFilter !== 'all') && (
+                  <Button variant="ghost" size="sm" onClick={resetFilters}>
+                    Réinitialiser
+                  </Button>
+                )}
+              </div>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600">Type:</span>
-              <select
-                className="px-3 py-2 border rounded-md bg-background"
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-              >
-                <option value="">Tous les types</option>
-                {eventTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-              
-              {(searchQuery || selectedType) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSearchQuery('')
-                    setSelectedType('')
-                  }}
-                >
-                  Réinitialiser
-                </Button>
-              )}
+            <div className="flex items-center justify-end">
+              <Button onClick={handleOpenCreateEvent} disabled={loading}>
+                <Plus className="mr-2 h-4 w-4" />
+                Créer un event
+              </Button>
             </div>
           </div>
+
+          {error && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Events Table */}
       <Card>
         <CardContent className="p-0">
-          <DataTable
-            data={filteredEvents}
-            columns={columns}
-            actions={actions}
-            loading={loading}
-            emptyMessage="Aucun événement trouvé pour ce produit."
-            expandable={{
-              expandedRowRender: (event: EventData) => (
-                <PropertiesDisplay properties={parseProperties(event.properties)} />
-              ),
-              rowExpandable: (event: EventData) => getPropertyCount(event.properties) > 0,
-              showExpandIcon: false,
-            }}
-          />
+          {glossaryRows.length === 0 && !loading ? (
+            EMPTY_STATE
+          ) : (
+            <DataTable<EventDefinitionRow>
+              data={glossaryRows}
+              columns={columns}
+              loading={loading}
+              emptyMessage="Aucune définition d'événement disponible."
+              onRowClick={handleRowClick}
+            />
+          )}
         </CardContent>
       </Card>
 
-      <EditEventModal
-        isOpen={!!editEvent}
-        event={editEvent}
-        onClose={handleEditModalClose}
-        onSubmit={handleEditEventSubmit}
-        onDeleteRequest={handleDeleteEvent}
-        loading={editEventLoading || deleteEventLoading}
+      <CreateEventModal
+        isOpen={showCreateEventModal}
+        onClose={handleCreateModalClose}
+        onSubmit={handleCreateEventSubmit}
+        loading={createEventLoading}
         productId={currentProduct.id}
       />
-
-      {/* Stats Footer */}
-      {filteredEvents.length > 0 && (
-        <div className="text-sm text-slate-500 text-center">
-          {filteredEvents.length} événement{filteredEvents.length !== 1 ? 's' : ''} 
-          {(searchQuery || selectedType) && ` (filtré${filteredEvents.length !== 1 ? 's' : ''} sur ${events.length})`}
-        </div>
-      )}
     </div>
   )
 }

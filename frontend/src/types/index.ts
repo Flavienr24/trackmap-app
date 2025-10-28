@@ -6,6 +6,9 @@
 // Status types for events
 export type EventStatus = 'to_implement' | 'to_test' | 'validated' | 'error'
 
+// Interaction types for canonical event definitions
+export type UserInteractionType = 'click' | 'page_load' | 'interaction' | 'form_submit' | 'scroll' | 'other'
+
 // Property types
 export type PropertyType = 'string' | 'number' | 'boolean' | 'array' | 'object'
 
@@ -71,8 +74,29 @@ export interface Event {
   screenshots?: Screenshot[]
   createdAt: string
   updatedAt: string
+  eventDefinitionId?: string
   // Relations
   page?: Page
+  eventDefinition?: EventDefinition
+}
+
+/**
+ * Event Definition Model (Canonical glossary entry)
+ */
+export interface EventDefinition {
+  id: string
+  productId: string
+  name: string
+  description: string
+  userInteractionType: UserInteractionType
+  createdAt: string
+  updatedAt: string
+  // Relations
+  product?: Product
+  events?: Event[]
+  _count?: {
+    events: number
+  }
 }
 
 /**
@@ -140,6 +164,22 @@ export interface EventHistory {
   event?: Event
 }
 
+export interface EventDefinitionHistory {
+  id: string
+  eventDefinitionId: string
+  field: string
+  oldValue?: string
+  newValue?: string
+  author?: string
+  createdAt: string
+}
+
+export interface EventDefinitionStats {
+  totalDefinitions: number
+  totalEvents: number
+  avgEventsPerDefinition: number
+}
+
 /**
  * API Response Types
  */
@@ -185,6 +225,8 @@ export interface CreateEventRequest {
   name: string
   status?: EventStatus
   properties?: Record<string, any>
+  description?: string
+  userInteractionType?: UserInteractionType
 }
 
 export interface UpdateEventRequest extends Partial<CreateEventRequest> {
@@ -198,6 +240,14 @@ export interface CreatePropertyRequest {
 }
 
 export interface UpdatePropertyRequest extends Partial<CreatePropertyRequest> {}
+
+export interface CreateEventDefinitionRequest {
+  name: string
+  description?: string
+  userInteractionType?: UserInteractionType
+}
+
+export interface UpdateEventDefinitionRequest extends Partial<CreateEventDefinitionRequest> {}
 
 export interface CreateSuggestedValueRequest {
   value: string
@@ -285,6 +335,11 @@ export interface EventsFilter {
   modified_since?: string
   sortBy?: 'name' | 'created_at' | 'updated_at'
   sortOrder?: 'asc' | 'desc'
+}
+
+export interface EventDefinitionsFilter {
+  search?: string
+  includeStats?: boolean
 }
 
 export interface PropertiesFilter {
