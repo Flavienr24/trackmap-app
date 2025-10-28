@@ -175,9 +175,9 @@ function DataTable<T extends Record<string, any>>({
         </div>
       )}
       
-      <div className={cn('overflow-visible rounded-lg border border-neutral-200')}>
+      <div className={cn('overflow-x-auto rounded-lg border border-neutral-200')}>
         <div>
-        <table className="min-w-full divide-y divide-neutral-200">
+        <table className="w-full divide-y divide-neutral-200 table-fixed">
           <thead>
             <tr>
               {showExpandIcons && (
@@ -186,10 +186,8 @@ function DataTable<T extends Record<string, any>>({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={cn(
-                    'px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider',
-                    column.width && `w-[${column.width}]`
-                  )}
+                  className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider"
+                  style={column.width ? { width: column.width } : undefined}
                 >
                   <div className="flex items-center space-x-1">
                     <span>{column.title}</span>
@@ -255,9 +253,10 @@ function DataTable<T extends Record<string, any>>({
                       <td
                         key={column.key}
                         className={cn(
-                          "px-6 py-2 whitespace-nowrap text-sm text-neutral-900",
-                          (column.key === 'status' || column.key.includes('status')) && "overflow-visible relative"
+                          "px-6 py-2 text-sm text-neutral-900",
+                          (column.key === 'status' || column.key.includes('status')) && "overflow-visible relative whitespace-nowrap"
                         )}
+                        style={column.width ? { width: column.width } : undefined}
                       >
                         {renderCellValue(column, record)}
                       </td>

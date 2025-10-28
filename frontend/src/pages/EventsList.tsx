@@ -187,15 +187,22 @@ const EventsList: React.FC = () => {
     {
       key: 'name',
       title: 'Événement',
+      width: '220px',
       render: (_value, record) => (
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <span className="font-medium text-slate-900">{record.name}</span>
-            <Badge variant="outline" className="text-xs font-normal">
-              {record.usageCount} utilisation{record.usageCount > 1 ? 's' : ''}
-            </Badge>
-          </div>
-          <p className={cn('text-sm text-slate-600', !record.description && 'italic text-slate-400')}>
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-slate-900 truncate">{record.name}</span>
+          <Badge variant="outline" className="text-xs font-normal shrink-0">
+            {record.usageCount}
+          </Badge>
+        </div>
+      ),
+    },
+    {
+      key: 'description',
+      title: 'Description',
+      render: (_value, record) => (
+        <div className="max-w-md">
+          <p className={cn('text-sm text-slate-600 line-clamp-2', !record.description && 'italic text-slate-400')}>
             {record.description || 'Description à définir'}
           </p>
         </div>
@@ -204,7 +211,7 @@ const EventsList: React.FC = () => {
     {
       key: 'userInteractionType',
       title: 'Interaction',
-      width: '160px',
+      width: '140px',
       render: (value: string) => (
         <Badge variant="secondary" className="capitalize">
           {INTERACTION_LABELS[value] || value}
@@ -213,15 +220,15 @@ const EventsList: React.FC = () => {
     },
     {
       key: 'updatedAt',
-      title: 'Dernière mise à jour',
-      width: '160px',
+      title: 'Dernière MAJ',
+      width: '130px',
       render: (value: string) => {
         if (!value) return <span className="text-slate-400">-</span>
         const date = new Date(value)
         if (Number.isNaN(date.getTime())) {
           return <span className="text-slate-400">-</span>
         }
-        return <span className="text-slate-600">{date.toLocaleDateString('fr-FR')}</span>
+        return <span className="text-slate-600 text-sm">{date.toLocaleDateString('fr-FR')}</span>
       }
     }
   ]
