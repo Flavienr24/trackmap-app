@@ -187,25 +187,18 @@ const EventsList: React.FC = () => {
     {
       key: 'name',
       title: 'Événement',
-      width: '220px',
+      width: '200px',
       render: (_value, record) => (
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-slate-900 truncate">{record.name}</span>
-          <Badge variant="outline" className="text-xs font-normal shrink-0">
-            {record.usageCount}
-          </Badge>
-        </div>
+        <span className="font-medium text-slate-900 truncate block">{record.name}</span>
       ),
     },
     {
       key: 'description',
       title: 'Description',
       render: (_value, record) => (
-        <div className="max-w-md">
-          <p className={cn('text-sm text-slate-600 line-clamp-2', !record.description && 'italic text-slate-400')}>
-            {record.description || 'Description à définir'}
-          </p>
-        </div>
+        <p className={cn('text-sm text-slate-600 line-clamp-2 w-full', !record.description && 'italic text-slate-400')}>
+          {record.description || 'Description à définir'}
+        </p>
       ),
     },
     {
