@@ -334,11 +334,6 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
                           <div className="font-medium text-neutral-900">
                             {commonProp.property?.name || 'Propriété inconnue'}
                           </div>
-                          {commonProp.property?.description && (
-                            <div className="text-sm text-neutral-500">
-                              {commonProp.property.description}
-                            </div>
-                          )}
                         </div>
                         <div className="text-2xl text-neutral-400">→</div>
                         <div className="flex-1">
