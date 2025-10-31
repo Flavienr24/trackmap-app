@@ -1,6 +1,7 @@
 // Pages controller - handles all page-related HTTP requests
 // Pages represent trackable pages within a product/instance
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
 import { db } from '../config/database';
@@ -16,7 +17,8 @@ const prisma = db;
 export const getPagesByProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id: productId } = req.params;
-    const { has_events } = req.query;
+    const { has_events, full } = req.query;
+    const includeEvents = full === 'true';
     
     logger.debug('Fetching pages for product', { 
       productId, 
@@ -38,25 +40,91 @@ export const getPagesByProduct = async (req: Request, res: Response, next: NextF
       return next(error);
     }
 
-    // Fetch pages with event counts only (optimized - don't load all event data)
-    const pages = await prisma.page.findMany({
-      where: { productId: product.id },
-      include: {
-        _count: {
-          select: {
-            events: true
+    if (includeEvents) {
+      const pages = await prisma.page.findMany({
+        where: { productId: product.id },
+        include: {
+          events: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              properties: true,
+              createdAt: true,
+              updatedAt: true
+            }
           }
+        },
+        orderBy: {
+          createdAt: 'desc'
         }
+      });
+
+      const pagesWithCounts = pages.map(page => ({
+        ...page,
+        events_count: page.events.length
+      }));
+
+      const filteredPages = has_events === 'true'
+        ? pagesWithCounts.filter((page) => page.events_count > 0)
+        : pagesWithCounts;
+
+      logger.info('Pages (full) fetched successfully', {
+        productId: product.id,
+        count: filteredPages.length,
+        totalPages: pages.length,
+        requestId: req.ip
+      });
+
+      return res.json({
+        success: true,
+        data: filteredPages,
+        count: filteredPages.length
+      });
+    }
+
+    // Lite mode: fetch pages without events payload
+    const pagesLite = await prisma.page.findMany({
+      where: { productId: product.id },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        url: true,
+        createdAt: true,
+        updatedAt: true
       },
       orderBy: {
         createdAt: 'desc'
       }
     });
 
+    const pageIds = pagesLite.map(page => page.id);
+
+    // Get events count for pages in a single query
+    let eventsCountMap = new Map<string, number>();
+    if (pageIds.length > 0) {
+      const eventsCounts = await prisma.$queryRaw<{ pageId: string; count: bigint }[]>`
+        SELECT page_id as pageId, COUNT(id) as count
+        FROM events
+        WHERE page_id IN (${Prisma.join(pageIds)})
+        GROUP BY page_id
+      `;
+
+      eventsCountMap = new Map(
+        eventsCounts.map(row => [row.pageId, Number(row.count)])
+      );
+    }
+
+    const pagesWithCounts = pagesLite.map(page => ({
+      ...page,
+      events_count: eventsCountMap.get(page.id) || 0
+    }));
+
     // Filter pages that have events if requested
-    let filteredPages = pages;
+    let filteredPages = pagesWithCounts;
     if (has_events === 'true') {
-      filteredPages = pages.filter((page: any) => page._count.events > 0);
+      filteredPages = pagesWithCounts.filter((page) => page.events_count > 0);
     }
 
     logger.info('Pages fetched successfully', { 

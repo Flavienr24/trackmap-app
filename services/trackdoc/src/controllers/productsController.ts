@@ -151,8 +151,9 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
 export const getProductById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
+    const lite = req.query.lite === 'true';
     
-    logger.debug('Fetching product by ID', { productId: id, requestId: req.ip });
+    logger.debug('Fetching product by ID', { productId: id, lite, requestId: req.ip });
 
     // Find product by ID only (no slug support)
     const whereClause = { id };
@@ -160,15 +161,17 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
     // Find product with all related entities
     const product = await prisma.product.findUnique({
       where: whereClause,
-      include: {
-        pages: {
-          include: {
-            events: true // Include events for comprehensive view
+      include: lite
+        ? undefined
+        : {
+            pages: {
+              include: {
+                events: true // Include events for comprehensive view
+              }
+            },
+            properties: true,
+            suggestedValues: true
           }
-        },
-        properties: true,
-        suggestedValues: true
-      }
     });
 
     // Handle product not found case
@@ -178,9 +181,68 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
       return next(error);
     }
 
-    // Add computed fields like in getAllProducts
+    if (lite) {
+      // Lite payload: reuse lightweight counts similar to getAllProducts
+      const liteProduct = await prisma.product.findUnique({
+        where: whereClause,
+        select: {
+          id: true,
+          name: true,
+          url: true,
+          description: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: {
+              pages: true,
+              properties: true,
+              suggestedValues: true
+            }
+          }
+        }
+      });
+
+      let eventsCount = 0;
+      if (liteProduct) {
+        const eventCountResult = await prisma.$queryRaw<{ count: bigint }[]>`
+          SELECT COUNT(e.id) as count
+          FROM events e
+          JOIN pages p ON e.page_id = p.id
+          WHERE p.product_id = ${id}
+        `;
+        eventsCount = eventCountResult.length > 0 ? Number(eventCountResult[0].count) : 0;
+      }
+
+      const liteResponse = {
+        id: liteProduct?.id ?? product.id,
+        name: liteProduct?.name ?? product.name,
+        url: liteProduct?.url ?? product.url,
+        description: liteProduct?.description ?? product.description,
+        createdAt: liteProduct?.createdAt ?? product.createdAt,
+        updatedAt: liteProduct?.updatedAt ?? product.updatedAt,
+        pages_count: liteProduct?._count.pages ?? 0,
+        properties_count: liteProduct?._count.properties ?? 0,
+        suggested_values_count: liteProduct?._count.suggestedValues ?? 0,
+        events_count: eventsCount,
+        health_score: eventsCount > 0 ? Math.round(((liteProduct?._count.pages ?? 0) * 20) + (eventsCount * 10)) : 0
+      };
+
+      logger.info('Product (lite) fetched successfully', {
+        productId: id,
+        productName: liteResponse.name,
+        eventsCount,
+        requestId: req.ip
+      });
+
+      return res.json({
+        success: true,
+        data: liteResponse
+      });
+    }
+
+    // Full payload with relations
     const totalEvents = product.pages.reduce((acc, page) => acc + page.events.length, 0);
-    
+
     const enrichedProduct = {
       ...product,
       pages_count: product.pages.length,

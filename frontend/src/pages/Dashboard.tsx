@@ -244,7 +244,7 @@ const Dashboard: React.FC = () => {
       title: 'Events',
       width: '100px',
       render: (_, record) => (
-        <span className="text-slate-600">{record.events?.length || 0}</span>
+        <span className="text-slate-600">{record.events_count ?? record.events?.length ?? 0}</span>
       ),
     },
     {

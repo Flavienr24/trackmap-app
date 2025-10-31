@@ -364,6 +364,7 @@ export interface PagesFilter {
   has_events?: boolean
   sortBy?: 'name' | 'created_at' | 'events_count'
   sortOrder?: 'asc' | 'desc'
+  full?: 'true' | 'false'
 }
 
 export interface EventsFilter {

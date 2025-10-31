@@ -162,7 +162,7 @@ const PagesList: React.FC = () => {
       title: 'Events',
       width: '100px',
       render: (_, record) => (
-        <span className="text-slate-600">{record.events?.length || 0}</span>
+        <span className="text-slate-600">{record.events_count ?? record.events?.length ?? 0}</span>
       ),
     },
     {
@@ -243,7 +243,7 @@ const PagesList: React.FC = () => {
             <Card className="bg-slate-50">
               <CardContent className="p-4">
                 <div className="text-2xl font-bold text-slate-900">
-                  {pages.reduce((total, page) => total + (page.events?.length || 0), 0)}
+                {pages.reduce((total, page) => total + (page.events_count ?? page.events?.length ?? 0), 0)}
                 </div>
                 <div className="text-sm text-slate-600">Total événements</div>
               </CardContent>

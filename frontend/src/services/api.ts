@@ -130,8 +130,8 @@ export const productsApi = {
     apiRequest('/products' + (filters ? `?${new URLSearchParams(filters as any)}` : '')),
 
   // Get single product
-  getById: (id: string): Promise<ApiResponse<Product>> =>
-    apiRequest(`/products/${id}`),
+  getById: (id: string, filters?: { lite?: 'true' | 'false' }): Promise<ApiResponse<Product>> =>
+    apiRequest(`/products/${id}` + (filters ? `?${new URLSearchParams(filters as any)}` : '')),
 
   // Create product
   create: (data: CreateProductRequest): Promise<ApiResponse<Product>> =>

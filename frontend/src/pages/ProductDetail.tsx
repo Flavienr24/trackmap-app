@@ -72,8 +72,8 @@ const ProductDetail: React.FC = () => {
 
     try {
       const [productResponse, pagesResponse, commonPropsResponse] = await Promise.all([
-        productsApi.getById(productId),
-        pagesApi.getByProduct(productId),
+        productsApi.getById(productId, { lite: 'true' }),
+        pagesApi.getByProduct(productId, { full: 'true' }),
         commonPropertiesApi.getByProduct(productId)
       ])
 
@@ -289,7 +289,7 @@ const ProductDetail: React.FC = () => {
       title: 'Events',
       width: '100px',
       render: (_, record) => (
-        <span className="text-neutral-600">{record.events?.length || 0}</span>
+        <span className="text-neutral-600">{record.events?.length ?? record.events_count ?? 0}</span>
       ),
     },
     {
