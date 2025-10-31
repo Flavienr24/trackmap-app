@@ -55,18 +55,37 @@ const PageDetail: React.FC = () => {
   // Load page and events data
   useEffect(() => {
     if (!productName || !pageSlug || !currentProduct) return
-    
+
     const loadAllData = async () => {
       setLoading(true)
       try {
         // Load page using current product ID and page slug
         const pageResponse = await pagesApi.getBySlug(currentProduct.id, pageSlug)
         setPage(pageResponse.data)
-        
-        // Finally load events for that page
+
+        // Load events for that page
         if (pageResponse.data?.id) {
           const eventsResponse = await eventsApi.getByPage(pageResponse.data.id)
           setEvents(eventsResponse.data)
+
+          // Detect conflicts for all events (important for initial load)
+          if (currentProduct && eventsResponse.data.length > 0) {
+            const conflictsMap: Record<string, EventConflict[]> = {}
+
+            const conflictPromises = eventsResponse.data.map(async (event) => {
+              try {
+                const response = await commonPropertiesApi.detectConflicts(currentProduct.id, event.id)
+                if (response.data && response.data.length > 0) {
+                  conflictsMap[event.id] = response.data
+                }
+              } catch (error) {
+                console.error(`Error detecting conflicts for event ${event.id}:`, error)
+              }
+            })
+
+            await Promise.all(conflictPromises)
+            setEventConflicts(conflictsMap)
+          }
         }
       } catch (error) {
         console.error('Error loading page or events:', error)
@@ -75,7 +94,7 @@ const PageDetail: React.FC = () => {
         setLoading(false)
       }
     }
-    
+
     loadAllData()
   }, [productName, pageSlug, navigate, currentProduct])
 

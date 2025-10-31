@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Modal } from '@/components/organisms/Modal'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,6 +27,13 @@ const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = ({
 }) => {
   const [resolving, setResolving] = useState(false)
   const [selectedConflicts, setSelectedConflicts] = useState<Set<string>>(new Set())
+
+  // Reset selection when modal opens/closes or event changes
+  useEffect(() => {
+    if (!isOpen || !event) {
+      setSelectedConflicts(new Set())
+    }
+  }, [isOpen, event])
 
   if (!event || conflicts.length === 0) {
     return null
