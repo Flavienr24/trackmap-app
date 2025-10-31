@@ -32,7 +32,7 @@ interface EventDefinitionRow {
 
 const INTERACTION_LABELS: Record<string, string> = {
   click: 'Clic',
-  page_load: 'Chargement page',
+  page_load: 'Loading',
   interaction: 'Interaction',
   form_submit: 'Formulaire',
   scroll: 'Scroll',
@@ -187,7 +187,7 @@ const EventsList: React.FC = () => {
     {
       key: 'name',
       title: 'Événement',
-      width: '160px',
+      width: '190px',
       render: (_value, record) => (
         <span className="font-medium text-slate-900 truncate block">{record.name}</span>
       ),
@@ -195,8 +195,14 @@ const EventsList: React.FC = () => {
     {
       key: 'description',
       title: 'Description',
+      className: 'max-w-[680px]',
       render: (_value, record) => (
-        <p className={cn('text-sm text-slate-600 line-clamp-3 w-full', !record.description && 'italic text-slate-400')}>
+        <p
+          className={cn(
+            'text-sm text-slate-600 line-clamp-3',
+            !record.description && 'italic text-slate-400'
+          )}
+        >
           {record.description || 'Description à définir'}
         </p>
       ),
@@ -204,7 +210,7 @@ const EventsList: React.FC = () => {
     {
       key: 'userInteractionType',
       title: 'Interaction',
-      width: '140px',
+      width: '170px',
       render: (value: string) => (
         <Badge variant="secondary" className="capitalize">
           {INTERACTION_LABELS[value] || value}
@@ -214,7 +220,7 @@ const EventsList: React.FC = () => {
     {
       key: 'updatedAt',
       title: 'Dernière MAJ',
-      width: '130px',
+      width: '150px',
       render: (value: string) => {
         if (!value) return <span className="text-slate-400">-</span>
         const date = new Date(value)
@@ -279,12 +285,7 @@ const EventsList: React.FC = () => {
     <div className="w-full space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-3xl font-bold">
-            Glossaire des événements — {currentProduct.name}
-          </CardTitle>
-          <CardDescription>
-            Vision centralisée des événements suivis, leur description canonique et les interactions couvertes.
-          </CardDescription>
+          <CardTitle className="text-3xl font-bold">Events</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
