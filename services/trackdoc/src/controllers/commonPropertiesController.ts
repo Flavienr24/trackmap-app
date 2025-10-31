@@ -224,7 +224,7 @@ export const getCommonPropertyById = async (req: Request, res: Response, next: N
 export const updateCommonProperty = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { suggestedValueId } = req.body;
+    const { propertyId, suggestedValueId } = req.body;
 
     if (!suggestedValueId) {
       const error: AppError = new Error('Suggested value ID is required');
@@ -234,6 +234,7 @@ export const updateCommonProperty = async (req: Request, res: Response, next: Ne
 
     logger.debug('Updating common property', {
       commonPropertyId: id,
+      propertyId,
       suggestedValueId,
       requestId: req.ip
     });
@@ -247,6 +248,40 @@ export const updateCommonProperty = async (req: Request, res: Response, next: Ne
       const error: AppError = new Error('Common property not found');
       error.statusCode = 404;
       return next(error);
+    }
+
+    // If propertyId is provided, verify it exists and belongs to same product
+    if (propertyId) {
+      const property = await prisma.property.findUnique({
+        where: { id: propertyId }
+      });
+
+      if (!property) {
+        const error: AppError = new Error('Property not found');
+        error.statusCode = 404;
+        return next(error);
+      }
+
+      if (property.productId !== existingCommonProperty.productId) {
+        const error: AppError = new Error('Property does not belong to the same product');
+        error.statusCode = 400;
+        return next(error);
+      }
+
+      // Check if another common property already exists for this property (excluding current one)
+      const duplicateCommonProperty = await prisma.commonProperty.findFirst({
+        where: {
+          productId: existingCommonProperty.productId,
+          propertyId,
+          id: { not: id }
+        }
+      });
+
+      if (duplicateCommonProperty) {
+        const error: AppError = new Error('A common property already exists for this property');
+        error.statusCode = 409;
+        return next(error);
+      }
     }
 
     // Verify suggested value exists and belongs to same product
@@ -266,12 +301,19 @@ export const updateCommonProperty = async (req: Request, res: Response, next: Ne
       return next(error);
     }
 
+    // Build update data
+    const updateData: { propertyId?: string; suggestedValueId: string } = {
+      suggestedValueId
+    };
+
+    if (propertyId) {
+      updateData.propertyId = propertyId;
+    }
+
     // Update common property
     const commonProperty = await prisma.commonProperty.update({
       where: { id },
-      data: {
-        suggestedValueId
-      },
+      data: updateData,
       include: {
         product: true,
         property: true,
@@ -281,6 +323,8 @@ export const updateCommonProperty = async (req: Request, res: Response, next: Ne
 
     logger.info('Common property updated successfully', {
       commonPropertyId: id,
+      propertyChanged: !!propertyId,
+      newPropertyName: propertyId ? commonProperty.property.name : undefined,
       newSuggestedValue: suggestedValue.value,
       requestId: req.ip
     });

@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Modal } from '@/components/organisms/Modal'
 import { FormField } from '@/components/molecules/FormField'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { EventCombobox, type EventOption } from '@/components/ui/event-combobox'
 import { commonPropertiesApi, propertiesApi, suggestedValuesApi } from '@/services/api'
-import type { CommonProperty, Property, SuggestedValue, CreateCommonPropertyRequest } from '@/types'
+import type { CommonProperty, Property, SuggestedValue, CreateCommonPropertyRequest, UpdateCommonPropertyRequest } from '@/types'
 
 interface CommonPropertiesModalProps {
   isOpen: boolean
@@ -34,6 +34,13 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  // Edit mode state
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<UpdateCommonPropertyRequest>({
+    propertyId: '',
+    suggestedValueId: '',
+  })
+
   // Load data when modal opens
   const loadData = useCallback(async () => {
     if (!isOpen || !productId) return
@@ -61,15 +68,75 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
   }, [loadData])
 
   // Get available properties (not already used as common properties)
+  // Exclude currently editing property to allow re-selection
   const availableProperties = properties.filter(
-    (prop) => !commonProperties.some((cp) => cp.propertyId === prop.id)
+    (prop) => !commonProperties.some((cp) => cp.propertyId === prop.id && cp.id !== editingId)
   )
+
+  // Convert properties to EventOption format for EventCombobox
+  const propertyOptions: EventOption[] = availableProperties.map((prop) => ({
+    value: prop.id,
+    label: prop.name,
+    description: prop.description,
+  }))
+
+  // Convert suggested values to EventOption format for EventCombobox
+  const suggestedValueOptions: EventOption[] = suggestedValues.map((sv) => ({
+    value: sv.id,
+    label: sv.value,
+    description: sv.isContextual ? 'Contextuel' : 'Statique',
+  }))
 
   const handleClose = () => {
     setShowAddForm(false)
     setNewProperty({ propertyId: '', suggestedValueId: '' })
+    setEditingId(null)
+    setEditForm({ propertyId: '', suggestedValueId: '' })
     setErrors({})
     onClose()
+  }
+
+  const handleEditCommonProperty = (commonProp: CommonProperty) => {
+    setEditingId(commonProp.id)
+    setEditForm({
+      propertyId: commonProp.propertyId,
+      suggestedValueId: commonProp.suggestedValueId,
+    })
+    setShowAddForm(false) // Close add form if open
+    setErrors({})
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setEditForm({ propertyId: '', suggestedValueId: '' })
+    setErrors({})
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingId) return
+
+    if (!editForm.suggestedValueId) {
+      setErrors({
+        submit: 'Sélectionnez une valeur',
+      })
+      return
+    }
+
+    setActionLoading(editingId)
+    try {
+      await commonPropertiesApi.update(editingId, editForm)
+      await loadData()
+      setEditingId(null)
+      setEditForm({ propertyId: '', suggestedValueId: '' })
+      setErrors({})
+    } catch (error) {
+      console.error('Error updating common property:', error)
+      setErrors({
+        submit: (error as any)?.response?.message || 'Erreur lors de la mise à jour',
+      })
+    } finally {
+      setActionLoading(null)
+    }
   }
 
   const handleAddCommonProperty = async () => {
@@ -143,6 +210,9 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
             Les propriétés communes sont automatiquement pré-remplies lors de la création de nouveaux events.
             Configurez les valeurs par défaut que vous utilisez le plus souvent.
           </p>
+          <p className="text-xs text-blue-700 mt-2">
+            💡 <strong>Astuce :</strong> Cliquez sur une propriété commune pour la modifier.
+          </p>
         </div>
 
         {/* Loading state */}
@@ -172,47 +242,124 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
         {/* Common Properties List */}
         {!loading && commonProperties.length > 0 && (
           <div className="space-y-2">
-            {commonProperties.map((commonProp) => (
-              <div
-                key={commonProp.id}
-                className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg hover:bg-neutral-50"
-              >
-                <div className="flex items-center space-x-4 flex-1">
-                  <div className="flex-1">
-                    <div className="font-medium text-neutral-900">
-                      {commonProp.property?.name || 'Propriété inconnue'}
-                    </div>
-                    {commonProp.property?.description && (
-                      <div className="text-sm text-neutral-500">
-                        {commonProp.property.description}
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-2xl text-neutral-400">→</div>
-                  <div className="flex-1">
-                    <Badge
-                      variant="outline"
-                      className={`text-sm font-medium ${
-                        commonProp.suggestedValue?.isContextual
-                          ? 'border-purple-200 bg-purple-50 text-purple-800'
-                          : 'border-slate-200 bg-slate-100 text-slate-700'
-                      }`}
-                    >
-                      {commonProp.suggestedValue?.value || 'Valeur inconnue'}
-                    </Badge>
-                  </div>
-                </div>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => handleDeleteCommonProperty(commonProp.id)}
-                  loading={actionLoading === commonProp.id}
-                  disabled={!!actionLoading}
+            {commonProperties.map((commonProp) => {
+              const isEditing = editingId === commonProp.id
+
+              return (
+                <div
+                  key={commonProp.id}
+                  className={`flex items-center justify-between p-4 border rounded-lg ${
+                    isEditing
+                      ? 'border-blue-300 bg-blue-50'
+                      : 'border-neutral-200 hover:bg-neutral-50 cursor-pointer'
+                  }`}
+                  onClick={() => !isEditing && !actionLoading && handleEditCommonProperty(commonProp)}
                 >
-                  Supprimer
-                </Button>
-              </div>
-            ))}
+                  {isEditing ? (
+                    // Edit mode
+                    <div className="flex items-center space-x-4 flex-1">
+                      <div className="flex-1">
+                        <FormField label="Propriété" required>
+                          <EventCombobox
+                            value={editForm.propertyId || ''}
+                            onChange={(value) => {
+                              setEditForm({
+                                propertyId: value,
+                                suggestedValueId: '', // Reset value when property changes
+                              })
+                              setErrors({})
+                            }}
+                            options={propertyOptions}
+                            placeholder="Sélectionner une propriété"
+                            emptyMessage="Aucune propriété disponible"
+                          />
+                        </FormField>
+                      </div>
+                      <div className="text-2xl text-neutral-400">→</div>
+                      <div className="flex-1">
+                        <FormField label="Valeur" required>
+                          <EventCombobox
+                            value={editForm.suggestedValueId}
+                            onChange={(value) => {
+                              setEditForm({ ...editForm, suggestedValueId: value })
+                              setErrors({})
+                            }}
+                            options={suggestedValueOptions}
+                            placeholder="Sélectionner une valeur"
+                            emptyMessage="Aucune valeur disponible"
+                          />
+                        </FormField>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCancelEdit()
+                          }}
+                          disabled={actionLoading === commonProp.id}
+                        >
+                          Annuler
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleSaveEdit()
+                          }}
+                          loading={actionLoading === commonProp.id}
+                          disabled={!editForm.suggestedValueId || actionLoading === commonProp.id}
+                        >
+                          Enregistrer
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    // View mode
+                    <>
+                      <div className="flex items-center space-x-4 flex-1">
+                        <div className="flex-1">
+                          <div className="font-medium text-neutral-900">
+                            {commonProp.property?.name || 'Propriété inconnue'}
+                          </div>
+                          {commonProp.property?.description && (
+                            <div className="text-sm text-neutral-500">
+                              {commonProp.property.description}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-2xl text-neutral-400">→</div>
+                        <div className="flex-1">
+                          <Badge
+                            variant="outline"
+                            className={`text-sm font-medium ${
+                              commonProp.suggestedValue?.isContextual
+                                ? 'border-purple-200 bg-purple-50 text-purple-800'
+                                : 'border-slate-200 bg-slate-100 text-slate-700'
+                            }`}
+                          >
+                            {commonProp.suggestedValue?.value || 'Valeur inconnue'}
+                          </Badge>
+                        </div>
+                      </div>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteCommonProperty(commonProp.id)
+                        }}
+                        loading={actionLoading === commonProp.id}
+                        disabled={!!actionLoading}
+                      >
+                        Supprimer
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
 
@@ -228,35 +375,17 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
               error={errors.property}
               hint="Choisissez la propriété à utiliser par défaut"
             >
-              <Select
+              <EventCombobox
                 value={newProperty.propertyId}
-                onValueChange={(value) => {
+                onChange={(value) => {
                   setNewProperty({ ...newProperty, propertyId: value, suggestedValueId: '' })
                   setErrors({})
                 }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner une propriété" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableProperties.length === 0 ? (
-                    <div className="px-2 py-6 text-center text-sm text-neutral-500">
-                      Aucune propriété disponible
-                    </div>
-                  ) : (
-                    availableProperties.map((prop) => (
-                      <SelectItem key={prop.id} value={prop.id}>
-                        <div>
-                          <div>{prop.name}</div>
-                          {prop.description && (
-                            <div className="text-xs text-neutral-500">{prop.description}</div>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                options={propertyOptions}
+                placeholder="Sélectionner une propriété"
+                emptyMessage="Aucune propriété disponible"
+                disabled={availableProperties.length === 0}
+              />
             </FormField>
 
             {newProperty.propertyId && (
@@ -266,42 +395,17 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
                 error={errors.value}
                 hint="Choisissez la valeur qui sera pré-remplie"
               >
-                <Select
+                <EventCombobox
                   value={newProperty.suggestedValueId}
-                  onValueChange={(value) => {
+                  onChange={(value) => {
                     setNewProperty({ ...newProperty, suggestedValueId: value })
                     setErrors({})
                   }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner une valeur" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suggestedValues.length === 0 ? (
-                      <div className="px-2 py-6 text-center text-sm text-neutral-500">
-                        Aucune valeur suggérée disponible
-                      </div>
-                    ) : (
-                      suggestedValues.map((value) => (
-                        <SelectItem key={value.id} value={value.id}>
-                          <div className="flex items-center space-x-2">
-                            <span>{value.value}</span>
-                            <Badge
-                              variant="outline"
-                              className={`text-xs font-medium ${
-                                value.isContextual
-                                  ? 'border-purple-200 bg-purple-50 text-purple-800'
-                                  : 'border-slate-200 bg-slate-100 text-slate-700'
-                              }`}
-                            >
-                              {value.isContextual ? 'Contextuel' : 'Statique'}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                  options={suggestedValueOptions}
+                  placeholder="Sélectionner une valeur"
+                  emptyMessage="Aucune valeur suggérée disponible"
+                  disabled={suggestedValues.length === 0}
+                />
               </FormField>
             )}
 

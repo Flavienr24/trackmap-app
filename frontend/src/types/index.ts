@@ -318,6 +318,7 @@ export interface CreateCommonPropertyRequest {
 }
 
 export interface UpdateCommonPropertyRequest {
+  propertyId?: string       // Optional - allows changing the property key
   suggestedValueId: string
 }
 
