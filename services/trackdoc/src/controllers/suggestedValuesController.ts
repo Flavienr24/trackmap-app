@@ -12,12 +12,22 @@ const prisma = db;
 /**
  * Get all suggested values for a specific product
  * GET /api/products/:id/suggested-values
+ * Supports pagination via ?limit= and search via ?search=
  */
 export const getSuggestedValuesByProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id: productSlug } = req.params;
-    
-    logger.debug('Fetching suggested values for product', { productSlug, requestId: req.ip });
+    const { limit, search } = req.query;
+
+    // Parse limit parameter (default: no limit for backward compatibility)
+    const limitNum = limit ? parseInt(limit as string, 10) : undefined;
+
+    logger.debug('Fetching suggested values for product', {
+      productSlug,
+      limit: limitNum,
+      search,
+      requestId: req.ip
+    });
 
     // Verify product exists
     const product = await prisma.product.findUnique({
@@ -30,9 +40,18 @@ export const getSuggestedValuesByProduct = async (req: Request, res: Response, n
       return next(error);
     }
 
-    // Fetch all suggested values for the product with associated properties
+    // Build where clause for search
+    const whereClause: any = { productId: product.id };
+    if (search && typeof search === 'string') {
+      whereClause.value = {
+        contains: search,
+        mode: 'insensitive'
+      };
+    }
+
+    // Fetch suggested values with optional limit and search
     const suggestedValues = await prisma.suggestedValue.findMany({
-      where: { productId: product.id },
+      where: whereClause,
       include: {
         propertyValues: {
           include: {
@@ -43,19 +62,23 @@ export const getSuggestedValuesByProduct = async (req: Request, res: Response, n
       orderBy: [
         { isContextual: 'asc' }, // Non-contextual first
         { value: 'asc' } // Then alphabetical by value
-      ]
+      ],
+      take: limitNum
     });
 
-    logger.info('Suggested values fetched successfully', { 
+    logger.info('Suggested values fetched successfully', {
       productId: product.id,
       count: suggestedValues.length,
-      requestId: req.ip 
+      limit: limitNum,
+      search: search || 'none',
+      requestId: req.ip
     });
 
     res.json({
       success: true,
       data: suggestedValues,
-      count: suggestedValues.length
+      count: suggestedValues.length,
+      hasMore: limitNum ? suggestedValues.length === limitNum : false
     });
   } catch (error) {
     logger.error('Error fetching suggested values', { error, productSlug: req.params.id, requestId: req.ip });

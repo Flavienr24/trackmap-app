@@ -42,6 +42,7 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
   })
 
   // Load data when modal opens
+  // Use limit to reduce initial payload for better performance
   const loadData = useCallback(async () => {
     if (!isOpen || !productId) return
 
@@ -49,8 +50,10 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
     try {
       const [commonPropsResponse, propsResponse, valuesResponse] = await Promise.all([
         commonPropertiesApi.getByProduct(productId),
-        propertiesApi.getByProduct(productId),
-        suggestedValuesApi.getByProduct(productId),
+        // Load only first 100 properties/values for better performance
+        // EventCombobox handles search and lazy loading
+        propertiesApi.getByProduct(productId, { limit: '100' } as any),
+        suggestedValuesApi.getByProduct(productId, { limit: '100' } as any),
       ])
 
       setCommonProperties(commonPropsResponse.data)
@@ -68,10 +71,21 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
   }, [loadData])
 
   // Get available properties (not already used as common properties)
-  // Exclude currently editing property to allow re-selection
-  const availableProperties = properties.filter(
-    (prop) => !commonProperties.some((cp) => cp.propertyId === prop.id && cp.id !== editingId)
-  )
+  // When editing, keep the current property in the list to allow correction
+  // Otherwise exclude all properties already mapped to common properties
+  const availableProperties = properties.filter((prop) => {
+    // Find if this property is used in a common property
+    const usedInCommonProp = commonProperties.find((cp) => cp.propertyId === prop.id)
+
+    // If not used anywhere, it's available
+    if (!usedInCommonProp) return true
+
+    // If we're editing and this is the property of the item being edited, keep it
+    if (editingId && usedInCommonProp.id === editingId) return true
+
+    // Otherwise, exclude it (already used in another common property)
+    return false
+  })
 
   // Convert properties to EventOption format for EventCombobox
   const propertyOptions: EventOption[] = availableProperties.map((prop) => ({

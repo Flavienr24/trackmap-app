@@ -14,12 +14,22 @@ const VALID_TYPES = ['STRING', 'NUMBER', 'BOOLEAN', 'ARRAY', 'OBJECT'];
 /**
  * Get all properties for a specific product
  * GET /api/products/:id/properties
+ * Supports pagination via ?limit= and search via ?search=
  */
 export const getPropertiesByProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id: productSlug } = req.params;
-    
-    logger.debug('Fetching properties for product', { productSlug, requestId: req.ip });
+    const { limit, search } = req.query;
+
+    // Parse limit parameter (default: no limit for backward compatibility)
+    const limitNum = limit ? parseInt(limit as string, 10) : undefined;
+
+    logger.debug('Fetching properties for product', {
+      productSlug,
+      limit: limitNum,
+      search,
+      requestId: req.ip
+    });
 
     // Verify product exists
     const product = await prisma.product.findUnique({
@@ -32,9 +42,18 @@ export const getPropertiesByProduct = async (req: Request, res: Response, next: 
       return next(error);
     }
 
-    // Fetch all properties for the product with associated suggested values
+    // Build where clause for search
+    const whereClause: any = { productId: product.id };
+    if (search && typeof search === 'string') {
+      whereClause.name = {
+        contains: search,
+        mode: 'insensitive'
+      };
+    }
+
+    // Fetch properties with optional limit and search
     const properties = await prisma.property.findMany({
-      where: { productId: product.id },
+      where: whereClause,
       include: {
         propertyValues: {
           include: {
@@ -44,19 +63,23 @@ export const getPropertiesByProduct = async (req: Request, res: Response, next: 
       },
       orderBy: {
         name: 'asc' // Alphabetical order by name
-      }
+      },
+      take: limitNum
     });
 
-    logger.info('Properties fetched successfully', { 
+    logger.info('Properties fetched successfully', {
       productId: product.id,
       count: properties.length,
-      requestId: req.ip 
+      limit: limitNum,
+      search: search || 'none',
+      requestId: req.ip
     });
 
     res.json({
       success: true,
       data: properties,
-      count: properties.length
+      count: properties.length,
+      hasMore: limitNum ? properties.length === limitNum : false
     });
   } catch (error) {
     logger.error('Error fetching properties', { error, productSlug: req.params.id, requestId: req.ip });
