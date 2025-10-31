@@ -127,11 +127,11 @@ export const getPagesByProduct = async (req: Request, res: Response, next: NextF
       filteredPages = pagesWithCounts.filter((page) => page.events_count > 0);
     }
 
-    logger.info('Pages fetched successfully', { 
+    logger.info('Pages fetched successfully', {
       productId: product.id,
       count: filteredPages.length,
-      totalPages: pages.length,
-      requestId: req.ip 
+      totalPages: pagesLite.length,
+      requestId: req.ip
     });
 
     res.json({

@@ -158,31 +158,8 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
     // Find product by ID only (no slug support)
     const whereClause = { id };
 
-    // Find product with all related entities
-    const product = await prisma.product.findUnique({
-      where: whereClause,
-      include: lite
-        ? undefined
-        : {
-            pages: {
-              include: {
-                events: true // Include events for comprehensive view
-              }
-            },
-            properties: true,
-            suggestedValues: true
-          }
-    });
-
-    // Handle product not found case
-    if (!product) {
-      const error: AppError = new Error('Product not found');
-      error.statusCode = 404;
-      return next(error);
-    }
-
     if (lite) {
-      // Lite payload: reuse lightweight counts similar to getAllProducts
+      // Lite payload: single query with counts (optimized)
       const liteProduct = await prisma.product.findUnique({
         where: whereClause,
         select: {
@@ -202,29 +179,34 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
         }
       });
 
-      let eventsCount = 0;
-      if (liteProduct) {
-        const eventCountResult = await prisma.$queryRaw<{ count: bigint }[]>`
-          SELECT COUNT(e.id) as count
-          FROM events e
-          JOIN pages p ON e.page_id = p.id
-          WHERE p.product_id = ${id}
-        `;
-        eventsCount = eventCountResult.length > 0 ? Number(eventCountResult[0].count) : 0;
+      // Handle product not found case
+      if (!liteProduct) {
+        const error: AppError = new Error('Product not found');
+        error.statusCode = 404;
+        return next(error);
       }
 
+      // Get events count with single query
+      const eventCountResult = await prisma.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(e.id) as count
+        FROM events e
+        JOIN pages p ON e.page_id = p.id
+        WHERE p.product_id = ${id}
+      `;
+      const eventsCount = eventCountResult.length > 0 ? Number(eventCountResult[0].count) : 0;
+
       const liteResponse = {
-        id: liteProduct?.id ?? product.id,
-        name: liteProduct?.name ?? product.name,
-        url: liteProduct?.url ?? product.url,
-        description: liteProduct?.description ?? product.description,
-        createdAt: liteProduct?.createdAt ?? product.createdAt,
-        updatedAt: liteProduct?.updatedAt ?? product.updatedAt,
-        pages_count: liteProduct?._count.pages ?? 0,
-        properties_count: liteProduct?._count.properties ?? 0,
-        suggested_values_count: liteProduct?._count.suggestedValues ?? 0,
+        id: liteProduct.id,
+        name: liteProduct.name,
+        url: liteProduct.url,
+        description: liteProduct.description,
+        createdAt: liteProduct.createdAt,
+        updatedAt: liteProduct.updatedAt,
+        pages_count: liteProduct._count.pages,
+        properties_count: liteProduct._count.properties,
+        suggested_values_count: liteProduct._count.suggestedValues,
         events_count: eventsCount,
-        health_score: eventsCount > 0 ? Math.round(((liteProduct?._count.pages ?? 0) * 20) + (eventsCount * 10)) : 0
+        health_score: eventsCount > 0 ? Math.round((liteProduct._count.pages * 20) + (eventsCount * 10)) : 0
       };
 
       logger.info('Product (lite) fetched successfully', {
@@ -238,6 +220,27 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
         success: true,
         data: liteResponse
       });
+    }
+
+    // Full payload: single query with all related entities
+    const product = await prisma.product.findUnique({
+      where: whereClause,
+      include: {
+        pages: {
+          include: {
+            events: true // Include events for comprehensive view
+          }
+        },
+        properties: true,
+        suggestedValues: true
+      }
+    });
+
+    // Handle product not found case
+    if (!product) {
+      const error: AppError = new Error('Product not found');
+      error.statusCode = 404;
+      return next(error);
     }
 
     // Full payload with relations
