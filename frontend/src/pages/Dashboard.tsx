@@ -1,15 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreatePageModal } from '@/components/organisms/CreatePageModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { EditProductModal } from '@/components/organisms/EditProductModal'
-import { pagesApi, productsApi } from '@/services/api'
+import { CommonPropertiesModal } from '@/components/organisms/CommonPropertiesModal'
+import { pagesApi, productsApi, commonPropertiesApi } from '@/services/api'
 import { useProduct } from '@/hooks/useProduct'
 import { doesProductNameMatchSlug } from '@/utils/slug'
-import type { Page, CreatePageRequest, UpdatePageRequest, UpdateProductRequest, Product } from '@/types'
+import type {
+  Page,
+  CreatePageRequest,
+  UpdatePageRequest,
+  UpdateProductRequest,
+  Product,
+  CommonProperty,
+} from '@/types'
 
 /**
  * Dashboard Page - Main product overview with stats, pages, and actions
@@ -34,15 +43,24 @@ const Dashboard: React.FC = () => {
   const [editPageLoading, setEditPageLoading] = useState(false)
   const [showEditProductModal, setShowEditProductModal] = useState(false)
   const [editProductLoading, setEditProductLoading] = useState(false)
+  const [showCommonPropertiesModal, setShowCommonPropertiesModal] = useState(false)
+  const [commonPropertiesCount, setCommonPropertiesCount] = useState(0)
+  const [commonProperties, setCommonProperties] = useState<CommonProperty[]>([])
 
-  // Load pages for the current product
-  const loadPages = useCallback(async () => {
+  // Load dashboard data (pages + common properties) for the current product
+  const loadDashboardData = useCallback(async () => {
     if (!currentProduct) return
     try {
-      const response = await pagesApi.getByProduct(currentProduct.id)
-      setPages(response.data)
+      const [pagesResponse, commonPropsResponse] = await Promise.all([
+        pagesApi.getByProduct(currentProduct.id),
+        commonPropertiesApi.getByProduct(currentProduct.id),
+      ])
+
+      setPages(pagesResponse.data)
+      setCommonProperties(commonPropsResponse.data)
+      setCommonPropertiesCount(commonPropsResponse.data.length)
     } catch (error) {
-      console.error('Error loading pages:', error)
+      console.error('Error loading dashboard data:', error)
     }
   }, [currentProduct])
 
@@ -63,9 +81,9 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     if (currentProduct) {
       setLoading(true)
-      loadPages().finally(() => setLoading(false))
+      loadDashboardData().finally(() => setLoading(false))
     }
-  }, [currentProduct, loadPages])
+  }, [currentProduct, loadDashboardData])
 
   // Calculate unique properties used across all events
   const getUsedPropertiesCount = useCallback(() => {
@@ -123,7 +141,7 @@ const Dashboard: React.FC = () => {
     setEditPageLoading(true)
     try {
       await pagesApi.update(pageId, data)
-      await loadPages()
+      await loadDashboardData()
     } catch (error) {
       console.error('Error updating page:', error)
       throw error
@@ -135,7 +153,7 @@ const Dashboard: React.FC = () => {
   const handleDeletePage = async (page: Page) => {
     try {
       await pagesApi.delete(page.id)
-      await loadPages()
+      await loadDashboardData()
     } catch (error) {
       console.error('Error deleting page:', error)
     }
@@ -164,7 +182,10 @@ const Dashboard: React.FC = () => {
       }
 
       // Refresh products list to ensure consistency
-      await loadProducts(true) // Force reload
+      await Promise.all([
+        loadProducts(true), // Force reload
+        loadDashboardData(),
+      ])
     } catch (error) {
       console.error('Error updating product:', error)
       throw error
@@ -276,7 +297,7 @@ const Dashboard: React.FC = () => {
         
         <CardContent>
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <Card className="bg-slate-50">
               <CardContent className="p-4">
                 <div className="text-2xl font-bold text-slate-900">
@@ -301,6 +322,15 @@ const Dashboard: React.FC = () => {
                   {getUsedPropertiesCount()}
                 </div>
                 <div className="text-sm text-slate-600">Propriétés utilisées</div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-50">
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-slate-900">
+                  {commonPropertiesCount}
+                </div>
+                <div className="text-sm text-slate-600">Propriétés communes</div>
               </CardContent>
             </Card>
             
@@ -395,6 +425,71 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Common Properties Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Propriétés communes</CardTitle>
+              <CardDescription>
+                Propriétés auto-remplies lors de la création d’un événement
+              </CardDescription>
+            </div>
+            <Button variant="secondary" onClick={() => setShowCommonPropertiesModal(true)}>
+              Gérer
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {commonProperties.length === 0 ? (
+            <div className="text-center py-8 border border-dashed border-slate-300 rounded-lg">
+              <div className="text-5xl mb-3">📋</div>
+              <p className="text-slate-700 font-medium mb-2">Aucune propriété commune configurée</p>
+              <p className="text-slate-500 mb-4">
+                Ajoutez des propriétés communes pour pré-remplir vos nouveaux events.
+              </p>
+              <Button onClick={() => setShowCommonPropertiesModal(true)}>Ajouter une propriété</Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead>
+                  <tr className="text-slate-500 uppercase text-xs">
+                    <th className="py-2 pr-4 font-medium">Propriété</th>
+                    <th className="py-2 pr-4 font-medium">Description</th>
+                    <th className="py-2 pr-4 font-medium">Valeur par défaut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {commonProperties.map((commonProp) => (
+                    <tr key={commonProp.id} className="border-t border-slate-200">
+                      <td className="py-3 pr-4 font-medium text-slate-900">
+                        {commonProp.property?.name || 'Propriété inconnue'}
+                      </td>
+                      <td className="py-3 pr-4 text-slate-600">
+                        {commonProp.property?.description || '—'}
+                      </td>
+                      <td className="py-3 pr-4">
+                        <Badge
+                          variant="outline"
+                          className={`text-sm font-medium ${
+                            commonProp.suggestedValue?.isContextual
+                              ? 'border-purple-200 bg-purple-50 text-purple-800'
+                              : 'border-slate-200 bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {commonProp.suggestedValue?.value || 'Valeur inconnue'}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Last update info */}
       <div className="flex justify-end pt-4">
         <div className="text-sm text-slate-500">
@@ -426,6 +521,15 @@ const Dashboard: React.FC = () => {
         onSubmit={handleEditProductSubmit}
         onDelete={handleDeleteProduct}
         loading={editProductLoading}
+      />
+
+      <CommonPropertiesModal
+        isOpen={showCommonPropertiesModal}
+        productId={currentProduct.id}
+        onClose={() => {
+          setShowCommonPropertiesModal(false)
+          void loadDashboardData()
+        }}
       />
     </div>
   )

@@ -118,11 +118,11 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
 
   const footer = (
     <div className="flex justify-between items-center">
-      <div className="text-sm text-neutral-600">
-        {commonProperties.length} propriété{commonProperties.length !== 1 ? 's' : ''} commune{commonProperties.length !== 1 ? 's' : ''}
-      </div>
-      <Button variant="secondary" onClick={handleClose}>
-        Fermer
+      <Button
+        onClick={() => setShowAddForm(true)}
+        disabled={showAddForm || availableProperties.length === 0}
+      >
+        {availableProperties.length === 0 ? 'Aucune propriété disponible' : 'Ajouter une propriété commune'}
       </Button>
     </div>
   )
@@ -134,6 +134,7 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
       title="Propriétés communes"
       footer={footer}
       size="xl"
+      fixedHeight
     >
       <div className="space-y-4">
         {/* Description */}
@@ -189,12 +190,16 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
                   </div>
                   <div className="text-2xl text-neutral-400">→</div>
                   <div className="flex-1">
-                    <Badge variant="secondary" className="text-sm">
+                    <Badge
+                      variant="outline"
+                      className={`text-sm font-medium ${
+                        commonProp.suggestedValue?.isContextual
+                          ? 'border-purple-200 bg-purple-50 text-purple-800'
+                          : 'border-slate-200 bg-slate-100 text-slate-700'
+                      }`}
+                    >
                       {commonProp.suggestedValue?.value || 'Valeur inconnue'}
                     </Badge>
-                    {commonProp.suggestedValue?.isContextual && (
-                      <div className="text-xs text-blue-600 mt-1">Valeur contextuelle</div>
-                    )}
                   </div>
                 </div>
                 <Button
@@ -212,16 +217,6 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
         )}
 
         {/* Add Button (when list is not empty) */}
-        {!loading && commonProperties.length > 0 && !showAddForm && (
-          <Button
-            onClick={() => setShowAddForm(true)}
-            disabled={availableProperties.length === 0}
-            className="w-full"
-          >
-            {availableProperties.length === 0 ? 'Toutes les propriétés sont déjà configurées' : '+ Ajouter une propriété commune'}
-          </Button>
-        )}
-
         {/* Add Form */}
         {showAddForm && (
           <div className="border border-blue-200 bg-blue-50 rounded-lg p-4 space-y-4">
@@ -291,11 +286,16 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
                         <SelectItem key={value.id} value={value.id}>
                           <div className="flex items-center space-x-2">
                             <span>{value.value}</span>
-                            {value.isContextual && (
-                              <Badge variant="outline" className="text-xs">
-                                Contextuel
-                              </Badge>
-                            )}
+                            <Badge
+                              variant="outline"
+                              className={`text-xs font-medium ${
+                                value.isContextual
+                                  ? 'border-purple-200 bg-purple-50 text-purple-800'
+                                  : 'border-slate-200 bg-slate-100 text-slate-700'
+                              }`}
+                            >
+                              {value.isContextual ? 'Contextuel' : 'Statique'}
+                            </Badge>
                           </div>
                         </SelectItem>
                       ))
