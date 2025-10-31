@@ -6,7 +6,8 @@ import { DataTable, type Column, type Action } from '@/components/organisms/Data
 import { CreatePageModal } from '@/components/organisms/CreatePageModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { EditProductModal } from '@/components/organisms/EditProductModal'
-import { productsApi, pagesApi } from '@/services/api'
+import { CommonPropertiesModal } from '@/components/organisms/CommonPropertiesModal'
+import { productsApi, pagesApi, commonPropertiesApi } from '@/services/api'
 import { useProduct } from '@/hooks/useProduct'
 import { doesProductNameMatchSlug } from '@/utils/slug'
 import type { Product, Page, CreatePageRequest, UpdatePageRequest, UpdateProductRequest } from '@/types'
@@ -29,6 +30,8 @@ const ProductDetail: React.FC = () => {
   const [editPageLoading, setEditPageLoading] = useState(false)
   const [showEditProductModal, setShowEditProductModal] = useState(false)
   const [editProductLoading, setEditProductLoading] = useState(false)
+  const [showCommonPropertiesModal, setShowCommonPropertiesModal] = useState(false)
+  const [commonPropertiesCount, setCommonPropertiesCount] = useState(0)
   const isMountedRef = useRef(true)
 
   useEffect(() => {
@@ -68,15 +71,17 @@ const ProductDetail: React.FC = () => {
     }
 
     try {
-      const [productResponse, pagesResponse] = await Promise.all([
+      const [productResponse, pagesResponse, commonPropsResponse] = await Promise.all([
         productsApi.getById(productId),
-        pagesApi.getByProduct(productId)
+        pagesApi.getByProduct(productId),
+        commonPropertiesApi.getByProduct(productId)
       ])
 
       if (!isMountedRef.current) return
 
       setProduct(productResponse.data)
       setPages(pagesResponse.data)
+      setCommonPropertiesCount(commonPropsResponse.data.length)
     } catch (error) {
       if (isMountedRef.current) {
         console.error('Error loading product details:', error)
@@ -333,6 +338,9 @@ const ProductDetail: React.FC = () => {
             <Button variant="secondary" onClick={handleEditProduct}>
               Modifier le produit
             </Button>
+            <Button variant="secondary" onClick={() => setShowCommonPropertiesModal(true)}>
+              Propriétés communes
+            </Button>
             <Button variant="secondary" onClick={() => navigate(`/products/${productName}/properties`)}>
               Gérer les propriétés
             </Button>
@@ -349,7 +357,7 @@ const ProductDetail: React.FC = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <div className="bg-neutral-50 rounded-lg p-4">
             <div className="text-2xl font-bold text-neutral-900">
               {product.pages_count || pages.length}
@@ -367,6 +375,12 @@ const ProductDetail: React.FC = () => {
               {getUsedPropertiesCount()}
             </div>
             <div className="text-sm text-neutral-600">Propriétés utilisées</div>
+          </div>
+          <div className="bg-blue-50 rounded-lg p-4 cursor-pointer hover:bg-blue-100 transition-colors" onClick={() => setShowCommonPropertiesModal(true)}>
+            <div className="text-2xl font-bold text-blue-900">
+              {commonPropertiesCount}
+            </div>
+            <div className="text-sm text-blue-700">Propriétés communes</div>
           </div>
           <div className="bg-neutral-50 rounded-lg p-4">
             <div className="text-2xl font-bold text-success">
@@ -449,6 +463,21 @@ const ProductDetail: React.FC = () => {
         onDelete={handleDeleteProduct}
         loading={editProductLoading}
       />
+
+      {/* Common Properties Modal */}
+      {product && (
+        <CommonPropertiesModal
+          isOpen={showCommonPropertiesModal}
+          productId={product.id}
+          onClose={() => {
+            setShowCommonPropertiesModal(false)
+            // Reload to update common properties count
+            if (product.id) {
+              reloadProductData(product.id, { showSpinner: false })
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

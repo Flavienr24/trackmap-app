@@ -17,6 +17,7 @@ import propertiesRoutes from './routes/properties';
 import suggestedValuesRoutes from './routes/suggestedValues';
 import commentsRoutes from './routes/comments';
 import eventDefinitionsRoutes from './routes/eventDefinitions';
+import commonPropertiesRoutes from './routes/commonProperties';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -122,6 +123,7 @@ app.use('/api/events', authenticate, eventsRoutes);
 app.use('/api/event-definitions', authenticate, eventDefinitionsRoutes);
 app.use('/api/properties', authenticate, propertiesRoutes);
 app.use('/api/suggested-values', authenticate, suggestedValuesRoutes);
+app.use('/api/common-properties', authenticate, commonPropertiesRoutes);
 app.use('/api/comments', authenticate, commentsRoutes);
 
 // Error handling middleware (must be last)

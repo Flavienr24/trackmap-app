@@ -14,6 +14,8 @@ import type {
   Comment,
   EventHistory,
   EventDefinitionHistory,
+  CommonProperty,
+  EventConflict,
   ApiResponse,
   CreateProductRequest,
   UpdateProductRequest,
@@ -31,6 +33,8 @@ import type {
   DeletePropertyValueRequest,
   CreateCommentRequest,
   UpdateCommentRequest,
+  CreateCommonPropertyRequest,
+  UpdateCommonPropertyRequest,
   ProductsFilter,
   PagesFilter,
   EventsFilter,
@@ -456,4 +460,42 @@ export const importContextApi = {
     const query = params.toString()
     return apiRequest(`/products/${productId}/import-context${query ? `?${query}` : ''}`)
   }
+}
+
+/**
+ * Common Properties API
+ * Manages default property-value pairs that are auto-filled in new events
+ */
+export const commonPropertiesApi = {
+  // Get common properties for a product
+  getByProduct: (productId: string): Promise<ApiResponse<CommonProperty[]>> =>
+    apiRequest(`/products/${productId}/common-properties`),
+
+  // Get single common property
+  getById: (id: string): Promise<ApiResponse<CommonProperty>> =>
+    apiRequest(`/common-properties/${id}`),
+
+  // Create common property
+  create: (productId: string, data: CreateCommonPropertyRequest): Promise<ApiResponse<CommonProperty>> =>
+    apiRequest(`/products/${productId}/common-properties`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // Update common property
+  update: (id: string, data: UpdateCommonPropertyRequest): Promise<ApiResponse<CommonProperty>> =>
+    apiRequest(`/common-properties/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  // Delete common property
+  delete: (id: string): Promise<ApiResponse<void>> =>
+    apiRequest(`/common-properties/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // Detect conflicts between event properties and common properties
+  detectConflicts: (productId: string, eventId: string): Promise<ApiResponse<EventConflict[]>> =>
+    apiRequest(`/products/${productId}/events/${eventId}/conflicts`),
 }

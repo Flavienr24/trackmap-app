@@ -135,6 +135,33 @@ export interface PropertyValue {
   suggested_value?: SuggestedValue
 }
 
+/**
+ * Common Property Model (Default property-value pairs for events)
+ */
+export interface CommonProperty {
+  id: string
+  productId: string
+  propertyId: string
+  suggestedValueId: string
+  createdAt: string
+  updatedAt: string
+  // Relations
+  product?: Product
+  property?: Property
+  suggestedValue?: SuggestedValue
+}
+
+/**
+ * Event Conflict Model (Detected conflicts with common properties)
+ */
+export interface EventConflict {
+  eventId: string
+  eventName: string
+  propertyKey: string
+  currentValue: any
+  expectedValue: any
+  commonPropertyId: string
+}
 
 /**
  * Comment Model
@@ -284,6 +311,15 @@ export interface CreateCommentRequest {
 }
 
 export interface UpdateCommentRequest extends Partial<CreateCommentRequest> {}
+
+export interface CreateCommonPropertyRequest {
+  propertyId: string
+  suggestedValueId: string
+}
+
+export interface UpdateCommonPropertyRequest {
+  suggestedValueId: string
+}
 
 /**
  * Impact Analysis Types

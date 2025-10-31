@@ -27,6 +27,11 @@ import {
   getEventDefinitionsByProduct,
   createEventDefinition
 } from '../controllers/eventDefinitionsController';
+import {
+  getCommonPropertiesByProduct,
+  createCommonProperty,
+  detectEventConflicts
+} from '../controllers/commonPropertiesController';
 
 const router = Router();
 
@@ -74,6 +79,16 @@ router.post('/:id/event-definitions', createEventDefinition);
 // Import Context route - consolidated endpoint for bulk event import
 // GET /api/products/:id/import-context - Get aggregated data for event parsing
 router.get('/:id/import-context', getImportContext);
+
+// Common Property routes nested under products
+// GET /api/products/:id/common-properties - Get all common properties for a product
+router.get('/:id/common-properties', getCommonPropertiesByProduct);
+
+// POST /api/products/:id/common-properties - Create a new common property for a product
+router.post('/:id/common-properties', createCommonProperty);
+
+// GET /api/products/:productId/events/:eventId/conflicts - Detect conflicts between event and common properties
+router.get('/:productId/events/:eventId/conflicts', detectEventConflicts);
 
 // Product-specific routes must come AFTER nested resource routes to avoid path conflicts
 // GET /api/products/:id - Retrieve a specific product by ID
