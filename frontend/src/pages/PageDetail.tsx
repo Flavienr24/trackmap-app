@@ -10,11 +10,12 @@ import { CreateEventModal } from '@/components/organisms/CreateEventModal'
 import { EditEventModal } from '@/components/organisms/EditEventModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
 import { EventDetailModal } from '@/components/organisms/EventDetailModal'
-import { pagesApi, eventsApi } from '@/services/api'
+import { ConflictResolutionModal } from '@/components/organisms/ConflictResolutionModal'
+import { pagesApi, eventsApi, commonPropertiesApi } from '@/services/api'
 import { getPropertyCount, getStatusLabel } from '@/utils/properties'
 import { useProduct } from '@/hooks/useProduct'
 import { doesProductNameMatchSlug } from '@/utils/slug'
-import type { Page, Event, EventStatus, CreateEventRequest, UpdateEventRequest, UpdatePageRequest } from '@/types'
+import type { Page, Event, EventStatus, CreateEventRequest, UpdateEventRequest, UpdatePageRequest, EventConflict } from '@/types'
 
 /**
  * Page Detail 
@@ -35,6 +36,8 @@ const PageDetail: React.FC = () => {
   const [editPage, setEditPage] = useState<Page | null>(null)
   const [editPageLoading, setEditPageLoading] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [eventConflicts, setEventConflicts] = useState<Record<string, EventConflict[]>>({}) // eventId → conflicts
+  const [conflictResolutionEvent, setConflictResolutionEvent] = useState<Event | null>(null)
 
   // Sync product with URL slug
   useEffect(() => {
@@ -49,21 +52,50 @@ const PageDetail: React.FC = () => {
     }
   }, [productName, currentProduct, setCurrentProductBySlug])
 
+  // Detect conflicts for all events (reusable function)
+  const detectConflictsForAllEvents = useCallback(async (productId: string, eventsList: Event[]) => {
+    const conflictsMap: Record<string, EventConflict[]> = {}
+
+    try {
+      // Call API for each event to detect conflicts
+      const conflictPromises = eventsList.map(async (event) => {
+        try {
+          const response = await commonPropertiesApi.detectConflicts(productId, event.id)
+          if (response.data && response.data.length > 0) {
+            conflictsMap[event.id] = response.data
+          }
+        } catch (error) {
+          console.error(`Error detecting conflicts for event ${event.id}:`, error)
+        }
+      })
+
+      await Promise.all(conflictPromises)
+      setEventConflicts(conflictsMap)
+    } catch (error) {
+      console.error('Error detecting conflicts:', error)
+    }
+  }, [])
+
   // Load page and events data
   useEffect(() => {
     if (!productName || !pageSlug || !currentProduct) return
-    
+
     const loadAllData = async () => {
       setLoading(true)
       try {
         // Load page using current product ID and page slug
         const pageResponse = await pagesApi.getBySlug(currentProduct.id, pageSlug)
         setPage(pageResponse.data)
-        
-        // Finally load events for that page
+
+        // Load events for that page
         if (pageResponse.data?.id) {
           const eventsResponse = await eventsApi.getByPage(pageResponse.data.id)
           setEvents(eventsResponse.data)
+
+          // Detect conflicts for all events (important for initial load)
+          if (currentProduct && eventsResponse.data.length > 0) {
+            await detectConflictsForAllEvents(currentProduct.id, eventsResponse.data)
+          }
         }
       } catch (error) {
         console.error('Error loading page or events:', error)
@@ -72,18 +104,23 @@ const PageDetail: React.FC = () => {
         setLoading(false)
       }
     }
-    
+
     loadAllData()
-  }, [productName, pageSlug, navigate, currentProduct])
+  }, [productName, pageSlug, navigate, currentProduct, detectConflictsForAllEvents])
 
   const loadEvents = useCallback(async (pageId: string) => {
     try {
       const eventsResponse = await eventsApi.getByPage(pageId)
       setEvents(eventsResponse.data)
+
+      // Detect conflicts for all events
+      if (currentProduct && eventsResponse.data.length > 0) {
+        detectConflictsForAllEvents(currentProduct.id, eventsResponse.data)
+      }
     } catch (error) {
       console.error('Error loading events:', error)
     }
-  }, [])
+  }, [currentProduct, detectConflictsForAllEvents])
 
   const handleCreateEvent = () => {
     setShowCreateEventModal(true)
@@ -260,12 +297,30 @@ const PageDetail: React.FC = () => {
       title: 'Event',
       render: (value, record) => {
         const variableCount = getPropertyCount(record.properties)
-        
+        const conflicts = eventConflicts[record.id] || []
+        const hasConflicts = conflicts.length > 0
+
         return (
-          <div>
-            <div className="font-medium text-neutral-900">{value}</div>
-            <div className="text-xs text-neutral-500">
-              {variableCount} propriété{variableCount !== 1 ? 's' : ''}
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-neutral-900">{value}</span>
+                {hasConflicts && (
+                  <Badge
+                    variant="error"
+                    className="text-xs cursor-pointer hover:bg-red-100 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setConflictResolutionEvent(record)
+                    }}
+                  >
+                    ⚠️ {conflicts.length} conflit{conflicts.length > 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
+              <div className="text-xs text-neutral-500">
+                {variableCount} propriété{variableCount !== 1 ? 's' : ''}
+              </div>
             </div>
           </div>
         )
@@ -429,6 +484,19 @@ const PageDetail: React.FC = () => {
         onClose={() => setSelectedEvent(null)}
         onEdit={handleEditEventFromDetail}
         onEventUpdate={handleEventUpdate}
+      />
+
+      {/* Conflict Resolution Modal */}
+      <ConflictResolutionModal
+        isOpen={!!conflictResolutionEvent}
+        event={conflictResolutionEvent}
+        conflicts={conflictResolutionEvent ? (eventConflicts[conflictResolutionEvent.id] || []) : []}
+        onClose={() => setConflictResolutionEvent(null)}
+        onResolved={() => {
+          if (page?.id) {
+            loadEvents(page.id) // Reload events and re-detect conflicts
+          }
+        }}
       />
     </div>
   )
