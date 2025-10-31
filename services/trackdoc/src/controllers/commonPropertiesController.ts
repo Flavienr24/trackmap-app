@@ -338,3 +338,130 @@ export const deleteCommonProperty = async (req: Request, res: Response, next: Ne
     next(error);
   }
 };
+
+/**
+ * Detect conflicts between an event's properties and product's common properties
+ * GET /api/products/:productId/events/:eventId/conflicts
+ */
+export const detectEventConflicts = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { productId, eventId } = req.params;
+
+    logger.debug('Detecting conflicts for event', { eventId, productId, requestId: req.ip });
+
+    // Verify product exists
+    const product = await prisma.product.findUnique({
+      where: { id: productId }
+    });
+
+    if (!product) {
+      const error: AppError = new Error('Product not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // Get the event with its properties
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        page: true
+      }
+    });
+
+    if (!event) {
+      const error: AppError = new Error('Event not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // Verify event belongs to the product
+    if (event.page.productId !== product.id) {
+      const error: AppError = new Error('Event does not belong to this product');
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    // Get common properties for the product
+    const commonProperties = await prisma.commonProperty.findMany({
+      where: { productId: product.id },
+      include: {
+        property: true,
+        suggestedValue: true
+      }
+    });
+
+    // Parse event properties
+    let eventProperties: Record<string, any> = {};
+    if (event.properties) {
+      if (typeof event.properties === 'string') {
+        try {
+          eventProperties = JSON.parse(event.properties);
+        } catch (error) {
+          logger.warn('Failed to parse event properties JSON', {
+            eventId: event.id,
+            properties: event.properties
+          });
+        }
+      } else if (typeof event.properties === 'object') {
+        eventProperties = event.properties as Record<string, any>;
+      }
+    }
+
+    // Detect conflicts
+    const conflicts: Array<{
+      eventId: string;
+      eventName: string;
+      propertyKey: string;
+      currentValue: any;
+      expectedValue: any;
+      commonPropertyId: string;
+    }> = [];
+
+    for (const commonProp of commonProperties) {
+      if (!commonProp.property || !commonProp.suggestedValue) continue;
+
+      const propertyKey = commonProp.property.name;
+      const expectedValue = commonProp.suggestedValue.value;
+
+      // Check if property exists in event
+      if (Object.prototype.hasOwnProperty.call(eventProperties, propertyKey)) {
+        const currentValue = eventProperties[propertyKey];
+
+        // Compare values (convert to string for comparison to handle different types)
+        if (String(currentValue) !== String(expectedValue)) {
+          conflicts.push({
+            eventId: event.id,
+            eventName: event.name,
+            propertyKey,
+            currentValue,
+            expectedValue,
+            commonPropertyId: commonProp.id
+          });
+        }
+      }
+      // Note: If property doesn't exist in event, it's not a conflict,
+      // it's just a suggestion to add it (not included in conflicts array)
+    }
+
+    logger.info('Conflicts detected successfully', {
+      eventId,
+      productId,
+      conflictsCount: conflicts.length,
+      requestId: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: conflicts,
+      count: conflicts.length
+    });
+  } catch (error) {
+    logger.error('Error detecting conflicts', {
+      error,
+      eventId: req.params.eventId,
+      productId: req.params.productId,
+      requestId: req.ip
+    });
+    next(error);
+  }
+};

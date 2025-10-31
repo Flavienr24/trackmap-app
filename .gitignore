@@ -79,6 +79,8 @@ test.db
 # Database backups
 **/backups/
 **/prisma/backups/
+**/prisma/*.backup*
+*.db.backup*
 
 # Prisma
 # Note: Migrations are now tracked for schema reproducibility (Phase 1)
