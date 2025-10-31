@@ -17,13 +17,14 @@ const prisma = db;
 export const getPagesByProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id: productId } = req.params;
-    const { has_events, full } = req.query;
+    const { has_events, full, include_conflicts } = req.query;
     const includeEvents = full === 'true';
-    
-    logger.debug('Fetching pages for product', { 
-      productId, 
-      filters: { has_events },
-      requestId: req.ip 
+    const shouldIncludeConflicts = include_conflicts === 'true';
+
+    logger.debug('Fetching pages for product', {
+      productId,
+      filters: { has_events, include_conflicts },
+      requestId: req.ip
     });
 
     // Find product by ID only
@@ -116,9 +117,87 @@ export const getPagesByProduct = async (req: Request, res: Response, next: NextF
       );
     }
 
+    // Get conflicts count for pages if requested
+    let conflictsCountMap = new Map<string, number>();
+    if (shouldIncludeConflicts && pageIds.length > 0) {
+      // First, get all common properties for the product
+      const commonProperties = await prisma.commonProperty.findMany({
+        where: { productId: product.id },
+        include: {
+          property: true,
+          suggestedValue: true
+        }
+      });
+
+      if (commonProperties.length > 0) {
+        // Get all events for these pages with their properties
+        const events = await prisma.event.findMany({
+          where: {
+            pageId: { in: pageIds }
+          },
+          select: {
+            id: true,
+            pageId: true,
+            name: true,
+            properties: true
+          }
+        });
+
+        // Count conflicts per page
+        const conflictsByPage = new Map<string, number>();
+
+        for (const event of events) {
+          // Parse event properties
+          let eventProperties: Record<string, any> = {};
+          if (event.properties) {
+            if (typeof event.properties === 'string') {
+              try {
+                eventProperties = JSON.parse(event.properties);
+              } catch (error) {
+                logger.warn('Failed to parse event properties JSON during conflict count', {
+                  eventId: event.id,
+                  pageId: event.pageId
+                });
+                continue;
+              }
+            } else if (typeof event.properties === 'object') {
+              eventProperties = event.properties as Record<string, any>;
+            }
+          }
+
+          // Check for conflicts with common properties
+          let eventHasConflicts = false;
+          for (const commonProp of commonProperties) {
+            if (!commonProp.property || !commonProp.suggestedValue) continue;
+
+            const propertyKey = commonProp.property.name;
+            const expectedValue = commonProp.suggestedValue.value;
+
+            // Check if property exists in event and has different value
+            if (Object.prototype.hasOwnProperty.call(eventProperties, propertyKey)) {
+              const currentValue = eventProperties[propertyKey];
+              if (String(currentValue) !== String(expectedValue)) {
+                eventHasConflicts = true;
+                break; // Count event only once even if multiple conflicts
+              }
+            }
+          }
+
+          // Increment conflict count for this page
+          if (eventHasConflicts) {
+            const currentCount = conflictsByPage.get(event.pageId) || 0;
+            conflictsByPage.set(event.pageId, currentCount + 1);
+          }
+        }
+
+        conflictsCountMap = conflictsByPage;
+      }
+    }
+
     const pagesWithCounts = pagesLite.map(page => ({
       ...page,
-      events_count: eventsCountMap.get(page.id) || 0
+      events_count: eventsCountMap.get(page.id) || 0,
+      ...(shouldIncludeConflicts && { conflicts_count: conflictsCountMap.get(page.id) || 0 })
     }));
 
     // Filter pages that have events if requested

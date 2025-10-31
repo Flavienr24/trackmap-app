@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Tooltip } from '@/components/atoms/Tooltip'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreatePageModal } from '@/components/organisms/CreatePageModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
@@ -28,20 +30,18 @@ const PagesList: React.FC = () => {
   const [editPage, setEditPage] = useState<Page | null>(null)
   const [editLoading, setEditLoading] = useState(false)
 
-  // Load pages data
-  const loadPages = useCallback(async () => {
-    if (!currentProduct) return
-    
+  // Load pages data with conflict information
+  const loadPages = useCallback(async (productId: string) => {
     setLoading(true)
     try {
-      const response = await pagesApi.getByProduct(currentProduct.id)
+      const response = await pagesApi.getByProduct(productId, { include_conflicts: 'true' })
       setPages(response.data)
     } catch (error) {
       console.error('Error loading pages:', error)
     } finally {
       setLoading(false)
     }
-  }, [currentProduct])
+  }, [])
 
   // Initialize product and load data
   useEffect(() => {
@@ -58,9 +58,9 @@ const PagesList: React.FC = () => {
 
   useEffect(() => {
     if (currentProduct) {
-      loadPages()
+      loadPages(currentProduct.id)
     }
-  }, [currentProduct, loadPages])
+  }, [currentProduct?.id, loadPages])
 
   // Filter pages based on search
   const filteredPages = pages.filter(page =>
@@ -97,10 +97,12 @@ const PagesList: React.FC = () => {
   }
 
   const handleEditSubmit = async (pageId: string, data: UpdatePageRequest) => {
+    if (!currentProduct) return
+
     setEditLoading(true)
     try {
       await pagesApi.update(pageId, data)
-      await loadPages()
+      await loadPages(currentProduct.id)
     } catch (error) {
       console.error('Error updating page:', error)
       throw error
@@ -110,9 +112,11 @@ const PagesList: React.FC = () => {
   }
 
   const handleDeletePage = async (page: Page) => {
+    if (!currentProduct) return
+
     try {
       await pagesApi.delete(page.id)
-      await loadPages()
+      await loadPages(currentProduct.id)
     } catch (error) {
       console.error('Error deleting page:', error)
     }
@@ -160,9 +164,27 @@ const PagesList: React.FC = () => {
     {
       key: 'events_count',
       title: 'Events',
-      width: '100px',
+      width: '150px',
       render: (_, record) => (
-        <span className="text-slate-600">{record.events_count ?? record.events?.length ?? 0}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-slate-600">{record.events_count ?? record.events?.length ?? 0}</span>
+          {record.conflicts_count !== undefined && record.conflicts_count > 0 && (
+            <Tooltip content={`${record.conflicts_count} conflit${record.conflicts_count > 1 ? 's' : ''} détecté${record.conflicts_count > 1 ? 's' : ''}`}>
+              <Badge
+                variant="error"
+                className="cursor-pointer hover:opacity-80"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (productName) {
+                    navigate(`/products/${productName}/pages/${record.slug}`)
+                  }
+                }}
+              >
+                ⚠️
+              </Badge>
+            </Tooltip>
+          )}
+        </div>
       ),
     },
     {
@@ -274,9 +296,9 @@ const PagesList: React.FC = () => {
                 className="w-full"
               />
             </div>
-            <Button 
-              variant="outline" 
-              onClick={loadPages}
+            <Button
+              variant="outline"
+              onClick={() => currentProduct && loadPages(currentProduct.id)}
               title="Actualiser la liste"
               className="ml-4"
             >

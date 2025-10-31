@@ -31,7 +31,7 @@ export interface Product {
 }
 
 /**
- * Page Model  
+ * Page Model
  */
 export interface Page {
   id: string
@@ -43,6 +43,7 @@ export interface Page {
   updated_at: string
   // Computed fields
   events_count?: number
+  conflicts_count?: number
   product?: Product
   events?: Event[]
 }
@@ -365,6 +366,7 @@ export interface PagesFilter {
   sortBy?: 'name' | 'created_at' | 'events_count'
   sortOrder?: 'asc' | 'desc'
   full?: 'true' | 'false'
+  include_conflicts?: 'true' | 'false'
 }
 
 export interface EventsFilter {

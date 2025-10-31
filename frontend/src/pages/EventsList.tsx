@@ -87,11 +87,7 @@ const EventsList: React.FC = () => {
     }
   }, [productName, currentProduct, setCurrentProductBySlug])
 
-  const loadDefinitions = useCallback(async (force = false) => {
-    if (!currentProduct) return
-
-    const productId = currentProduct.id
-
+  const loadDefinitions = useCallback(async (productId: string, force = false) => {
     if (fetchPromiseRef.current) {
       if (!force && lastLoadedProductIdRef.current === productId) {
         return fetchPromiseRef.current
@@ -127,7 +123,7 @@ const EventsList: React.FC = () => {
 
     fetchPromiseRef.current = fetchPromise
     return fetchPromise
-  }, [currentProduct])
+  }, [])
 
   useEffect(() => {
     if (!currentProduct) return
@@ -137,8 +133,8 @@ const EventsList: React.FC = () => {
       setFilteredDefinitions([])
     }
 
-    loadDefinitions()
-  }, [currentProduct, loadDefinitions])
+    loadDefinitions(currentProduct.id)
+  }, [currentProduct?.id, loadDefinitions])
 
   // Compute filter options and apply filters
   const interactionOptions = useMemo(() => {
@@ -251,10 +247,12 @@ const EventsList: React.FC = () => {
   }
 
   const handleCreateEventSubmit = async ({ pageId, data }: { pageId: string; data: CreateEventRequest }) => {
+    if (!currentProduct) return
+
     setCreateEventLoading(true)
     try {
       const response = await eventsApi.create(pageId, data)
-      await loadDefinitions(true)
+      await loadDefinitions(currentProduct.id, true)
       return response.data
     } catch (err) {
       console.error('Error creating event from glossary:', err)

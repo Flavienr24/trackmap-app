@@ -93,7 +93,7 @@ const PageDetail: React.FC = () => {
           setEvents(eventsResponse.data)
 
           // Detect conflicts for all events (important for initial load)
-          if (currentProduct && eventsResponse.data.length > 0) {
+          if (eventsResponse.data.length > 0) {
             await detectConflictsForAllEvents(currentProduct.id, eventsResponse.data)
           }
         }
@@ -106,21 +106,21 @@ const PageDetail: React.FC = () => {
     }
 
     loadAllData()
-  }, [productName, pageSlug, navigate, currentProduct, detectConflictsForAllEvents])
+  }, [productName, pageSlug, navigate, currentProduct?.id, detectConflictsForAllEvents])
 
-  const loadEvents = useCallback(async (pageId: string) => {
+  const loadEvents = useCallback(async (pageId: string, productId: string) => {
     try {
       const eventsResponse = await eventsApi.getByPage(pageId)
       setEvents(eventsResponse.data)
 
       // Detect conflicts for all events
-      if (currentProduct && eventsResponse.data.length > 0) {
-        detectConflictsForAllEvents(currentProduct.id, eventsResponse.data)
+      if (eventsResponse.data.length > 0) {
+        detectConflictsForAllEvents(productId, eventsResponse.data)
       }
     } catch (error) {
       console.error('Error loading events:', error)
     }
-  }, [currentProduct, detectConflictsForAllEvents])
+  }, [detectConflictsForAllEvents])
 
   const handleCreateEvent = () => {
     setShowCreateEventModal(true)
@@ -128,13 +128,13 @@ const PageDetail: React.FC = () => {
 
   const handleCreateEventSubmit = async ({ pageId: targetPageId, data }: { pageId: string; data: CreateEventRequest }) => {
     const effectivePageId = targetPageId || page?.id
-    if (!effectivePageId) return
+    if (!effectivePageId || !currentProduct) return
 
     setCreateEventLoading(true)
     try {
       const response = await eventsApi.create(effectivePageId, data)
       console.log('Event created:', response.data)
-      await loadEvents(effectivePageId) // Reload the list
+      await loadEvents(effectivePageId, currentProduct.id) // Reload the list
     } catch (error) {
       console.error('Error creating event:', error)
       throw error
@@ -161,8 +161,8 @@ const PageDetail: React.FC = () => {
     try {
       const response = await eventsApi.update(eventId, data)
       console.log('Event updated:', response.data)
-      if (response.data && page?.id) {
-        await loadEvents(page.id) // Reload the list
+      if (response.data && page?.id && currentProduct) {
+        await loadEvents(page.id, currentProduct.id) // Reload the list
       }
     } catch (error) {
       console.error('Error updating event:', error)
@@ -201,8 +201,8 @@ const PageDetail: React.FC = () => {
       try {
         await eventsApi.delete(event.id)
         console.log('Event deleted:', event)
-        if (page?.id) {
-          await loadEvents(page.id) // Reload the list
+        if (page?.id && currentProduct) {
+          await loadEvents(page.id, currentProduct.id) // Reload the list
         }
       } catch (error) {
         console.error('Error deleting event:', error)
@@ -218,9 +218,9 @@ const PageDetail: React.FC = () => {
     try {
       const response = await eventsApi.duplicate(event.id)
 
-      if (response.data && page?.id) {
+      if (response.data && page?.id && currentProduct) {
         // Reload events to show the duplicated event
-        await loadEvents(page.id)
+        await loadEvents(page.id, currentProduct.id)
       }
     } catch (error) {
       console.error('Error duplicating event:', error)
@@ -493,8 +493,8 @@ const PageDetail: React.FC = () => {
         conflicts={conflictResolutionEvent ? (eventConflicts[conflictResolutionEvent.id] || []) : []}
         onClose={() => setConflictResolutionEvent(null)}
         onResolved={() => {
-          if (page?.id) {
-            loadEvents(page.id) // Reload events and re-detect conflicts
+          if (page?.id && currentProduct) {
+            loadEvents(page.id, currentProduct.id) // Reload events and re-detect conflicts
           }
         }}
       />

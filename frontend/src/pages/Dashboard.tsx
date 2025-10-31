@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tooltip } from '@/components/atoms/Tooltip'
 import { DataTable, type Column, type Action } from '@/components/organisms/DataTable'
 import { CreatePageModal } from '@/components/organisms/CreatePageModal'
 import { EditPageModal } from '@/components/organisms/EditPageModal'
@@ -51,7 +52,7 @@ const Dashboard: React.FC = () => {
   const loadDashboardData = useCallback(async (productId: string) => {
     try {
       const [pagesResponse, commonPropsResponse] = await Promise.all([
-        pagesApi.getByProduct(productId),
+        pagesApi.getByProduct(productId, { include_conflicts: 'true' }),
         commonPropertiesApi.getByProduct(productId),
       ])
 
@@ -241,9 +242,27 @@ const Dashboard: React.FC = () => {
     {
       key: 'events_count',
       title: 'Events',
-      width: '100px',
+      width: '150px',
       render: (_, record) => (
-        <span className="text-slate-600">{record.events_count ?? record.events?.length ?? 0}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-slate-600">{record.events_count ?? record.events?.length ?? 0}</span>
+          {record.conflicts_count !== undefined && record.conflicts_count > 0 && (
+            <Tooltip content={`${record.conflicts_count} conflit${record.conflicts_count > 1 ? 's' : ''} détecté${record.conflicts_count > 1 ? 's' : ''}`}>
+              <Badge
+                variant="error"
+                className="cursor-pointer hover:opacity-80"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (productName) {
+                    navigate(`/products/${productName}/pages/${record.slug}`)
+                  }
+                }}
+              >
+                ⚠️
+              </Badge>
+            </Tooltip>
+          )}
+        </div>
       ),
     },
     {

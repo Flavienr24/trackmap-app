@@ -90,7 +90,7 @@ const PropertiesList: React.FC = () => {
     return () => {
       isActive = false
     }
-  }, [product, loadProperties])
+  }, [product?.id, loadProperties])
 
   const handleCreateProperty = () => {
     setShowCreateModal(true)

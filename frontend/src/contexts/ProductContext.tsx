@@ -20,8 +20,8 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isLoaded, setIsLoaded] = useState(false)
   const loadPromiseRef = useRef<Promise<void> | null>(null)
+  const isLoadedRef = useRef(false)
 
   // Load products from API with deduplication
   const loadProducts = useCallback(async (force = false) => {
@@ -35,7 +35,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     // Skip if already loaded unless force=true
-    if (isLoaded && !force) {
+    if (isLoadedRef.current && !force) {
       return
     }
 
@@ -45,11 +45,13 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
       try {
         const response = await productsApi.getAll()
         setProducts(response.data)
-        setIsLoaded(true)
+        isLoadedRef.current = true
       } catch (err) {
         console.error('Error loading products:', err)
         setError('Failed to load products')
         setProducts([])
+        // CRITICAL: Mark as loaded even on error to prevent infinite retry loops
+        isLoadedRef.current = true
       } finally {
         setIsLoading(false)
         loadPromiseRef.current = null
@@ -58,7 +60,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     loadPromiseRef.current = fetchPromise
     return fetchPromise
-  }, [isLoaded])
+  }, [])
 
   // Load current product from localStorage on mount
   useEffect(() => {
