@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { BackLink } from '@/components/atoms/BackLink'
@@ -91,19 +91,19 @@ const ProductDetail: React.FC = () => {
         setLoading(false)
       }
     }
-  }, [])
+  }, []) // Empty deps - stable function
 
-  // Calculate unique properties used across all events
-  const getUsedPropertiesCount = useCallback(() => {
+  // Calculate unique properties used across all events (memoized for performance)
+  const usedPropertiesCount = useMemo(() => {
     const usedProperties = new Set<string>()
-    
+
     pages.forEach((page: any) => {
       if (page.events) {
         page.events.forEach((event: any) => {
           if (event.properties) {
             try {
-              const parsed = typeof event.properties === 'string' 
-                ? JSON.parse(event.properties) 
+              const parsed = typeof event.properties === 'string'
+                ? JSON.parse(event.properties)
                 : event.properties
               Object.keys(parsed || {}).forEach(key => usedProperties.add(key))
             } catch (error) {
@@ -113,7 +113,7 @@ const ProductDetail: React.FC = () => {
         })
       }
     })
-    
+
     return usedProperties.size
   }, [pages])
   
@@ -125,7 +125,7 @@ const ProductDetail: React.FC = () => {
     }
 
     reloadProductData(currentProductId)
-  }, [currentProductId, reloadProductData])
+  }, [currentProductId]) // Remove reloadProductData from deps
 
   useEffect(() => {
     if (!currentProductId) {
@@ -145,7 +145,7 @@ const ProductDetail: React.FC = () => {
       window.removeEventListener('focus', handleFocusOrVisibility)
       document.removeEventListener('visibilitychange', handleFocusOrVisibility)
     }
-  }, [currentProductId, reloadProductData])
+  }, [currentProductId]) // Remove reloadProductData from deps
 
   const handleCreatePage = () => {
     setShowCreatePageModal(true)
@@ -372,7 +372,7 @@ const ProductDetail: React.FC = () => {
           </div>
           <div className="bg-neutral-50 rounded-lg p-4">
             <div className="text-2xl font-bold text-neutral-900">
-              {getUsedPropertiesCount()}
+              {usedPropertiesCount}
             </div>
             <div className="text-sm text-neutral-600">Propriétés utilisées</div>
           </div>

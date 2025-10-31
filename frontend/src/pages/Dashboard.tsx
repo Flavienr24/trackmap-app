@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -48,12 +48,11 @@ const Dashboard: React.FC = () => {
   const [commonProperties, setCommonProperties] = useState<CommonProperty[]>([])
 
   // Load dashboard data (pages + common properties) for the current product
-  const loadDashboardData = useCallback(async () => {
-    if (!currentProduct) return
+  const loadDashboardData = useCallback(async (productId: string) => {
     try {
       const [pagesResponse, commonPropsResponse] = await Promise.all([
-        pagesApi.getByProduct(currentProduct.id),
-        commonPropertiesApi.getByProduct(currentProduct.id),
+        pagesApi.getByProduct(productId),
+        commonPropertiesApi.getByProduct(productId),
       ])
 
       setPages(pagesResponse.data)
@@ -62,7 +61,7 @@ const Dashboard: React.FC = () => {
     } catch (error) {
       console.error('Error loading dashboard data:', error)
     }
-  }, [currentProduct])
+  }, [])
 
   // Initialize product on mount
   useEffect(() => {
@@ -81,21 +80,21 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     if (currentProduct) {
       setLoading(true)
-      loadDashboardData().finally(() => setLoading(false))
+      loadDashboardData(currentProduct.id).finally(() => setLoading(false))
     }
-  }, [currentProduct, loadDashboardData])
+  }, [currentProduct?.id, loadDashboardData])
 
-  // Calculate unique properties used across all events
-  const getUsedPropertiesCount = useCallback(() => {
+  // Calculate unique properties used across all events (memoized for performance)
+  const usedPropertiesCount = useMemo(() => {
     const usedProperties = new Set<string>()
-    
+
     pages.forEach((page: any) => {
       if (page.events) {
         page.events.forEach((event: any) => {
           if (event.properties) {
             try {
-              const parsed = typeof event.properties === 'string' 
-                ? JSON.parse(event.properties) 
+              const parsed = typeof event.properties === 'string'
+                ? JSON.parse(event.properties)
                 : event.properties
               Object.keys(parsed || {}).forEach(key => usedProperties.add(key))
             } catch (error) {
@@ -105,7 +104,7 @@ const Dashboard: React.FC = () => {
         })
       }
     })
-    
+
     return usedProperties.size
   }, [pages])
 
@@ -319,7 +318,7 @@ const Dashboard: React.FC = () => {
             <Card className="bg-slate-50">
               <CardContent className="p-4">
                 <div className="text-2xl font-bold text-slate-900">
-                  {getUsedPropertiesCount()}
+                  {usedPropertiesCount}
                 </div>
                 <div className="text-sm text-slate-600">Propriétés utilisées</div>
               </CardContent>
