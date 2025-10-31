@@ -67,21 +67,27 @@ export function EventCombobox({
     setDisplayLimit(20)
   }, [searchValue])
 
-  // Sort all events by usage count
+  // Sort all options by usage count
   const sortedByUsage = React.useMemo(() => {
-    const eventCounts = new Map<string, number>()
+    const optionCounts = new Map<string, number>()
 
-    // Count occurrences of each event
+    // Count occurrences of each option
     options.forEach(option => {
-      eventCounts.set(option.value, (eventCounts.get(option.value) || 0) + 1)
+      optionCounts.set(option.value, (optionCounts.get(option.value) || 0) + 1)
     })
 
-    // Get unique events and sort by count (descending), then alphabetically
-    const uniqueEvents = Array.from(new Set(options.map(o => o.value)))
-    return uniqueEvents.sort((a, b) => {
-      const countDiff = (eventCounts.get(b) || 0) - (eventCounts.get(a) || 0)
+    // Remove duplicates and sort by count (descending), then alphabetically by label/value
+    const uniqueOptions = Array.from(
+      new Map(options.map(o => [o.value, o])).values()
+    )
+
+    return uniqueOptions.sort((a, b) => {
+      const countDiff = (optionCounts.get(b.value) || 0) - (optionCounts.get(a.value) || 0)
       if (countDiff !== 0) return countDiff
-      return a.localeCompare(b)
+      // Sort by label if available, otherwise by value
+      const aLabel = a.label || a.value
+      const bLabel = b.label || b.value
+      return aLabel.localeCompare(bLabel)
     })
   }, [options])
 
@@ -92,11 +98,12 @@ export function EventCombobox({
       return sortedByUsage
     }
 
-    // Filter: only events that START with search value (case insensitive)
+    // Filter: search in label (if available) or value (case insensitive)
     const searchLower = searchValue.toLowerCase()
-    return sortedByUsage.filter(eventValue =>
-      eventValue.toLowerCase().startsWith(searchLower)
-    )
+    return sortedByUsage.filter(option => {
+      const searchText = option.label || option.value
+      return searchText.toLowerCase().startsWith(searchLower)
+    })
   }, [searchValue, sortedByUsage])
 
   // Apply lazy loading limit
@@ -132,7 +139,8 @@ export function EventCombobox({
           disabled={disabled}
         >
           <span className={cn('truncate', value && 'font-mono')}>
-            {value || placeholder}
+            {/* Display label if available, otherwise show value */}
+            {value ? (options.find(o => o.value === value)?.label || value) : placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -152,10 +160,10 @@ export function EventCombobox({
           <CommandList onScroll={handleScroll}>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
-              {displayedOptions.map((eventValue) => (
+              {displayedOptions.map((option) => (
                 <CommandItem
-                  key={eventValue}
-                  value={eventValue}
+                  key={option.value}
+                  value={option.value}
                   onSelect={(currentValue) => {
                     onChange(currentValue === value ? '' : currentValue)
                     setOpen(false)
@@ -165,11 +173,16 @@ export function EventCombobox({
                   <Check
                     className={cn(
                       'mr-2 h-4 w-4 shrink-0',
-                      value === eventValue ? 'opacity-100' : 'opacity-0'
+                      value === option.value ? 'opacity-100' : 'opacity-0'
                     )}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="font-mono text-sm">{eventValue}</div>
+                    {/* Display label if available, otherwise value */}
+                    <div className="font-mono text-sm">{option.label || option.value}</div>
+                    {/* Show description as secondary text if available */}
+                    {option.description && (
+                      <div className="text-xs text-muted-foreground">{option.description}</div>
+                    )}
                   </div>
                 </CommandItem>
               ))}
