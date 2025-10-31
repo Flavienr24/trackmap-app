@@ -384,6 +384,7 @@ export interface PropertiesFilter {
   type?: PropertyType[]
   sortBy?: 'name' | 'type' | 'created_at' | 'updated_at'
   sortOrder?: 'asc' | 'desc'
+  lite?: 'true' | 'false'
 }
 
 export interface SuggestedValuesFilter {
@@ -391,6 +392,7 @@ export interface SuggestedValuesFilter {
   isContextual?: boolean
   sortBy?: 'value' | 'created_at' | 'updated_at'
   sortOrder?: 'asc' | 'desc'
+  lite?: 'true' | 'false'
 }
 
 export interface CommentsFilter {

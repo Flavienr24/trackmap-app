@@ -1,6 +1,7 @@
 // Properties controller - handles all property-related HTTP requests
 // Properties define reusable property schemas for events
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
 import { db } from '../config/database';
@@ -14,20 +15,24 @@ const VALID_TYPES = ['STRING', 'NUMBER', 'BOOLEAN', 'ARRAY', 'OBJECT'];
 /**
  * Get all properties for a specific product
  * GET /api/products/:id/properties
- * Supports pagination via ?limit= and search via ?search=
+ * Supports pagination via ?limit=, ?offset= and search via ?search=
  */
 export const getPropertiesByProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id: productSlug } = req.params;
-    const { limit, search } = req.query;
+    const { limit, offset, search, lite } = req.query;
 
-    // Parse limit parameter (default: no limit for backward compatibility)
+    // Parse pagination parameters (default: no limit for backward compatibility)
     const limitNum = limit ? parseInt(limit as string, 10) : undefined;
+    const offsetNum = offset ? parseInt(offset as string, 10) : 0;
+    const isLite = lite === 'true';
 
     logger.debug('Fetching properties for product', {
       productSlug,
       limit: limitNum,
+      offset: offsetNum,
       search,
+      lite: isLite,
       requestId: req.ip
     });
 
@@ -51,27 +56,42 @@ export const getPropertiesByProduct = async (req: Request, res: Response, next: 
       };
     }
 
-    // Fetch properties with optional limit and search
-    const properties = await prisma.property.findMany({
+    // Get total count for hasMore calculation
+    const totalCount = await prisma.property.count({ where: whereClause });
+
+    // Fetch properties with optional limit, offset and search
+    const query: Prisma.PropertyFindManyArgs = {
       where: whereClause,
-      include: {
+      orderBy: {
+        name: 'asc' // Alphabetical order by name
+      },
+      skip: offsetNum,
+      take: limitNum
+    };
+
+    if (!isLite) {
+      query.include = {
         propertyValues: {
           include: {
             suggestedValue: true
           }
         }
-      },
-      orderBy: {
-        name: 'asc' // Alphabetical order by name
-      },
-      take: limitNum
-    });
+      };
+    }
+
+    const properties = await prisma.property.findMany(query);
+
+    const hasMore = limitNum ? (offsetNum + properties.length) < totalCount : false;
 
     logger.info('Properties fetched successfully', {
       productId: product.id,
       count: properties.length,
+      totalCount,
       limit: limitNum,
+      offset: offsetNum,
+      hasMore,
       search: search || 'none',
+      lite: isLite,
       requestId: req.ip
     });
 
@@ -79,7 +99,8 @@ export const getPropertiesByProduct = async (req: Request, res: Response, next: 
       success: true,
       data: properties,
       count: properties.length,
-      hasMore: limitNum ? properties.length === limitNum : false
+      totalCount,
+      hasMore
     });
   } catch (error) {
     logger.error('Error fetching properties', { error, productSlug: req.params.id, requestId: req.ip });

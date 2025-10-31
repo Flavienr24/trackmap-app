@@ -1,6 +1,7 @@
 // Suggested Values controller - handles all suggested value-related HTTP requests
 // Suggested values store reusable values for variables (static or contextual)
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import logger from '../config/logger';
 import { AppError } from '../middleware/errorHandler';
 import { db } from '../config/database';
@@ -12,20 +13,24 @@ const prisma = db;
 /**
  * Get all suggested values for a specific product
  * GET /api/products/:id/suggested-values
- * Supports pagination via ?limit= and search via ?search=
+ * Supports pagination via ?limit=, ?offset= and search via ?search=
  */
 export const getSuggestedValuesByProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id: productSlug } = req.params;
-    const { limit, search } = req.query;
+    const { limit, offset, search, lite } = req.query;
 
-    // Parse limit parameter (default: no limit for backward compatibility)
+    // Parse pagination parameters (default: no limit for backward compatibility)
     const limitNum = limit ? parseInt(limit as string, 10) : undefined;
+    const offsetNum = offset ? parseInt(offset as string, 10) : 0;
+    const isLite = lite === 'true';
 
     logger.debug('Fetching suggested values for product', {
       productSlug,
       limit: limitNum,
+      offset: offsetNum,
       search,
+      lite: isLite,
       requestId: req.ip
     });
 
@@ -49,28 +54,43 @@ export const getSuggestedValuesByProduct = async (req: Request, res: Response, n
       };
     }
 
-    // Fetch suggested values with optional limit and search
-    const suggestedValues = await prisma.suggestedValue.findMany({
+    // Get total count for hasMore calculation
+    const totalCount = await prisma.suggestedValue.count({ where: whereClause });
+
+    // Fetch suggested values with optional limit, offset and search
+    const query: Prisma.SuggestedValueFindManyArgs = {
       where: whereClause,
-      include: {
+      orderBy: [
+        { isContextual: 'asc' }, // Non-contextual first
+        { value: 'asc' } // Then alphabetical by value
+      ],
+      skip: offsetNum,
+      take: limitNum
+    };
+
+    if (!isLite) {
+      query.include = {
         propertyValues: {
           include: {
             property: true
           }
         }
-      },
-      orderBy: [
-        { isContextual: 'asc' }, // Non-contextual first
-        { value: 'asc' } // Then alphabetical by value
-      ],
-      take: limitNum
-    });
+      };
+    }
+
+    const suggestedValues = await prisma.suggestedValue.findMany(query);
+
+    const hasMore = limitNum ? (offsetNum + suggestedValues.length) < totalCount : false;
 
     logger.info('Suggested values fetched successfully', {
       productId: product.id,
       count: suggestedValues.length,
+      totalCount,
       limit: limitNum,
+      offset: offsetNum,
+      hasMore,
       search: search || 'none',
+      lite: isLite,
       requestId: req.ip
     });
 
@@ -78,7 +98,8 @@ export const getSuggestedValuesByProduct = async (req: Request, res: Response, n
       success: true,
       data: suggestedValues,
       count: suggestedValues.length,
-      hasMore: limitNum ? suggestedValues.length === limitNum : false
+      totalCount,
+      hasMore
     });
   } catch (error) {
     logger.error('Error fetching suggested values', { error, productSlug: req.params.id, requestId: req.ip });

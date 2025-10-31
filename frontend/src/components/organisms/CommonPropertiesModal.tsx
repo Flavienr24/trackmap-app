@@ -41,8 +41,7 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
     suggestedValueId: '',
   })
 
-  // Load data when modal opens
-  // Use limit to reduce initial payload for better performance
+  // Load data when modal opens (lite mode limits payload size)
   const loadData = useCallback(async () => {
     if (!isOpen || !productId) return
 
@@ -50,10 +49,8 @@ const CommonPropertiesModal: React.FC<CommonPropertiesModalProps> = ({
     try {
       const [commonPropsResponse, propsResponse, valuesResponse] = await Promise.all([
         commonPropertiesApi.getByProduct(productId),
-        // Load only first 100 properties/values for better performance
-        // EventCombobox handles search and lazy loading
-        propertiesApi.getByProduct(productId, { limit: '100' } as any),
-        suggestedValuesApi.getByProduct(productId, { limit: '100' } as any),
+        propertiesApi.getByProduct(productId, { lite: 'true' } as any),
+        suggestedValuesApi.getByProduct(productId, { lite: 'true' } as any),
       ])
 
       setCommonProperties(commonPropsResponse.data)
