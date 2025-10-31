@@ -27,6 +27,7 @@ model Product {
   properties       Property[]        // Shared property definitions
   suggestedValues  SuggestedValue[]  // Shared suggested values
   eventDefinitions EventDefinition[] // Canonical event definitions
+  commonProperties CommonProperty[]  // Default properties auto-filled in new events
 
   @@map("products")
 }
@@ -133,6 +134,7 @@ model Property {
   // Relationships
   product             Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   propertyValues      PropertyValue[] // Associations with suggested values
+  commonProperty      CommonProperty? // Common property configuration (if this property is used as default)
 
   @@map("properties")
 }
@@ -150,6 +152,7 @@ model SuggestedValue {
   // Relationships
   product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   propertyValues    PropertyValue[] // Associations with properties
+  commonProperties  CommonProperty[] // Common properties using this value as default
 
   @@map("suggested_values")
 }
@@ -166,6 +169,26 @@ model PropertyValue {
 
   @@id([propertyId, suggestedValueId]) // Composite primary key
   @@map("property_values")
+}
+
+// CommonProperty model - stores default property-value pairs that are auto-filled in new events
+// Associates a Property with a SuggestedValue to use as default for a product
+model CommonProperty {
+  id               String         @id @default(cuid())
+  productId        String         @map("product_id") // Foreign key to Product
+  propertyId       String         @unique @map("property_id") // Foreign key to Property (unique - one common property per property)
+  suggestedValueId String         @map("suggested_value_id") // Foreign key to SuggestedValue
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  // Relationships
+  product          Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  property         Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  suggestedValue   SuggestedValue @relation(fields: [suggestedValueId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, propertyId]) // One common property per property per product
+  @@index([productId])
+  @@map("common_properties")
 }
 
 // Comment model - stores user comments on events

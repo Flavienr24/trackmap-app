@@ -195,7 +195,6 @@ const EventsList: React.FC = () => {
     {
       key: 'description',
       title: 'Description',
-      className: 'max-w-[680px]',
       render: (_value, record) => (
         <p
           className={cn(

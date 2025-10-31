@@ -11,7 +11,7 @@ import { BulkEventImporter } from '@/components/organisms/BulkEventImporter'
 import { uploadMultipleFilesWithProgress } from '@/utils/uploadUtils'
 import { useImportContext } from '@/hooks/useImportContext'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { eventDefinitionsApi, pagesApi } from '@/services/api'
+import { eventDefinitionsApi, pagesApi, commonPropertiesApi } from '@/services/api'
 import type {
   CreateEventRequest,
   EventStatus,
@@ -66,6 +66,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [availablePages, setAvailablePages] = useState<Page[]>([])
   const [pagesLoading, setPagesLoading] = useState(false)
   const [selectedPageId, setSelectedPageId] = useState<string>(pageId ?? '')
+  const [commonPropsLoaded, setCommonPropsLoaded] = useState(false)
 
   // Fetch import context lazily for bulk creation suggestions
   const { data: importContext } = useImportContext(productId, {
@@ -95,6 +96,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     setActiveTab('manual')
     setSelectedDefinition(null)
     setSelectedPageId(pageId ?? '')
+    setCommonPropsLoaded(false)
   }, [pageId])
 
   useEffect(() => {
@@ -146,6 +148,46 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     if (!isOpen) return
     setSelectedPageId(pageId ?? '')
   }, [isOpen, pageId])
+
+  // Load and pre-fill common properties when modal opens
+  useEffect(() => {
+    if (!isOpen || !productId || commonPropsLoaded) return
+
+    const loadCommonProperties = async () => {
+      try {
+        const response = await commonPropertiesApi.getByProduct(productId)
+        const commonProperties = response.data
+
+        if (commonProperties.length > 0) {
+          // Build properties object from common properties
+          const defaultProperties: Record<string, any> = {}
+          commonProperties.forEach((cp) => {
+            if (cp.property && cp.suggestedValue) {
+              defaultProperties[cp.property.name] = cp.suggestedValue.value
+            }
+          })
+
+          // Pre-fill form data with common properties
+          setFormData((prev) => ({
+            ...prev,
+            properties: {
+              ...defaultProperties,
+              ...prev.properties // Keep any manually entered properties
+            }
+          }))
+
+          console.log(`✓ ${commonProperties.length} propriété(s) commune(s) pré-remplie(s)`)
+        }
+
+        setCommonPropsLoaded(true)
+      } catch (error) {
+        console.error('Error loading common properties:', error)
+        setCommonPropsLoaded(true) // Mark as loaded even on error to avoid retry loop
+      }
+    }
+
+    loadCommonProperties()
+  }, [isOpen, productId, commonPropsLoaded])
 
   // Build combobox suggestions from import context + existing definitions + common events
   useEffect(() => {
