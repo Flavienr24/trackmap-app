@@ -98,11 +98,11 @@ export function EventCombobox({
       return sortedByUsage
     }
 
-    // Filter: search in label (if available) or value (case insensitive)
+    // Filter: search anywhere in label (if available) or value (case insensitive)
     const searchLower = searchValue.toLowerCase()
     return sortedByUsage.filter(option => {
       const searchText = option.label || option.value
-      return searchText.toLowerCase().startsWith(searchLower)
+      return searchText.toLowerCase().includes(searchLower)
     })
   }, [searchValue, sortedByUsage])
 
